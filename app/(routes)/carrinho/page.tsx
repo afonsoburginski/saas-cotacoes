@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast"
 import jsPDF from "jspdf"
 import { PageBackground } from "@/components/layout/page-background"
 
-export default function CarrinhoPage() {
+ export default function CarrinhoPage() {
   const { cartItems, updateQuantity, removeFromCart, clearCart } = useCartStore()
   const { toast } = useToast()
   

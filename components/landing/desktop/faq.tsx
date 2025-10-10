@@ -5,28 +5,28 @@ import { useState } from "react";
 
 const faqs = [
   {
-    question: "Como funciona para consumidores?",
-    answer: "É grátis! Você cadastra sua lista de materiais, compara preços de diferentes lojistas da sua região e pode comprar diretamente pela plataforma com entrega na obra."
+    question: "Como funciona a plataforma para empresas?",
+    answer: "Você escolhe um plano mensal (Básico, Plus ou Premium), cria seu perfil profissional, cadastra seus produtos ou serviços e começa a receber cotações de clientes interessados. Simples assim!"
   },
   {
-    question: "Como os lojistas se cadastram?",
-    answer: "Lojistas escolhem um plano mensal (R$ 99 ou R$ 129,99), cadastram seus produtos e começam a receber cotações de clientes interessados. Sem taxas por venda!"
+    question: "Vocês cobram taxa por venda ou comissão?",
+    answer: "NÃO! Você paga apenas a mensalidade do plano escolhido. Todo o lucro das suas vendas é 100% seu. Sem surpresas, sem taxas escondidas."
   },
   {
-    question: "Que tipos de materiais posso encontrar?",
-    answer: "Temos todos os materiais de construção: cimento, tijolos, telhas, ferragens, tintas, pisos, azulejos, madeiras, tubulações e muito mais. Milhares de produtos disponíveis."
+    question: "Qual a diferença entre os planos?",
+    answer: "Básico (R$ 99): 50 produtos, relatórios básicos. Plus (R$ 189,99): 300 produtos + divulgação automática. Premium (R$ 249,99): produtos ilimitados + vídeos + campanhas semanais."
   },
   {
-    question: "A entrega é garantida?",
-    answer: "Sim! Todos os lojistas são verificados e devem cumprir prazos de entrega. Temos sistema de avaliações e em caso de problemas, nossa equipe intervém para resolver."
+    question: "Como recebo os pagamentos dos clientes?",
+    answer: "A plataforma apenas conecta você com o cliente. Depois é com vocês dois acertarem como preferir fazer o negócio."
   },
   {
-    question: "Posso negociar preços?",
-    answer: "Claro! Você pode entrar em contato direto com os lojistas através da plataforma para negociar preços, especialmente em compras grandes ou recorrentes."
+    question: "Posso cancelar minha assinatura a qualquer momento?",
+    answer: "Sim! Você pode cancelar quando quiser, sem multas ou taxas de cancelamento. Seu plano permanece ativo até o fim do período pago."
   },
   {
-    question: "Como funciona o pagamento?",
-    answer: "Oferecemos várias formas: cartão, PIX, boleto ou direto com o lojista. Para lojistas, cobramos apenas a mensalidade do plano escolhido."
+    question: "Prestadores de serviço também podem usar?",
+    answer: "Sim! Pedreiros, eletricistas, encanadores, pintores e outros profissionais da construção podem divulgar seus serviços e receber orçamentos de clientes."
   }
 ];
 
@@ -35,7 +35,7 @@ export function FAQ() {
 
   return (
     <section className="py-20 px-6 bg-gradient-to-b from-gray-50 to-white">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -43,11 +43,11 @@ export function FAQ() {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 font-marlin">
             Dúvidas Frequentes
           </h2>
-          <p className="text-xl text-gray-600">
-            Tudo que você precisa saber sobre materiais de construção na nossa plataforma
+          <p className="text-xl text-gray-600 font-montserrat">
+            Tudo que você precisa saber sobre nossos planos de assinatura
           </p>
         </motion.div>
 
@@ -65,7 +65,7 @@ export function FAQ() {
                 onClick={() => setOpenIndex(openIndex === index ? null : index)}
                 className="w-full px-8 py-6 text-left flex items-center justify-between hover:bg-[#0052FF]/5 transition-colors duration-200"
               >
-                <h3 className="text-lg font-semibold text-gray-900 pr-4">
+                <h3 className="text-lg font-semibold text-gray-900 pr-4 font-marlin">
                   {faq.question}
                 </h3>
                 <motion.div
@@ -86,7 +86,7 @@ export function FAQ() {
                     className="overflow-hidden"
                   >
                     <div className="px-8 pb-6">
-                      <p className="text-gray-600 leading-relaxed">
+                      <p className="text-gray-600 leading-relaxed font-montserrat">
                         {faq.answer}
                       </p>
                     </div>

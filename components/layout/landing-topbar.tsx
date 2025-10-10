@@ -8,7 +8,6 @@ import Image from "next/image"
 export function LandingTopbar() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [authDialogOpen, setAuthDialogOpen] = useState(false)
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
 
   useEffect(() => {
     const handleScroll = () => {
@@ -20,64 +19,46 @@ export function LandingTopbar() {
   }, [])
 
   return (
-    <header className="sticky top-2 z-50 transition-all">
-      <div className="mx-auto max-w-[1600px] px-4">
+    <header className="sticky top-1 sm:top-2 z-50">
+      <div className="max-w-[84rem] mx-auto px-6 transition-all duration-700 ease-out">
         <div
-          className={`flex h-14 items-center justify-between px-4 transition-all duration-500 ease-in-out
+          className={`flex h-12 sm:h-14 items-center justify-between px-4 transition-all duration-700 ease-out rounded-2xl sm:rounded-3xl
             ${
               isScrolled
-                ? "backdrop-blur-2xl bg-white/40 border border-gray-200/30 shadow-xl max-w-5xl mx-auto rounded-3xl"
-                : "bg-transparent max-w-full rounded-2xl"
+                ? "backdrop-blur-2xl bg-white/80 border border-gray-200/50 shadow-xl"
+                : "bg-transparent border border-transparent shadow-none"
             }
           `}
         >
-        <div className="flex items-center gap-3">
-        <div className="w-8 h-8 relative overflow-hidden">
-          <Image
-            src="/logo.png"
-            alt="Orça Norte"
-            fill
-            className="object-contain"
-          />
-        </div>
-          <span className={`font-bold text-xl transition-colors duration-500 ${
-            isScrolled ? "text-gray-900" : "text-gray-900"
-          }`}>
-            Orça Norte
-          </span>
-        </div>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 relative overflow-hidden">
+              <Image
+                src="/logo.png"
+                alt="Orça Norte"
+                fill
+                className="object-contain"
+              />
+            </div>
+            <span className="font-bold text-base sm:text-xl text-[#22C55E] font-marlin">
+              Orça Norte
+            </span>
+          </div>
 
-        <div className="flex items-center gap-4">
-          <Button
-            onClick={() => {
-              setAuthMode('login')
-              setAuthDialogOpen(true)
-            }}
-            className={`transition-all duration-500 ${
-              isScrolled
-                ? "bg-blue-600 text-white hover:bg-blue-700"
-                : "bg-blue-600 text-white hover:bg-blue-700"
-            }`}
-          >
-            Login
-          </Button>
-          <Button
-            onClick={() => {
-              setAuthMode('register')
-              setAuthDialogOpen(true)
-            }}
-            className="bg-[#22C55E] text-white hover:bg-[#22C55E]/90 transition-all duration-200"
-          >
-            Registro
-          </Button>
-        </div>
+          <div className="flex items-center gap-4">
+            <Button
+              onClick={() => setAuthDialogOpen(true)}
+              className="bg-[#22C55E] text-white hover:bg-[#22C55E]/90 transition-all duration-200 px-4 sm:px-6 text-sm sm:text-base h-9 sm:h-10"
+            >
+              Entrar
+            </Button>
+          </div>
         </div>
       </div>
       
       <AuthDialog 
         open={authDialogOpen} 
         onOpenChange={setAuthDialogOpen}
-        mode={authMode}
+        mode="login"
       />
     </header>
   )

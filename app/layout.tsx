@@ -12,11 +12,33 @@ import { Suspense } from "react"
 
 import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
-import { Inter } from "next/font/google"
+import { Inter, Montserrat } from "next/font/google"
+import localFont from "next/font/local"
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
+})
+
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  variable: "--font-montserrat",
+})
+
+const marlinSoft = localFont({
+  src: [
+    {
+      path: "./fonts/FontMesa - MarlinSoftBasic-Regular.otf",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "./fonts/FontMesa - MarlinSoftBasic-RegularItalic.otf",
+      weight: "400",
+      style: "italic",
+    }
+  ],
+  variable: "--font-marlin",
 })
 
 export const metadata: Metadata = {
@@ -31,15 +53,16 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
+    <html lang="pt-BR" suppressHydrationWarning className="light">
       <body
-        className={`min-h-screen bg-background font-sans antialiased ${GeistSans.variable} ${GeistMono.variable} ${inter.variable}`}
+        className={`min-h-screen bg-background font-sans antialiased ${GeistSans.variable} ${GeistMono.variable} ${inter.variable} ${montserrat.variable} ${marlinSoft.variable}`}
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="light"
+          enableSystem={false}
           disableTransitionOnChange
+          forcedTheme="light"
         >
           <Providers>
             <RoleProvider>

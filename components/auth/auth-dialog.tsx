@@ -68,11 +68,11 @@ export function AuthDialog({ open, onOpenChange, mode = 'login' }: AuthDialogPro
 
           <div className="space-y-3 text-center">
             <DialogTitle className="text-2xl font-bold text-white text-center">
-              Bem-vindo ao Orça Norte
+              Entrar no Orça Norte
             </DialogTitle>
             <DialogDescription className="text-gray-400 text-sm leading-relaxed text-center max-w-sm mx-auto">
-              Ao continuar, você concorda com nossos Termos de Serviço e Política de Privacidade.<br />
-              Comece sua jornada de economia em materiais hoje.
+              Para clientes, lojas e prestadores de serviço.<br />
+              Ao continuar, você concorda com nossos Termos de Serviço e Política de Privacidade.
             </DialogDescription>
           </div>
         </DialogHeader>
