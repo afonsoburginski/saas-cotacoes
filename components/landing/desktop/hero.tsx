@@ -89,12 +89,12 @@ export function Hero() {
                 {/* Heading */}
                 <h1 className="text-4xl md:text-7xl font-extrabold tracking-tight text-white font-marlin mb-4">
                   Orçamentos em tempo real
-                  <br className="hidden md:block" /> com processo simplificado
+                  <br className="hidden md:block" /> rápido e fácil
                 </h1>
 
                 {/* Subtext */}
                 <p className="text-base md:text-lg text-neutral-200 mb-6 font-montserrat max-w-2xl mx-auto">
-                  Conectando clientes e empresas, com foco em construção civil e serviços.
+                  Conectando clientes, empresas e prestadores de serviço na construção civil.
                 </p>
 
                 {/* CTA */}

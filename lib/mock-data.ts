@@ -9,6 +9,15 @@ export const mockStores: Store[] = [
     priorityScore: 95,
     plano: "Pro",
     createdAt: "2024-01-15",
+    shippingPolicy: {
+      type: "free",
+    },
+    address: {
+      lat: -15.7942,
+      lng: -47.8822,
+      cidade: "Brasília",
+      estado: "DF",
+    },
   },
   {
     id: "2",
@@ -18,6 +27,17 @@ export const mockStores: Store[] = [
     priorityScore: 88,
     plano: "Basic",
     createdAt: "2024-02-20",
+    shippingPolicy: {
+      type: "free_radius",
+      freeRadius: 10,
+      pricePerKm: 3.5,
+    },
+    address: {
+      lat: -15.7801,
+      lng: -47.9292,
+      cidade: "Brasília",
+      estado: "DF",
+    },
   },
   {
     id: "3",
@@ -27,6 +47,18 @@ export const mockStores: Store[] = [
     priorityScore: 82,
     plano: "Pro",
     createdAt: "2024-03-10",
+    shippingPolicy: {
+      type: "free_radius",
+      freeRadius: 5,
+      pricePerKm: 2.8,
+      minOrderForFreeShipping: 500,
+    },
+    address: {
+      lat: -15.7975,
+      lng: -47.8919,
+      cidade: "Brasília",
+      estado: "DF",
+    },
   },
   {
     id: "4",
@@ -36,6 +68,16 @@ export const mockStores: Store[] = [
     priorityScore: 75,
     plano: "Basic",
     createdAt: "2024-01-05",
+    shippingPolicy: {
+      type: "fixed",
+      fixedPrice: 50,
+    },
+    address: {
+      lat: -15.8267,
+      lng: -47.9218,
+      cidade: "Brasília",
+      estado: "DF",
+    },
   },
   {
     id: "5",
@@ -45,6 +87,16 @@ export const mockStores: Store[] = [
     priorityScore: 90,
     plano: "Pro",
     createdAt: "2024-02-28",
+    shippingPolicy: {
+      type: "per_km",
+      pricePerKm: 4.2,
+    },
+    address: {
+      lat: -15.7655,
+      lng: -47.8783,
+      cidade: "Brasília",
+      estado: "DF",
+    },
   },
   {
     id: "6",
@@ -54,6 +106,17 @@ export const mockStores: Store[] = [
     priorityScore: 85,
     plano: "Basic",
     createdAt: "2024-03-15",
+    shippingPolicy: {
+      type: "fixed",
+      fixedPrice: 35,
+      minOrderForFreeShipping: 800,
+    },
+    address: {
+      lat: -15.8102,
+      lng: -47.8976,
+      cidade: "Brasília",
+      estado: "DF",
+    },
   },
   {
     id: "7",
@@ -63,6 +126,17 @@ export const mockStores: Store[] = [
     priorityScore: 78,
     plano: "Pro",
     createdAt: "2024-01-25",
+    shippingPolicy: {
+      type: "free_radius",
+      freeRadius: 15,
+      pricePerKm: 3.0,
+    },
+    address: {
+      lat: -15.7689,
+      lng: -47.9123,
+      cidade: "Brasília",
+      estado: "DF",
+    },
   },
   {
     id: "8",
@@ -72,6 +146,15 @@ export const mockStores: Store[] = [
     priorityScore: 92,
     plano: "Pro",
     createdAt: "2024-02-10",
+    shippingPolicy: {
+      type: "free",
+    },
+    address: {
+      lat: -15.7883,
+      lng: -47.8665,
+      cidade: "Brasília",
+      estado: "DF",
+    },
   },
   {
     id: "9",
@@ -81,6 +164,17 @@ export const mockStores: Store[] = [
     priorityScore: 80,
     plano: "Basic",
     createdAt: "2024-03-05",
+    shippingPolicy: {
+      type: "per_km",
+      pricePerKm: 3.8,
+      minOrderForFreeShipping: 1000,
+    },
+    address: {
+      lat: -15.8345,
+      lng: -47.9045,
+      cidade: "Brasília",
+      estado: "DF",
+    },
   },
   {
     id: "10",
@@ -90,6 +184,16 @@ export const mockStores: Store[] = [
     priorityScore: 87,
     plano: "Pro",
     createdAt: "2024-01-30",
+    shippingPolicy: {
+      type: "fixed",
+      fixedPrice: 45,
+    },
+    address: {
+      lat: -15.7512,
+      lng: -47.8901,
+      cidade: "Brasília",
+      estado: "DF",
+    },
   },
 ]
 

@@ -65,8 +65,13 @@ export function VerticalInfiniteCards({
     const ease = (t: number) => t * t * (3 - 2 * t); // smoothstep
 
     const frame = () => {
-      const container = containerRef.current!;
-      const cards = scrollerRef.current?.querySelectorAll<HTMLElement>('.feature-card') || [];
+      if (!containerRef.current || !scrollerRef.current) {
+        rafId = requestAnimationFrame(frame);
+        return;
+      }
+
+      const container = containerRef.current;
+      const cards = scrollerRef.current.querySelectorAll<HTMLElement>('.feature-card') || [];
       const rect = container.getBoundingClientRect();
       const centerY = rect.top + rect.height / 2;
 

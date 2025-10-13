@@ -20,12 +20,12 @@ export function HeroMobile() {
 
           {/* Heading */}
           <h1 className="text-2xl font-extrabold text-white leading-tight mb-2 px-2 font-marlin">
-            Orçamentos em tempo real com processo simplificado
+            Orçamentos em tempo real rápido e fácil
           </h1>
 
           {/* Subtext */}
           <p className="text-xs text-white/75 mb-5 px-4 leading-relaxed font-montserrat">
-            Conectando clientes e empresas, com foco em construção civil e serviços.
+            Conectando clientes, empresas e prestadores de serviço na construção civil.
           </p>
 
           {/* CTA */}

@@ -37,28 +37,6 @@ export default function CompararPage() {
   const { toast } = useToast()
   const [sortBy, setSortBy] = useState<"preco" | "rating">("preco")
 
-  const handleQuoteAll = () => {
-    const cartItems = comparisonProducts.map(product => ({
-      id: `quote-${Date.now()}-${product.id}`,
-      productId: product.id,
-      storeId: product.storeId,
-      qty: 1,
-      productNome: product.nome,
-      storeNome: product.storeNome,
-      precoUnit: product.preco,
-    }))
-    
-    createList(
-      `Orçamento Comparativo - ${comparisonProducts[0]?.categoria || 'Produtos'}`,
-      cartItems,
-      `Orçamento gerado automaticamente com ${comparisonProducts.length} produtos da comparação inteligente`
-    )
-    
-    toast({
-      title: "🧾 Orçamento comparativo gerado!",
-      description: `Orçamento com ${comparisonProducts.length} produtos foi criado nas suas listas.`,
-    })
-  }
 
   useEffect(() => {
     console.log("[v0] Comparison page loaded, products:", comparisonProducts.length)
@@ -97,11 +75,11 @@ export default function CompararPage() {
 
         <div className="text-center py-12">
           <div className="mb-6">
-            <Sparkles className="h-16 w-16 mx-auto text-primary/40 mb-4" />
-            <p className="text-lg font-medium mb-2">Nenhuma comparação ativa</p>
-            <p className="text-muted-foreground">Clique em "Comparação Inteligente" em qualquer produto para começar</p>
+            <Sparkles className="h-16 w-16 mx-auto text-[#0052FF]/40 mb-4" />
+            <p className="text-lg font-bold text-gray-900 mb-2 font-marlin">Nenhuma comparação ativa</p>
+            <p className="text-gray-600 font-montserrat">Clique em "Comparação Inteligente" em qualquer produto para começar</p>
           </div>
-          <Button asChild>
+          <Button asChild className="bg-[#0052FF] hover:bg-[#0052FF]/90 text-white font-montserrat">
             <Link href="/explorar">Explorar Produtos</Link>
           </Button>
         </div>
@@ -126,15 +104,11 @@ export default function CompararPage() {
         className="flex items-center justify-end pt-4 px-4"
       >
         <div className="flex gap-2">
-          <Button onClick={handleQuoteAll} className="bg-[#22C55E] hover:bg-[#22C55E]/90 text-white">
-            <Sparkles className="h-4 w-4 mr-2" />
-            Gerar Orçamento
-          </Button>
-          <Button variant="outline" onClick={() => setSortBy(sortBy === "preco" ? "rating" : "preco")}>
+          <Button variant="outline" onClick={() => setSortBy(sortBy === "preco" ? "rating" : "preco")} className="border-gray-200 text-gray-700 hover:bg-gray-50 font-montserrat">
             <ArrowUpDown className="h-4 w-4 mr-2" />
             Ordenar por {sortBy === "preco" ? "Avaliação" : "Preço"}
           </Button>
-          <Button variant="outline" onClick={clearComparison}>
+          <Button variant="outline" onClick={clearComparison} className="border-gray-200 text-gray-700 hover:bg-gray-50 font-montserrat">
             Nova Comparação
           </Button>
         </div>
@@ -145,10 +119,10 @@ export default function CompararPage() {
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.2, duration: 0.6, ease: "easeOut" }}
       >
-        <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+        <Card className="border-gray-200 bg-white rounded-2xl shadow-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
+          <CardTitle className="flex items-center gap-2 text-gray-900 font-marlin">
+            <Sparkles className="h-5 w-5 text-[#0052FF]" />
             Comparação Inteligente ({comparisonProducts.length} produtos)
           </CardTitle>
         </CardHeader>
@@ -157,11 +131,11 @@ export default function CompararPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-32">Produto</TableHead>
+                  <TableHead className="w-32 text-gray-700 font-bold font-montserrat">Produto</TableHead>
                   {sortedProducts.map((product) => (
-                    <TableHead key={product.id} className="min-w-48">
+                    <TableHead key={product.id} className="min-w-48 text-gray-900 font-montserrat">
                       <div className="flex items-center justify-between">
-                        <span className="truncate">{product.nome}</span>
+                        <span className="truncate font-semibold">{product.nome}</span>
                       </div>
                     </TableHead>
                   ))}
@@ -169,7 +143,7 @@ export default function CompararPage() {
               </TableHeader>
               <TableBody>
                 <TableRow>
-                  <TableCell className="font-medium">Imagem</TableCell>
+                  <TableCell className="font-semibold text-gray-700 font-montserrat">Imagem</TableCell>
                   {sortedProducts.map((product) => (
                     <TableCell key={product.id}>
                       <div className="aspect-square w-20 relative bg-gray-50 rounded-lg overflow-hidden">
@@ -183,28 +157,28 @@ export default function CompararPage() {
                 </TableRow>
 
                 <TableRow>
-                  <TableCell className="font-medium">Loja</TableCell>
+                  <TableCell className="font-semibold text-gray-700 font-montserrat">Loja</TableCell>
                   {sortedProducts.map((product) => (
                     <TableCell key={product.id}>
-                      <Badge variant="secondary">{product.storeNome}</Badge>
+                      <Badge variant="secondary" className="bg-gray-100 text-gray-700 font-montserrat">{product.storeNome}</Badge>
                     </TableCell>
                   ))}
                 </TableRow>
 
                 <TableRow>
-                  <TableCell className="font-medium">Preço</TableCell>
+                  <TableCell className="font-semibold text-gray-700 font-montserrat">Preço</TableCell>
                   {sortedProducts.map((product) => (
                     <TableCell key={product.id}>
-                      <div className="text-lg font-bold text-primary">{formatPrice(product.preco)}</div>
+                      <div className="text-lg font-bold text-[#0052FF] font-montserrat">{formatPrice(product.preco)}</div>
                     </TableCell>
                   ))}
                 </TableRow>
 
                 <TableRow>
-                  <TableCell className="font-medium">Estoque</TableCell>
+                  <TableCell className="font-semibold text-gray-700 font-montserrat">Estoque</TableCell>
                   {sortedProducts.map((product) => (
                     <TableCell key={product.id}>
-                      <span className={product.estoque > 0 ? "text-neutral-600" : "text-red-600"}>
+                      <span className={`font-montserrat ${product.estoque > 0 ? "text-gray-600" : "text-red-600"}`}>
                         {product.estoque} unidades
                       </span>
                     </TableCell>
@@ -212,28 +186,28 @@ export default function CompararPage() {
                 </TableRow>
 
                 <TableRow>
-                  <TableCell className="font-medium">Avaliação</TableCell>
+                  <TableCell className="font-semibold text-gray-700 font-montserrat">Avaliação</TableCell>
                   {sortedProducts.map((product) => (
                     <TableCell key={product.id}>
                       <div className="flex items-center gap-1">
                         {renderStars(product.rating)}
-                        <span className="text-sm text-muted-foreground ml-1">({product.rating})</span>
+                        <span className="text-sm text-gray-600 ml-1 font-montserrat">({product.rating})</span>
                       </div>
                     </TableCell>
                   ))}
                 </TableRow>
 
                 <TableRow>
-                  <TableCell className="font-medium">Categoria</TableCell>
+                  <TableCell className="font-semibold text-gray-700 font-montserrat">Categoria</TableCell>
                   {sortedProducts.map((product) => (
                     <TableCell key={product.id}>
-                      <Badge variant="outline">{product.categoria}</Badge>
+                      <Badge variant="outline" className="border-gray-200 text-gray-700 font-montserrat">{product.categoria}</Badge>
                     </TableCell>
                   ))}
                 </TableRow>
 
                 <TableRow>
-                  <TableCell className="font-medium">Ações</TableCell>
+                  <TableCell className="font-semibold text-gray-700 font-montserrat">Ações</TableCell>
                   {sortedProducts.map((product) => {
                     const isRecentlyAdded = recentlyAdded === product.id
                     return (
@@ -249,8 +223,8 @@ export default function CompararPage() {
                               })
                             }}
                             disabled={product.estoque === 0}
-                            className={`w-full relative overflow-hidden ${
-                              isRecentlyAdded ? "bg-green-500 hover:bg-green-600 text-white" : ""
+                            className={`w-full relative overflow-hidden font-montserrat ${
+                              isRecentlyAdded ? "bg-[#22C55E] hover:bg-[#22C55E]/90 text-white" : "bg-[#0052FF] hover:bg-[#0052FF]/90 text-white"
                             }`}
                           >
                             <AnimatePresence mode="wait">
@@ -307,9 +281,9 @@ export default function CompararPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4, duration: 0.6 }}
-        className="text-center"
+        className="text-center pb-6"
       >
-        <Button asChild variant="outline">
+        <Button asChild variant="outline" className="border-gray-200 text-gray-700 hover:bg-gray-50 font-montserrat">
           <Link href="/explorar">Continuar Explorando</Link>
         </Button>
       </motion.div>

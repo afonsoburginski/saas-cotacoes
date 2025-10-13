@@ -1,5 +1,13 @@
 export type Role = "admin" | "loja" | "usuario"
 
+export type ShippingPolicy = {
+  type: "free" | "free_radius" | "per_km" | "fixed"
+  freeRadius?: number // em km, para type: "free_radius"
+  pricePerKm?: number // para type: "per_km" ou "free_radius" (após o raio)
+  fixedPrice?: number // para type: "fixed"
+  minOrderForFreeShipping?: number // valor mínimo para frete grátis
+}
+
 export type Store = {
   id: string
   nome: string
@@ -8,6 +16,13 @@ export type Store = {
   priorityScore: number
   plano: "Basic" | "Pro"
   createdAt: string
+  shippingPolicy: ShippingPolicy
+  address?: {
+    lat: number
+    lng: number
+    cidade: string
+    estado: string
+  }
 }
 
 export type Product = {
@@ -52,6 +67,8 @@ export type PurchaseList = {
   items: CartItem[]
   observacoes?: string
   totalEstimado: number
+  shippingCosts?: Record<string, number> // storeId -> custo de frete
+  totalComFrete?: number
 }
 
 export type Plan = {

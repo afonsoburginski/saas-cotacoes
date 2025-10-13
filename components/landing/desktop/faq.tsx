@@ -18,7 +18,7 @@ const faqs = [
   },
   {
     question: "Como recebo os pagamentos dos clientes?",
-    answer: "A plataforma apenas conecta você com o cliente. Depois é com vocês dois acertarem como preferir fazer o negócio."
+    answer: "A plataforma apenas conecta você com o cliente. Pagamentos diretamente com a empresa ou prestador escolhido."
   },
   {
     question: "Posso cancelar minha assinatura a qualquer momento?",

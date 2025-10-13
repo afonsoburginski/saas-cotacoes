@@ -1,17 +1,30 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { CartGroupByStore } from "@/components/features/cart-group-by-store"
+import { useState } from "react"
 import { useCartStore, type CartItem } from "@/stores/cart-store"
-import { Trash2, ShoppingBag, Download } from "lucide-react"
-import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
+import { useListsStore } from "@/stores/lists-store"
+import { useRouter } from "next/navigation"
 import jsPDF from "jspdf"
 import { PageBackground } from "@/components/layout/page-background"
+import { CarrinhoAdaptive } from "@/components/carrinho"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
  export default function CarrinhoPage() {
   const { cartItems, updateQuantity, removeFromCart, clearCart } = useCartStore()
+  const createList = useListsStore((state) => state.createList)
+  const router = useRouter()
   const { toast } = useToast()
+  const [showQuoteDialog, setShowQuoteDialog] = useState(false)
   
   console.log("🛒 [Zustand] Carrinho carregado com", cartItems.length, "itens:", cartItems)
 
@@ -98,40 +111,68 @@ import { PageBackground } from "@/components/layout/page-background"
     })
   }
 
+  const handleSendQuote = () => {
+    if (cartItems.length === 0) {
+      toast({
+        title: "⚠️ Carrinho vazio",
+        description: "Adicione produtos ao carrinho antes de enviar um orçamento.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setShowQuoteDialog(true)
+  }
+
+  const confirmSendQuote = () => {
+    const listName = `Orçamento - ${new Date().toLocaleDateString('pt-BR')}`
+    createList(listName, cartItems, `Orçamento enviado com ${cartItems.length} produtos`)
+    
+    setShowQuoteDialog(false)
+    
+    toast({
+      title: "✅ Orçamento enviado!",
+      description: "Seu orçamento foi enviado. As lojas entrarão em contato em breve.",
+    })
+
+    // Limpar carrinho após 1 segundo
+    setTimeout(() => {
+      clearCart()
+      router.push('/listas')
+    }, 1500)
+  }
+
   return (
     <>
       <PageBackground />
-      <div className="space-y-6 pt-4 px-4">
-      {cartItems.length > 0 && (
-        <div className="flex items-center justify-end">
-          <div className="flex gap-2">
-            <Button onClick={handleGenerateQuote} className="bg-[#22C55E] hover:bg-[#22C55E]/90 text-white">
-              <Download className="h-4 w-4 mr-2" />
-              Gerar PDF
-            </Button>
-            <Button variant="outline" onClick={clearCart}>
-              <Trash2 className="h-4 w-4 mr-2" />
-              Limpar Carrinho
-            </Button>
-          </div>
-        </div>
-      )}
+      <CarrinhoAdaptive
+        cartItems={cartItems}
+        onUpdateQuantity={updateQuantity}
+        onRemoveItem={removeFromCart}
+        onClearCart={clearCart}
+        onGeneratePDF={handleGenerateQuote}
+        onGenerateList={handleSendQuote}
+      />
 
-      {cartItems.length === 0 ? (
-        <div className="text-center py-12">
-          <ShoppingBag className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <p className="text-muted-foreground mb-4">Seu carrinho está vazio</p>
-          <Button asChild>
-            <Link href="/explorar">
-              <ShoppingBag className="h-4 w-4 mr-2" />
-              Explorar Produtos
-            </Link>
-          </Button>
-        </div>
-      ) : (
-        <CartGroupByStore cartItems={cartItems} onUpdateQuantity={updateQuantity} onRemoveItem={removeFromCart} />
-      )}
-    </div>
+      <AlertDialog open={showQuoteDialog} onOpenChange={setShowQuoteDialog}>
+        <AlertDialogContent className="font-montserrat">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-marlin text-xl">Enviar Orçamento</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-600">
+              Seu orçamento será enviado para cotação. As lojas receberão sua solicitação e entrarão em contato em breve com as melhores ofertas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="font-montserrat">Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmSendQuote}
+              className="bg-[#0052FF] hover:bg-[#0052FF]/90 text-white font-montserrat"
+            >
+              Confirmar Envio
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }
