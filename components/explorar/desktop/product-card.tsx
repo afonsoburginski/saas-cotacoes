@@ -59,15 +59,15 @@ export function ProductCardDesktop({ product }: ProductCardDesktopProps) {
             referrerPolicy="no-referrer"
           />
 
-          {/* Category badge on hover */}
-          <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          {/* Category badge - sempre visível */}
+          <div className="absolute top-3 left-3 transition-opacity duration-300">
             <Badge variant="secondary" className="text-[11px] px-2 py-1 font-semibold backdrop-blur-md font-montserrat">
               {product.categoria}
             </Badge>
           </div>
 
-          {/* Overlay on hover */}
-          <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          {/* Overlay - sempre visível */}
+          <div className="pointer-events-none absolute inset-0 transition-opacity duration-300">
             <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/35 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-4 space-y-3">
               <h3 className="pointer-events-auto text-white font-bold text-base leading-snug line-clamp-2 drop-shadow font-marlin">

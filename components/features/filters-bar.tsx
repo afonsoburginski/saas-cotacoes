@@ -86,30 +86,34 @@ export function FiltersBar({ filters, onFiltersChange, categorias, lojas }: Filt
       </div>
 
 
-      {/* Desktop: Categories + Sort in same line */}
-      <div className="hidden md:flex flex-wrap gap-2 items-center">
-        <span className="text-sm text-gray-600 font-medium mr-2">Categorias:</span>
-        {quickCategories.map((category) => (
-          <Button
-            key={category}
-            variant={filters.categoria === category ? "default" : "outline"}
-            size="sm"
-            onClick={() => updateFilter("categoria", filters.categoria === category ? "" : category)}
-            className={`h-8 px-3 rounded-lg text-sm ${
-              filters.categoria === category 
-                ? "bg-[#0052FF] text-white hover:bg-[#0052FF]/90" 
-                : "border-gray-200 hover:bg-gray-50"
-            }`}
+      {/* Desktop: Categories + Sort in same line (migrated next to tabs) */}
+      <div className="hidden">
+        {/* Category Dropdown */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600 font-medium">Categoria:</span>
+          <Select 
+            value={filters.categoria || "todas"} 
+            onValueChange={(value) => updateFilter("categoria", value === "todas" ? "" : value)}
           >
-            {category}
-          </Button>
-        ))}
+            <SelectTrigger className="w-[180px] h-8 px-3 border-gray-200 rounded-lg text-sm">
+              <SelectValue placeholder="Todas" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todas">Todas as categorias</SelectItem>
+              {categorias.map((category) => (
+                <SelectItem key={category} value={category}>
+                  {category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         
         {/* Desktop Sort Filter */}
-        <div className="ml-4 flex items-center gap-2">
+        <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600 font-medium">Ordenar:</span>
           <Select value={filters.ordenarPor} onValueChange={(value) => updateFilter("ordenarPor", value)}>
-            <SelectTrigger className="w-auto h-8 px-3 border-gray-200 rounded-lg text-sm">
+            <SelectTrigger className="w-[160px] h-8 px-3 border-gray-200 rounded-lg text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

@@ -10,14 +10,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { User, Settings, LogOut, UserCircle } from "lucide-react"
+import { Settings, LogOut, UserCircle } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useAuthStore } from "@/stores/auth-store"
 import Image from "next/image"
 
 export function Topbar() {
   const [isScrolled, setIsScrolled] = useState(false)
-  const { user, logout } = useAuthStore()
+  const { user, logout, updateUser } = useAuthStore()
+  const displayInitials = ((user?.name || "Afonso").trim().split(/\s+/).map((n) => n.charAt(0)).slice(0, 2).join("") || "AF").toUpperCase()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -27,6 +28,14 @@ export function Topbar() {
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
+
+  // Ensure display name defaults to "Afonso" when missing or placeholder
+  useEffect(() => {
+    const placeholderRegex = /usu[aá]rio|teste/i
+    if (!user?.name || placeholderRegex.test(user.name)) {
+      updateUser({ name: "Afonso" })
+    }
+  }, [user, updateUser])
 
   return (
     <header className="sticky top-2 z-50 transition-all">
@@ -64,9 +73,9 @@ export function Topbar() {
                 className="relative h-10 w-10 rounded-full hover:bg-gray-100 transition-all duration-200"
               >
                 <Avatar className="h-9 w-9">
-                  <AvatarImage src={user?.avatar} alt={user?.name} />
+                  {/* Removemos imagem para forçar o fallback padrão */}
                   <AvatarFallback className="bg-[#0052FF] text-white font-semibold">
-                    {user?.name?.charAt(0) || <User className="h-4 w-4" />}
+                    {displayInitials}
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -78,7 +87,7 @@ export function Topbar() {
             >
               <DropdownMenuLabel className="p-3">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-semibold text-gray-900">{user?.name || 'Usuário'}</p>
+                  <p className="text-sm font-semibold text-gray-900">{user?.name || 'Afonso'}</p>
                   <p className="text-xs text-gray-500">{user?.email}</p>
                   <p className="text-xs text-gray-400 capitalize">{user?.role}</p>
                 </div>

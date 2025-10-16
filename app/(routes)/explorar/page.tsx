@@ -10,16 +10,20 @@ import { mockProducts, mockStores } from "@/lib/mock-data"
 import { useSmartComparison } from "@/hooks/use-smart-comparison"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Sparkles, Zap, Loader2, Search, TrendingUp, ShoppingBag, MapPin, Star, MessageCircle, Shield } from "lucide-react"
+import { Sparkles, Zap, Loader2, Search, TrendingUp, ShoppingBag, MapPin, Star, MessageCircle, Shield, SlidersHorizontal, ChevronsUpDown, Check } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
 
 export default function ExplorarPage() {
   const { generateCategoryComparison, isLoading } = useSmartComparison()
   const [selectedStore, setSelectedStore] = useState<string | null>(null)
   const [supplierModalOpen, setSupplierModalOpen] = useState(false)
+  const [categoryOpen, setCategoryOpen] = useState(false)
+  const [orderOpen, setOrderOpen] = useState(false)
 
   const [filters, setFilters] = useState<FilterState>({
     search: "",
@@ -37,6 +41,13 @@ export default function ExplorarPage() {
   const lojas = useMemo(() => {
     return Array.from(new Set(mockProducts.map((p) => p.storeNome))).sort()
   }, [])
+
+  const orderOptions: { value: FilterState["ordenarPor"]; label: string }[] = [
+    { value: "prioridade-desc", label: "Relevância" },
+    { value: "preco-asc", label: "Menor preço" },
+    { value: "preco-desc", label: "Maior preço" },
+    { value: "rating-desc", label: "Melhor avaliação" },
+  ]
 
   const filteredProducts = useMemo(() => {
     const filtered = mockProducts.filter((product) => {
@@ -67,6 +78,14 @@ export default function ExplorarPage() {
 
     // Apply sorting with priority consideration
     filtered.sort((a, b) => {
+      // SEMPRE priorizar produtos com imagens reais (do mock) antes de qualquer ordenação
+      const hasRealImageA = a.imagemUrl.startsWith('/mock/')
+      const hasRealImageB = b.imagemUrl.startsWith('/mock/')
+      
+      if (hasRealImageA && !hasRealImageB) return -1
+      if (!hasRealImageA && hasRealImageB) return 1
+      
+      // Se ambos têm imagens reais ou ambos não têm, aplica a ordenação selecionada
       const storeA = mockStores.find((s) => s.id === a.storeId)
       const storeB = mockStores.find((s) => s.id === b.storeId)
 
@@ -106,41 +125,38 @@ export default function ExplorarPage() {
       <PageBackground />
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pb-32 md:pb-8">
         <div className="w-full md:container md:mx-auto md:max-w-[1400px] md:px-6 py-6">
-          {/* Header - apenas desktop */}
-          <div className="hidden md:block pb-4 mb-6 border-b border-gray-200">
-            <h1 className="text-3xl font-bold text-gray-900 font-marlin">
-              Explorar Produtos
-            </h1>
-            <p className="text-gray-600 text-sm mt-1 font-montserrat">
-              Compare preços e encontre os melhores fornecedores
-            </p>
-          </div>
-
-      <Tabs defaultValue="produtos" className="w-full space-y-0 md:space-y-3">
+      <Tabs defaultValue="produtos" className="w-full space-y-0 md:space-y-2">
         {/* Mobile Tabs - Underline */}
         <div className="md:hidden border-b border-gray-200">
           <div className="flex w-full">
             <TabsList className="w-full bg-transparent justify-start h-auto p-0 gap-0">
               <TabsTrigger 
                 value="produtos" 
-                className="relative px-4 py-3 text-sm text-gray-600 bg-transparent border-0 rounded-none shadow-none data-[state=active]:bg-transparent data-[state=active]:text-[#0052FF] data-[state=active]:shadow-none data-[state=active]:font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-transparent data-[state=active]:after:bg-[#0052FF] font-montserrat"
+                className="relative px-3 py-2.5 text-sm text-gray-600 bg-transparent border-0 rounded-none shadow-none data-[state=active]:bg-transparent data-[state=active]:text-[#0052FF] data-[state=active]:shadow-none data-[state=active]:font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-transparent data-[state=active]:after:bg-[#0052FF] font-montserrat"
               >
-                <Search className="w-4 h-4 mr-2" />
+                <Search className="w-4 h-4 mr-1.5" />
                 Produtos
               </TabsTrigger>
               <TabsTrigger 
                 value="lojas"
-                className="relative px-4 py-3 text-sm text-gray-600 bg-transparent border-0 rounded-none shadow-none data-[state=active]:bg-transparent data-[state=active]:text-[#0052FF] data-[state=active]:shadow-none data-[state=active]:font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-transparent data-[state=active]:after:bg-[#0052FF] font-montserrat"
+                className="relative px-3 py-2.5 text-sm text-gray-600 bg-transparent border-0 rounded-none shadow-none data-[state=active]:bg-transparent data-[state=active]:text-[#0052FF] data-[state=active]:shadow-none data-[state=active]:font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-transparent data-[state=active]:after:bg-[#0052FF] font-montserrat"
               >
-                <ShoppingBag className="w-4 h-4 mr-2" />
+                <ShoppingBag className="w-4 h-4 mr-1.5" />
                 Fornecedores
+              </TabsTrigger>
+              <TabsTrigger 
+                value="servicos"
+                className="relative px-3 py-2.5 text-sm text-gray-600 bg-transparent border-0 rounded-none shadow-none data-[state=active]:bg-transparent data-[state=active]:text-[#0052FF] data-[state=active]:shadow-none data-[state=active]:font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-transparent data-[state=active]:after:bg-[#0052FF] font-montserrat"
+              >
+                <Shield className="w-4 h-4 mr-1.5" />
+                Serviços
               </TabsTrigger>
             </TabsList>
           </div>
         </div>
 
-        {/* Desktop Tabs - Pill style */}
-        <div className="hidden md:flex items-center justify-between">
+        {/* Desktop Tabs - Pill style + inline filters */}
+        <div className="hidden md:flex items-center justify-between gap-3">
           <TabsList className="bg-gray-100 border border-gray-200 rounded-lg p-1 font-montserrat">
             <TabsTrigger 
               value="produtos" 
@@ -156,31 +172,122 @@ export default function ExplorarPage() {
               <ShoppingBag className="w-4 h-4 mr-2" />
               Fornecedores
             </TabsTrigger>
-          </TabsList>
-          {filters.categoria && (
-            <Button
-              size="default"
-              onClick={() => generateCategoryComparison(filters.categoria)}
-              disabled={isLoading}
-              className="bg-[#0052FF] text-white hover:bg-[#0052FF]/90 font-montserrat"
+            <TabsTrigger 
+              value="servicos"
+              className="rounded-md px-4 py-2 text-sm data-[state=active]:bg-[#0052FF] data-[state=active]:text-white data-[state=active]:shadow-sm"
             >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Analisando...
-                </>
-              ) : (
-                <>
-                  <Zap className="h-4 w-4 mr-2" />
-                  Comparar {filters.categoria}
-                </>
-              )}
-            </Button>
-          )}
+              <Shield className="w-4 h-4 mr-2" />
+              Serviços
+            </TabsTrigger>
+          </TabsList>
+          <div className="flex items-center gap-2">
+            {/* Category combobox (shadcn style) */}
+            <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 w-[200px] justify-between">
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <SlidersHorizontal className="h-4 w-4" />
+                    <span className="truncate">
+                      {filters.categoria ? filters.categoria : "Categorias"}
+                    </span>
+                  </div>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="p-0 w-[260px]" align="end">
+                <Command>
+                  <CommandInput placeholder="Filtrar categorias..." />
+                  <CommandEmpty>Nenhuma categoria.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem
+                      value="todas"
+                      onSelect={() => {
+                        setCategoryOpen(false)
+                        setFilters({ ...filters, categoria: "" })
+                      }}
+                    >
+                      <Check className={`mr-2 h-4 w-4 ${!filters.categoria ? "opacity-100" : "opacity-0"}`} />
+                      Todas as categorias
+                    </CommandItem>
+                    {categorias.map((cat) => (
+                      <CommandItem
+                        key={cat}
+                        value={cat}
+                        onSelect={() => {
+                          setCategoryOpen(false)
+                          setFilters({ ...filters, categoria: cat })
+                        }}
+                      >
+                        <Check className={`mr-2 h-4 w-4 ${filters.categoria === cat ? "opacity-100" : "opacity-0"}`} />
+                        {cat}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </Command>
+              </PopoverContent>
+            </Popover>
+
+            {/* Order combobox (shadcn style) */}
+            <Popover open={orderOpen} onOpenChange={setOrderOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 w-[200px] justify-between">
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <SlidersHorizontal className="h-4 w-4" />
+                    <span className="truncate">
+                      {orderOptions.find(o => o.value === filters.ordenarPor)?.label || "Ordenar"}
+                    </span>
+                  </div>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="p-0 w-[260px]" align="end">
+                <Command>
+                  <CommandInput placeholder="Ordenar por..." />
+                  <CommandEmpty>Nenhuma opção.</CommandEmpty>
+                  <CommandGroup>
+                    {orderOptions.map((opt) => (
+                      <CommandItem
+                        key={opt.value}
+                        value={opt.value}
+                        onSelect={() => {
+                          setOrderOpen(false)
+                          setFilters({ ...filters, ordenarPor: opt.value })
+                        }}
+                      >
+                        <Check className={`mr-2 h-4 w-4 ${filters.ordenarPor === opt.value ? "opacity-100" : "opacity-0"}`} />
+                        {opt.label}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </Command>
+              </PopoverContent>
+            </Popover>
+
+            {filters.categoria && (
+              <Button
+                size="sm"
+                onClick={() => generateCategoryComparison(filters.categoria)}
+                disabled={isLoading}
+                className="h-9 bg-[#0052FF] text-white hover:bg-[#0052FF]/90 font-montserrat"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Analisando...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-4 w-4 mr-2" />
+                    Comparar {filters.categoria}
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         </div>
 
         <TabsContent value="produtos" className="space-y-4">
-          <div className="-mt-px md:mt-3">
+          <div className="-mt-px md:mt-0">
             <FiltersBar filters={filters} onFiltersChange={setFilters} categorias={categorias} lojas={lojas} />
           </div>
 
@@ -312,6 +419,29 @@ export default function ExplorarPage() {
                     </div>
                   </Card>
                 ))}
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="servicos" className="mt-0 space-y-4 px-4 md:px-0">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900 font-marlin">Serviços Disponíveis</h2>
+              <Badge variant="outline" className="font-montserrat">Em breve</Badge>
+            </div>
+            
+            <div className="flex items-center justify-center py-16">
+              <div className="text-center space-y-4">
+                <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                  <Shield className="h-8 w-8 text-gray-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 font-marlin mb-2">Serviços em Breve</h3>
+                  <p className="text-sm text-gray-600 font-montserrat max-w-md mx-auto">
+                    Em breve você poderá encontrar profissionais qualificados para seus projetos de construção e reforma.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </TabsContent>
