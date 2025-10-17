@@ -213,53 +213,40 @@ export function ExplorarMobile({
 
                     return (
                       <div key={store.id} className="">
-                        {/* Supplier Row */}
-                        <div className="px-4">
-                          <Card 
-                            className="p-4 bg-white border-0 shadow-sm rounded-2xl active:scale-[0.98] transition-all duration-200 cursor-pointer"
-                            onClick={() => router.push(`/fornecedor/${store.id}`)}
-                          >
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-12 w-12 rounded-xl">
-                                <AvatarFallback className="bg-blue-500 text-white font-semibold rounded-xl">
-                                  {store.nome.charAt(0)}
-                                </AvatarFallback>
-                              </Avatar>
+                        {/* Supplier Row (no card) */}
+                        <div 
+                          className="px-4 py-3 active:opacity-70 transition-opacity cursor-pointer bg-gray-50"
+                          onClick={() => router.push(`/fornecedor/${store.id}`)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-12 w-12 rounded-full">
+                              <AvatarFallback className="bg-blue-500 text-white font-semibold rounded-full">
+                                {store.nome.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
 
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <TypographySmall className="font-semibold truncate font-montserrat">@{store.nome}</TypographySmall>
-                                  <Badge className="bg-green-100 text-green-700 border-green-200 text-xs shrink-0 font-montserrat">
-                                    <Shield className="h-3 w-3 mr-1" />
-                                    Verificado
-                                  </Badge>
-                                </div>
-
-                                <div className="flex items-center gap-3 text-sm text-gray-600 font-montserrat">
-                                  <div className="flex items-center gap-1 shrink-0">
-                                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                                    <span className="font-medium">4.8</span>
-                                    <span className="text-xs">(127)</span>
-                                  </div>
-                                  <div className="flex items-center gap-1 shrink-0">
-                                    <MapPin className="h-3 w-3" />
-                                    <span className="text-xs truncate">2.5 km</span>
-                                  </div>
-                                </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <TypographySmall className="font-semibold truncate font-montserrat">@{store.nome}</TypographySmall>
                               </div>
 
-                              <div className="text-right shrink-0">
-                                <TypographySmall className="font-medium font-montserrat">{storeProducts.length}</TypographySmall>
-                                <TypographyMuted className="text-xs font-montserrat">itens</TypographyMuted>
+                              <div className="flex items-center gap-3 text-sm text-gray-600 font-montserrat">
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                                  <span className="font-medium">4.8</span>
+                                  <span className="text-xs">(127)</span>
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <MapPin className="h-3 w-3" />
+                                  <span className="text-xs truncate">2.5 km</span>
+                                </div>
                               </div>
                             </div>
-                          </Card>
-                        </div>
-
-                        {/* Separator */}
-                        <div className="px-4">
-                          <div className="h-3" />
-                          <div className="border-t border-gray-100" />
+                          </div>
+                          {/* Separator between supplier and product cards */}
+                          <div className="mt-3 mb-3 px-4">
+                            <div className="border-t border-gray-200 w-full" />
+                          </div>
                         </div>
 
                         {/* Products mini-row (horizontal scroll) */}
