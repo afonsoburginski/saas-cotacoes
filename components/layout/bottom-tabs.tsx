@@ -110,57 +110,47 @@ export function BottomTabs() {
   const displayRoutes = allRoutes.slice(0, 5)
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-safe">
-      <div className="mx-auto max-w-md mb-3">
-        <div className="bg-white/95 backdrop-blur-2xl rounded-full px-3 py-3 shadow-2xl border border-gray-200/50">
-          <div className="flex items-center justify-between">
-            {displayRoutes.map((route, index) => {
-              const isActive = pathname === route.href
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 safe-bottom md:hidden">
+      <div className="flex items-center justify-around px-2 py-2">
+        {displayRoutes.map((route) => {
+          const isActive = pathname === route.href
+          const isCartRoute = route.href === "/carrinho"
+          const cartCount = isClient ? getCartItemsCount() : 0
 
-              const isCartRoute = route.href === "/carrinho"
-              const cartCount = isClient ? getCartItemsCount() : 0
-
-              return (
-                <Link
-                  key={route.href}
-                  href={route.href}
+          return (
+            <Link
+              key={route.href}
+              href={route.href}
+              className="flex flex-col items-center justify-center min-w-[60px] py-2 px-3 transition-all duration-200"
+            >
+              <div className="relative mb-1">
+                <route.icon
                   className={cn(
-                    "flex items-center justify-center transition-all duration-500 ease-out relative group",
-                    isActive
-                      ? "bg-[#0052FF] rounded-full px-5 py-2 min-w-[100px] transform scale-105 shadow-lg"
-                      : "p-2 rounded-full min-w-[40px] hover:bg-gray-50 hover:scale-110",
+                    "h-6 w-6 transition-colors duration-200",
+                    isActive ? "text-blue-600" : "text-gray-600",
+                    isCartRoute && recentlyAdded ? "animate-bounce" : "",
                   )}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="relative">
-                      <route.icon
-                        className={cn(
-                          "h-4 w-4 transition-all duration-500 ease-out",
-                          isActive ? "text-white" : "text-gray-600 group-hover:text-gray-900",
-                          isCartRoute && recentlyAdded ? "animate-bounce" : "",
-                        )}
-                      />
-                      {isCartRoute && cartCount > 0 && (
-                        <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] rounded-full h-4 w-4 flex items-center justify-center font-bold">
-                          {cartCount > 9 ? "9+" : cartCount}
-                        </span>
-                      )}
-                    </div>
-                    {isActive && (
-                      <span className="text-white font-semibold text-xs whitespace-nowrap animate-in fade-in slide-in-from-left-2 duration-300">
-                        {route.label}
-                      </span>
-                    )}
-                  </div>
-
-                  {isActive && (
-                    <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-white/30 rounded-full animate-in fade-in duration-300" />
-                  )}
-                </Link>
-              )
-            })}
-          </div>
-        </div>
+                />
+                {isCartRoute && cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full h-4 w-4 flex items-center justify-center font-bold">
+                    {cartCount > 9 ? "9+" : cartCount}
+                  </span>
+                )}
+              </div>
+              <span 
+                className={cn(
+                  "text-[10px] font-medium transition-colors duration-200",
+                  isActive ? "text-blue-600" : "text-gray-600"
+                )}
+              >
+                {route.label}
+              </span>
+              {isActive && (
+                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-12 h-0.5 bg-blue-600 rounded-full" />
+              )}
+            </Link>
+          )
+        })}
       </div>
     </nav>
   )

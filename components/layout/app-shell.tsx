@@ -27,7 +27,7 @@ export function AppShell({ children, className }: AppShellProps) {
 
       <Topbar />
       <main className={cn("flex-1 overflow-auto pb-20 relative z-10", className)}>
-        <div className="px-6 py-3 h-full max-w-[1600px] mx-auto">{children}</div>
+        <div className="md:px-6 md:py-3 h-full max-w-[1600px] mx-auto">{children}</div>
       </main>
       <BottomTabs />
 

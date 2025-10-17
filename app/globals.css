@@ -254,3 +254,8 @@
     animation-delay: 6s;
   }
 }
+
+/* Text shadow utilities */
+.text-shadow-lg {
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}

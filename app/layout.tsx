@@ -45,6 +45,7 @@ export const metadata: Metadata = {
   title: "SaaS Cotações - Materiais de Construção",
   description: "Plataforma B2B para cotação de materiais de construção",
   generator: "v0.app",
+  themeColor: "#0052FF",
 }
 
 export default function RootLayout({
@@ -54,6 +55,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning className="light">
+      <head>
+        <meta name="theme-color" content="#0052FF" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+      </head>
       <body
         className={`min-h-screen bg-background font-sans antialiased ${GeistSans.variable} ${GeistMono.variable} ${inter.variable} ${montserrat.variable} ${marlinSoft.variable}`}
       >

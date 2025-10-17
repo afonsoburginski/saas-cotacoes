@@ -10,9 +10,7 @@ export interface FilterState {
   search: string
   categoria: string
   loja: string
-  precoMin: string
-  precoMax: string
-  ordenarPor: "preco-asc" | "preco-desc" | "rating-desc" | "prioridade-desc"
+  ordenarPor: "rating-desc" | "prioridade-desc"
 }
 
 interface FiltersBarProps {
@@ -56,12 +54,6 @@ export function FiltersBar({ filters, onFiltersChange, categorias, lojas }: Filt
             <SelectContent align="end" className="min-w-[140px]">
               <SelectItem value="prioridade-desc" className="cursor-pointer">
                 Relevância
-              </SelectItem>
-              <SelectItem value="preco-asc" className="cursor-pointer">
-                Menor preço
-              </SelectItem>
-              <SelectItem value="preco-desc" className="cursor-pointer">
-                Maior preço
               </SelectItem>
               <SelectItem value="rating-desc" className="cursor-pointer">
                 Avaliação
@@ -118,8 +110,6 @@ export function FiltersBar({ filters, onFiltersChange, categorias, lojas }: Filt
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="prioridade-desc">Relevância</SelectItem>
-              <SelectItem value="preco-asc">Menor preço</SelectItem>
-              <SelectItem value="preco-desc">Maior preço</SelectItem>
               <SelectItem value="rating-desc">Melhor avaliação</SelectItem>
             </SelectContent>
           </Select>
@@ -127,7 +117,7 @@ export function FiltersBar({ filters, onFiltersChange, categorias, lojas }: Filt
       </div>
 
       {/* Active Filters - Mobile optimized */}
-      {(filters.categoria || filters.loja || filters.precoMin || filters.precoMax || filters.search) && (
+      {(filters.categoria || filters.loja || filters.search) && (
         <div className="flex flex-wrap gap-1.5 md:gap-2 items-center pt-1">
           <span className="text-xs md:text-sm text-gray-500">Filtros:</span>
           
@@ -145,15 +135,6 @@ export function FiltersBar({ filters, onFiltersChange, categorias, lojas }: Filt
             </Badge>
           )}
           
-          {(filters.precoMin || filters.precoMax) && (
-            <Badge variant="secondary" className="bg-orange-50 text-orange-700 border-orange-200 rounded-md text-xs">
-              R$ {filters.precoMin || '0'} - R$ {filters.precoMax || '∞'}
-              <X className="h-3 w-3 ml-1 cursor-pointer" onClick={() => {
-                clearFilter("precoMin")
-                clearFilter("precoMax")
-              }} />
-            </Badge>
-          )}
           
           <Button 
             variant="ghost" 
@@ -163,8 +144,6 @@ export function FiltersBar({ filters, onFiltersChange, categorias, lojas }: Filt
               search: "",
               categoria: "",
               loja: "",
-              precoMin: "",
-              precoMax: "",
               ordenarPor: "prioridade-desc"
             })}
           >
