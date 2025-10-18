@@ -1,11 +1,10 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useState, useCallback } from "react"
+import { createContext, useContext, useState, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import type { Product } from "@/lib/types"
 import { findSimilarProducts, findBestProductsForCategory } from "@/lib/smart-comparison"
-import { mockProducts } from "@/lib/mock-data"
 import { useToast } from "@/hooks/use-toast"
 
 interface SmartComparisonContextType {
@@ -25,8 +24,23 @@ export function SmartComparisonProvider({ children }: { children: React.ReactNod
   const [comparisonProducts, setComparisonProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [loadingStates, setLoadingStates] = useState<Array<{ text: string }>>([])
+  const [allProducts, setAllProducts] = useState<Product[]>([])
   const { toast } = useToast()
   const router = useRouter()
+
+  // Fetch all products from API on mount
+  useEffect(() => {
+    async function fetchProducts() {
+      try {
+        const res = await fetch("/api/products")
+        const data = await res.json()
+        setAllProducts(data.data || [])
+      } catch (error) {
+        console.error("Failed to fetch products:", error)
+      }
+    }
+    fetchProducts()
+  }, [])
 
   const generateSmartComparison = useCallback(
     async (baseProduct: Product) => {
@@ -46,7 +60,7 @@ export function SmartComparisonProvider({ children }: { children: React.ReactNod
       await new Promise((resolve) => setTimeout(resolve, 800))
       await new Promise((resolve) => setTimeout(resolve, 600))
 
-      const similarProducts = findSimilarProducts(baseProduct, mockProducts, 3)
+      const similarProducts = findSimilarProducts(baseProduct, allProducts, 3)
       console.log("[v0] Found similar products:", similarProducts.length)
 
       const productsToCompare = [baseProduct, ...similarProducts.map((s) => s.product)]
@@ -69,7 +83,7 @@ export function SmartComparisonProvider({ children }: { children: React.ReactNod
       console.log("[v0] Navigating to comparison page with products:", productsToCompare.length)
       router.push("/comparar")
     },
-    [toast, router],
+    [toast, router, allProducts],
   )
 
   const generateCategoryComparison = useCallback(
@@ -90,7 +104,7 @@ export function SmartComparisonProvider({ children }: { children: React.ReactNod
       await new Promise((resolve) => setTimeout(resolve, 600))
       await new Promise((resolve) => setTimeout(resolve, 500))
 
-      const bestProducts = findBestProductsForCategory(categoria, mockProducts, 4)
+      const bestProducts = findBestProductsForCategory(categoria, allProducts, 4)
       console.log("[v0] Found best products for category:", bestProducts.length)
 
       setComparisonProducts(bestProducts)
@@ -107,7 +121,7 @@ export function SmartComparisonProvider({ children }: { children: React.ReactNod
       console.log("[v0] Navigating to comparison page with category products:", bestProducts.length)
       router.push("/comparar")
     },
-    [toast, router],
+    [toast, router, allProducts],
   )
 
   const clearComparison = useCallback(() => {

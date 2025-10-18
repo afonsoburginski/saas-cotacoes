@@ -11,6 +11,7 @@ interface CarrinhoAdaptiveProps {
   onClearCart: () => void
   onGeneratePDF: () => void
   onGenerateList: () => void
+  stores?: any[]
 }
 
 export function CarrinhoAdaptive({
@@ -19,7 +20,8 @@ export function CarrinhoAdaptive({
   onRemoveItem,
   onClearCart,
   onGeneratePDF,
-  onGenerateList
+  onGenerateList,
+  stores
 }: CarrinhoAdaptiveProps) {
   return (
     <>
@@ -31,6 +33,7 @@ export function CarrinhoAdaptive({
           onClearCart={onClearCart}
           onGeneratePDF={onGeneratePDF}
           onGenerateList={onGenerateList}
+          stores={stores}
         />
       </div>
       <div className="hidden md:block">
@@ -41,6 +44,7 @@ export function CarrinhoAdaptive({
           onClearCart={onClearCart}
           onGeneratePDF={onGeneratePDF}
           onGenerateList={onGenerateList}
+          stores={stores}
         />
       </div>
     </>

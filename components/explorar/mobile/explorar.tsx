@@ -1,13 +1,16 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useCallback, memo } from "react"
 import { ProductCardAdaptive } from "@/components/explorar/product-card-adaptive"
 import { FiltersBar, type FilterState } from "@/components/features/filters-bar"
-import { mockProducts, mockStores } from "@/lib/mock-data"
 import { useSmartComparison } from "@/hooks/use-smart-comparison"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TypographyH3, TypographyH4, TypographyP, TypographySmall, TypographyMuted } from "@/components/ui/typography"
+import { ProductRowsSkeleton } from "./product-rows-skeleton"
+import { SuppliersSkeleton } from "./suppliers-skeleton"
+import { VirtualizedProductList } from "../virtualized-product-list"
+import { useExplorarStore } from "@/stores/explorar-store"
 import { 
   Search, 
   ShoppingBag, 
@@ -21,41 +24,101 @@ import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
-import { Input } from "@/components/ui/input"
+import { OptimizedSearchInput } from "@/components/ui/optimized-search-input"
 import Link from "next/link"
 
 interface ExplorarMobileProps {
   filters: FilterState
-  setFilters: (filters: FilterState) => void
+  setFilters: React.Dispatch<React.SetStateAction<FilterState>>
   filteredProducts: any[]
   categorias: string[]
   lojas: string[]
+  stores: any[]
+  isLoading?: boolean
 }
 
-export function ExplorarMobile({ 
+const ExplorarMobile = memo(function ExplorarMobile({ 
   filters, 
   setFilters, 
   filteredProducts, 
   categorias, 
-  lojas 
+  lojas,
+  stores,
+  isLoading: isLoadingData = false
 }: ExplorarMobileProps) {
   const { generateCategoryComparison, isLoading } = useSmartComparison()
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState("produtos")
+  
+  // Use Zustand para compartilhar estado com desktop
+  const { activeTab, supplierSearch, setActiveTab, setSupplierSearch } = useExplorarStore()
 
-  // Listen for supplier modal events from ProductCard
+  // Listen for supplier modal events from ProductCard - memoized
+  const handleOpenSupplierModal = useCallback((event: CustomEvent) => {
+    const { storeId } = event.detail
+    router.push(`/fornecedor/${storeId}`)
+  }, [router])
+
   useEffect(() => {
-    const handleOpenSupplierModal = (event: CustomEvent) => {
-      const { storeId } = event.detail
-      router.push(`/fornecedor/${storeId}`)
-    }
-
     window.addEventListener('openSupplierModal', handleOpenSupplierModal as EventListener)
     
     return () => {
       window.removeEventListener('openSupplierModal', handleOpenSupplierModal as EventListener)
     }
-  }, [router])
+  }, [handleOpenSupplierModal])
+
+  // Group products by category for Netflix-style rows - memoized
+  const productsByCategory = useMemo(() => {
+    if (!filteredProducts.length) return {}
+    
+    const grouped: { [key: string]: any[] } = {}
+    
+    filteredProducts.forEach(product => {
+      if (!grouped[product.categoria]) {
+        grouped[product.categoria] = []
+      }
+      grouped[product.categoria].push(product)
+    })
+    
+    return grouped
+  }, [filteredProducts])
+
+  // Memoized handlers for better performance
+  const handleSearchChange = useCallback((value: string) => {
+    if (activeTab === "produtos") {
+      setFilters(prev => ({ ...prev, search: value }))
+    } else {
+      setSupplierSearch(value)
+    }
+  }, [activeTab, setFilters, setSupplierSearch])
+
+  const handleTabChange = useCallback((value: string) => {
+    setActiveTab(value as 'produtos' | 'lojas')
+    // Limpa os filtros ao mudar de tab
+    if (value === "produtos") {
+      setSupplierSearch("")
+    } else {
+      setFilters(prev => ({ ...prev, search: "" }))
+    }
+  }, [setFilters, setActiveTab, setSupplierSearch])
+
+  // Filtrar fornecedores baseado na busca
+  const filteredStores = useMemo(() => {
+    if (!supplierSearch) return stores.filter(s => s.status === "ativo")
+    
+    const searchLower = supplierSearch.toLowerCase()
+    return stores.filter(s => 
+      s.status === "ativo" && 
+      (s.nome.toLowerCase().includes(searchLower) || 
+       s.cidade?.toLowerCase().includes(searchLower))
+    )
+  }, [stores, supplierSearch])
+
+  // Placeholder e value dinâmicos baseados na tab ativa
+  const searchPlaceholder = activeTab === "produtos" 
+    ? "Buscar produtos, materiais..." 
+    : "Buscar fornecedores, empresas..."
+  
+  const searchValue = activeTab === "produtos" ? filters.search : supplierSearch
 
   return (
     <div className="min-h-screen bg-[#FAFAFA]">
@@ -74,11 +137,10 @@ export function ExplorarMobile({
         <div className="px-4 pt-2 pb-4 relative z-10">
           {/* Search Bar */}
           <div className="relative mb-3">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-600 z-10" />
-            <Input
-              placeholder="Buscar produtos, materiais..."
-              value={filters.search}
-              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+            <OptimizedSearchInput
+              placeholder={searchPlaceholder}
+              value={searchValue}
+              onChange={handleSearchChange}
               className="pl-12 pr-4 h-12 !bg-white border border-gray-200 rounded-2xl text-base placeholder:text-gray-400 focus:!bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium shadow-sm font-montserrat"
             />
           </div>
@@ -94,7 +156,7 @@ export function ExplorarMobile({
 
       {/* Tabs */}
       <div className="bg-white border-b border-gray-100">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="w-full bg-transparent justify-start h-auto p-0 gap-0">
             <TabsTrigger 
               value="produtos" 
@@ -115,23 +177,30 @@ export function ExplorarMobile({
           {/* Products Tab */}
           <TabsContent value="produtos" className="mt-0">
             <div className="py-0">
-              {/* Results Header */}
-              {filteredProducts.length > 0 && (
-                <div className="flex items-center justify-between mb-4 px-4">
-                  <TypographySmall className="text-gray-500 font-montserrat">
-                    {filteredProducts.length} produtos encontrados
-                  </TypographySmall>
-                  
-                  {filters.search && (
-                    <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
-                      "{filters.search.length > 15 ? filters.search.substring(0, 15) + '...' : filters.search}"
-                    </Badge>
-                  )}
+              {/* Show skeleton while loading */}
+              {isLoadingData ? (
+                <div className="py-4">
+                  <ProductRowsSkeleton />
                 </div>
-              )}
+              ) : (
+                <>
+                  {/* Results Header */}
+                  {filteredProducts.length > 0 && (
+                    <div className="flex items-center justify-between mb-4 px-4">
+                      <TypographySmall className="text-gray-500 font-montserrat">
+                        {filteredProducts.length} produtos encontrados
+                      </TypographySmall>
+                      
+                      {filters.search && (
+                        <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+                          "{filters.search.length > 15 ? filters.search.substring(0, 15) + '...' : filters.search}"
+                        </Badge>
+                      )}
+                    </div>
+                  )}
 
-              {/* Products Rows - Netflix Style */}
-              {filteredProducts.length === 0 ? (
+                  {/* Products Rows - Netflix Style */}
+                  {filteredProducts.length === 0 ? (
                 <div className="text-center py-16 bg-white rounded-2xl mx-4">
                   <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
                     <Search className="h-8 w-8 text-gray-400" />
@@ -175,18 +244,17 @@ export function ExplorarMobile({
                           
                           {/* Horizontal Scrollable Row */}
                           <div className="overflow-x-auto scrollbar-hide">
-                            <div className="flex gap-3 px-4 pb-2">
-                              {categoryProducts.map((product) => (
-                                <div key={product.id} className="flex-none w-[45vw]">
-                                  <ProductCardAdaptive product={product} alwaysShowButtons={true} />
-                                </div>
-                              ))}
-                            </div>
+                            <VirtualizedProductList 
+                              products={categoryProducts} 
+                              alwaysShowButtons={true}
+                            />
                           </div>
                         </div>
                       )
                     })}
                 </div>
+              )}
+                </>
               )}
             </div>
           </TabsContent>
@@ -194,20 +262,32 @@ export function ExplorarMobile({
           {/* Suppliers Tab */}
           <TabsContent value="lojas" className="mt-0">
             <div className="py-4">
-              <div className="flex items-center justify-between mb-4 px-4">
-                <TypographyH4 className="font-montserrat">Fornecedores Disponíveis</TypographyH4>
-                <Badge variant="outline" className="bg-gray-50">
-                  {mockStores.filter(s => s.status === "ativo").length} fornecedores
-                </Badge>
-              </div>
+              {isLoadingData ? (
+                <SuppliersSkeleton />
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-4 px-4">
+                    <TypographyH4 className="font-montserrat">Fornecedores Disponíveis</TypographyH4>
+                    <Badge variant="outline" className="bg-gray-50">
+                      {filteredStores.length} fornecedores
+                    </Badge>
+                  </div>
 
-              {/* Supplier rows with mini product carousel */}
-              <div className="space-y-6">
-                {mockStores
-                  .filter(s => s.status === "ativo")
+                  {/* Supplier rows with mini product carousel */}
+                  {filteredStores.length === 0 ? (
+                    <div className="text-center py-16 bg-white rounded-2xl mx-4">
+                      <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                        <Search className="h-8 w-8 text-gray-400" />
+                      </div>
+                      <TypographyH4 className="mb-2 font-montserrat">Nenhum fornecedor encontrado</TypographyH4>
+                      <TypographyMuted className="font-montserrat">Tente buscar por outro termo</TypographyMuted>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                {filteredStores
                   .sort((a, b) => b.priorityScore - a.priorityScore)
                   .map((store) => {
-                    const storeProducts = mockProducts
+                    const storeProducts = filteredProducts
                       .filter(p => p.storeId === store.id)
                       .slice(0, 6) // show a few products like a preview
 
@@ -252,23 +332,25 @@ export function ExplorarMobile({
                         {/* Products mini-row (horizontal scroll) */}
                         {storeProducts.length > 0 && (
                           <div className="overflow-x-auto scrollbar-hide">
-                            <div className="flex gap-3 px-4 pb-2">
-                              {storeProducts.map((product) => (
-                                <div key={product.id} className="flex-none w-[45vw]">
-                                  <ProductCardAdaptive product={product} alwaysShowButtons={true} />
-                                </div>
-                              ))}
-                            </div>
+                            <VirtualizedProductList 
+                              products={storeProducts} 
+                              alwaysShowButtons={true}
+                            />
                           </div>
                         )}
                       </div>
                     )
                   })}
-              </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </TabsContent>
         </Tabs>
       </div>
     </div>
   )
-}
+})
+
+export { ExplorarMobile }

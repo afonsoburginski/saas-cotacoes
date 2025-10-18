@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import { ProductCardMobile } from "./mobile/product-card"
 import { ProductCardDesktop } from "./desktop/product-card"
 import type { Product } from "@/lib/types"
@@ -9,7 +10,7 @@ interface ProductCardAdaptiveProps {
   alwaysShowButtons?: boolean
 }
 
-export function ProductCardAdaptive({ product, alwaysShowButtons = false }: ProductCardAdaptiveProps) {
+const ProductCardAdaptive = memo(function ProductCardAdaptive({ product, alwaysShowButtons = false }: ProductCardAdaptiveProps) {
   // Se alwaysShowButtons for true, usa o layout mobile em ambas as versões
   if (alwaysShowButtons) {
     return <ProductCardMobile product={product} />
@@ -28,5 +29,7 @@ export function ProductCardAdaptive({ product, alwaysShowButtons = false }: Prod
       </div>
     </>
   )
-}
+})
+
+export { ProductCardAdaptive }
 

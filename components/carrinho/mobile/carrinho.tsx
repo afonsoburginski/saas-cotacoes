@@ -15,6 +15,7 @@ interface CarrinhoMobileProps {
   onClearCart: () => void
   onGeneratePDF: () => void
   onGenerateList: () => void
+  stores?: any[]
 }
 
 export function CarrinhoMobile({
@@ -23,7 +24,8 @@ export function CarrinhoMobile({
   onRemoveItem,
   onClearCart,
   onGeneratePDF,
-  onGenerateList
+  onGenerateList,
+  stores
 }: CarrinhoMobileProps) {
   return (
     <div className="min-h-screen flex flex-col">
@@ -75,42 +77,19 @@ export function CarrinhoMobile({
             </Button>
           </div>
         ) : (
-          <div className="pb-48">
+          <div className="pb-24">
             {/* Cart Items - Full Width */}
             <CartGroupByStore 
               cartItems={cartItems} 
               onUpdateQuantity={onUpdateQuantity} 
               onRemoveItem={onRemoveItem} 
+              onGeneratePDF={onGeneratePDF}
+              onGenerateList={onGenerateList}
+              stores={stores}
             />
           </div>
         )}
       </div>
-
-      {/* Actions Fixo no Rodapé - Acima da Bottom Tab */}
-      {cartItems.length > 0 && (
-        <div className="fixed bottom-32 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 shadow-lg z-10">
-          <div className="flex gap-2">
-            <Button 
-              onClick={onGenerateList} 
-              className="flex-1 bg-[#0052FF] hover:bg-[#0052FF]/90 text-white font-montserrat"
-              size="lg"
-            >
-              <ListPlus className="h-4 w-4 mr-2" />
-              Enviar Orçamento
-            </Button>
-            
-            <Button 
-              onClick={onGeneratePDF} 
-              variant="outline"
-              className="flex-1 border-gray-200 text-gray-700 hover:bg-gray-50 font-montserrat"
-              size="lg"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              PDF
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

@@ -1,19 +1,15 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { useSmartComparison } from "@/hooks/use-smart-comparison"
 import { useCartStore } from "@/stores/cart-store"
-import { useListsStore } from "@/stores/lists-store"
 import { useToast } from "@/hooks/use-toast"
-import { Star, ShoppingCart, ArrowUpDown, Sparkles, Check } from "lucide-react"
+import { Star, ShoppingCart, Sparkles } from "lucide-react"
+import { TypographyH3, TypographyH4, TypographyMuted, TypographySmall } from "@/components/ui/typography"
 import Image from "next/image"
 import Link from "next/link"
-import { useState, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { PageBackground } from "@/components/layout/page-background"
+import { useState, useEffect, useMemo } from "react"
 
 function FallbackImage({ src, alt }: { src?: string; alt: string }) {
   const [imgSrc, setImgSrc] = useState(src || "/placeholder.svg?height=80&width=80")
@@ -32,165 +28,190 @@ function FallbackImage({ src, alt }: { src?: string; alt: string }) {
 export function CompararDesktop() {
   const { comparisonProducts, clearComparison } = useSmartComparison()
   const addToCart = useCartStore((state) => state.addToCart)
-  const recentlyAdded = useCartStore((state) => state.recentlyAdded)
-  const createList = useListsStore((state) => state.createList)
   const { toast } = useToast()
-  const [sortBy, setSortBy] = useState<"preco" | "rating">("preco")
+  const [activeProductId, setActiveProductId] = useState<string>("")
+
+  const topRated = useMemo(() => {
+    return [...comparisonProducts].sort((a, b) => b.rating - a.rating)[0]
+  }, [comparisonProducts])
+
+  const visibleProducts = useMemo(() => {
+    return comparisonProducts.filter(p => !activeProductId || p.id === activeProductId)
+  }, [comparisonProducts, activeProductId])
 
   useEffect(() => {
     // desktop page analytics/logs
   }, [comparisonProducts])
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(price)
-  }
-
-  const renderStars = (rating: number) => {
-    return Array.from({ length: 5 }, (_, i) => (
-      <Star
-        key={i}
-        className={`h-3 w-3 ${i < Math.floor(rating) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
-      />
-    ))
-  }
-
-  const sortedProducts = [...comparisonProducts].sort((a, b) => {
-    if (sortBy === "preco") return a.preco - b.preco
-    return b.rating - a.rating
-  })
-
   if (comparisonProducts.length === 0) {
     return (
-      <>
-        <PageBackground />
-        <div className="space-y-6 pt-4 px-4">
-          <div className="text-center py-12">
-            <div className="mb-6">
-              <Sparkles className="h-16 w-16 mx-auto text-[#0052FF]/40 mb-4" />
-              <p className="text-lg font-bold text-gray-900 mb-2 font-marlin">Nenhuma comparação ativa</p>
-              <p className="text-gray-600 font-montserrat">Clique em "Comparação Inteligente" em qualquer produto para começar</p>
-            </div>
-            <Button asChild className="bg-[#0052FF] hover:bg-[#0052FF]/90 text-white font-montserrat">
+      <div className="min-h-screen bg-[#FAFAFA]">
+        <div className="bg-[#0052FF] relative overflow-hidden py-12">
+          <div 
+            className="absolute inset-0 opacity-40"
+            style={{
+              backgroundImage: 'url(/texture.png)',
+              backgroundSize: '150px 150px',
+              backgroundRepeat: 'repeat',
+              mixBlendMode: 'overlay'
+            }}
+          />
+          <div className="text-center relative z-10">
+            <Sparkles className="h-16 w-16 mx-auto text-white/70 mb-4" />
+            <TypographyH3 className="text-white font-montserrat mb-2">Nenhuma comparação ativa</TypographyH3>
+            <TypographyMuted className="text-white/80 font-montserrat">Clique em "Comparação Inteligente" em qualquer produto para começar</TypographyMuted>
+            <Button asChild className="mt-6 bg-white text-[#0052FF] hover:bg-white/90 font-montserrat">
               <Link href="/explorar">Explorar Produtos</Link>
             </Button>
           </div>
         </div>
-      </>
+      </div>
     )
   }
 
   return (
-    <>
-      <PageBackground />
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: "easeOut" }} className="space-y-6">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.6 }} className="flex items-center justify-end pt-4 px:4 md:px-4">
+    <div className="min-h-screen bg-[#FAFAFA]">
+      {/* Header */}
+      <div className="bg-[#0052FF] relative overflow-hidden">
+        <div 
+          className="absolute inset-0 opacity-40"
+          style={{
+            backgroundImage: 'url(/texture.png)',
+            backgroundSize: '150px 150px',
+            backgroundRepeat: 'repeat',
+            mixBlendMode: 'overlay'
+          }}
+        />
+        <div className="container mx-auto max-w-[1200px] px-6 py-8 relative z-10 text-center">
+          <TypographyH3 className="text-white font-montserrat mb-2">Comparação Inteligente</TypographyH3>
+          <TypographyMuted className="text-white/80 font-montserrat">Veja diferenças principais entre produtos</TypographyMuted>
+        </div>
+      </div>
+
+      <div className="container mx-auto max-w-[1200px] px-6 py-6">
+        {/* Filter chips */}
+        <div className="flex items-center justify-between mb-6">
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setSortBy(sortBy === "preco" ? "rating" : "preco")} className="border-gray-200 text-gray-700 hover:bg-gray-50 font-montserrat">
-              <ArrowUpDown className="h-4 w-4 mr-2" />
-              Ordenar por {sortBy === "preco" ? "Avaliação" : "Preço"}
-            </Button>
-            <Button variant="outline" onClick={clearComparison} className="border-gray-200 text-gray-700 hover:bg-gray-50 font-montserrat">
-              Nova Comparação
-            </Button>
+            <button
+              onClick={() => setActiveProductId("")}
+              className={`px-4 py-2 rounded-lg text-sm font-montserrat transition-colors ${
+                activeProductId === "" ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              Todos ({comparisonProducts.length})
+            </button>
+            {comparisonProducts.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setActiveProductId(p.id)}
+                className={`px-4 py-2 rounded-lg text-sm font-montserrat transition-colors ${
+                  activeProductId === p.id ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                {p.nome}
+              </button>
+            ))}
           </div>
-        </motion.div>
+          <Button variant="outline" onClick={clearComparison} className="font-montserrat">
+            Nova Comparação
+          </Button>
+        </div>
 
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2, duration: 0.6, ease: "easeOut" }}>
-          <Card className="border-gray-200 bg-white rounded-2xl shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-gray-900 font-marlin">
-                <Sparkles className="h-5 w-5 text-[#0052FF]" />
-                Comparação Inteligente ({comparisonProducts.length} produtos)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-32 text-gray-700 font-bold font-montserrat">Produto</TableHead>
-                      {sortedProducts.map((product) => (
-                        <TableHead key={product.id} className="min-w-48 text-gray-900 font-montserrat">
-                          <div className="flex items-center justify-between">
-                            <span className="truncate font-semibold">{product.nome}</span>
-                          </div>
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell className="font-semibold text-gray-700 font-montserrat">Imagem</TableCell>
-                      {sortedProducts.map((product) => (
-                        <TableCell key={product.id}>
-                          <div className="aspect-square w-20 relative bg-gray-50 rounded-lg overflow-hidden">
-                            <FallbackImage src={product.imagemUrl} alt={product.nome} />
-                          </div>
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-semibold text-gray-700 font-montserrat">Loja</TableCell>
-                      {sortedProducts.map((product) => (
-                        <TableCell key={product.id}>
-                          <Badge variant="secondary" className="bg-gray-100 text-gray-700 font-montserrat">{product.storeNome}</Badge>
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-semibold text-gray-700 font-montserrat">Preço</TableCell>
-                      {sortedProducts.map((product) => (
-                        <TableCell key={product.id}>
-                          <div className="text-lg font-bold text-[#0052FF] font-montserrat">{formatPrice(product.preco)}</div>
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-semibold text-gray-700 font-montserrat">Estoque</TableCell>
-                      {sortedProducts.map((product) => (
-                        <TableCell key={product.id}>
-                          <span className={`${product.estoque > 0 ? "text-gray-600" : "text-red-600"} font-montserrat`}>
-                            {product.estoque} unidades
-                          </span>
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-semibold text-gray-700 font-montserrat">Avaliação</TableCell>
-                      {sortedProducts.map((product) => (
-                        <TableCell key={product.id}>
-                          <div className="flex items-center gap-1">
-                            {renderStars(product.rating)}
-                            <span className="text-sm text-gray-600 ml-1 font-montserrat">({product.rating})</span>
-                          </div>
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-semibold text-gray-700 font-montserrat">Categoria</TableCell>
-                      {sortedProducts.map((product) => (
-                        <TableCell key={product.id}>
-                          <Badge variant="outline" className="border-gray-200 text-gray-700 font-montserrat">{product.categoria}</Badge>
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  </TableBody>
-                </Table>
+        {/* Products Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {visibleProducts.map((product) => (
+            <div 
+              key={product.id} 
+              className={`bg-white rounded-2xl shadow-sm overflow-hidden transition-all relative ${
+                product.id === topRated?.id ? 'ring-2 ring-blue-500/50' : ''
+              }`}
+            >
+              {/* Badge Recomendado - Absolute positioning */}
+              {product.id === topRated?.id && (
+                <div className="absolute top-4 right-4 z-10">
+                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-3 py-1.5 rounded-full shadow-lg">
+                    <TypographySmall className="text-white font-semibold font-montserrat flex items-center gap-1 text-xs">
+                      <Sparkles className="h-3 w-3" />
+                      Recomendado
+                    </TypographySmall>
+                  </div>
+                </div>
+              )}
+              
+              {/* Image - Full Width, Maior */}
+              <div className="relative h-80 w-full bg-gray-50 overflow-hidden">
+                <FallbackImage src={product.imagemUrl} alt={product.nome} />
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.6 }} className="text-center pb-6">
-          <Button asChild variant="outline" className="border-gray-200 text-gray-700 hover:bg-gray-50 font-montserrat">
+              <div className="p-4">
+                {/* Product Info - Comprimido */}
+                <div className="flex flex-col">
+                  <TypographyH4 className="font-montserrat mb-2 line-clamp-2">{product.nome}</TypographyH4>
+
+                  <div className="space-y-2 mb-3">
+                    {/* Rating */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex">
+                        {Array.from({ length: 5 }, (_, i) => (
+                          <Star
+                            key={i}
+                            className={`h-3.5 w-3.5 ${
+                              i < Math.floor(product.rating)
+                                ? "fill-yellow-400 text-yellow-400"
+                                : "text-gray-300"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <TypographySmall className="text-gray-600 font-montserrat text-xs">{product.rating}</TypographySmall>
+                    </div>
+
+                    {/* Store & Category */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant="secondary" className="bg-gray-100 text-gray-700 font-montserrat text-xs">
+                        {product.storeNome}
+                      </Badge>
+                      <Badge variant="outline" className="border-gray-200 text-gray-600 font-montserrat text-xs">
+                        {product.categoria}
+                      </Badge>
+                    </div>
+
+                    {/* Stock */}
+                    <div>
+                      <TypographySmall className={`font-montserrat text-xs ${product.estoque > 0 ? 'text-gray-600' : 'text-red-600'}`}>
+                        {product.estoque > 0 ? `${product.estoque} unidades` : 'Sem estoque'}
+                      </TypographySmall>
+                    </div>
+                  </div>
+
+                  {/* Add to Cart - Sempre no final */}
+                  <Button
+                    onClick={() => {
+                      addToCart(product, 1)
+                      toast({
+                        title: "Produto adicionado",
+                        description: `${product.nome} foi adicionado ao carrinho`,
+                      })
+                    }}
+                    className="w-full bg-[#0052FF] hover:bg-[#0052FF]/90 text-white font-montserrat text-sm h-9"
+                  >
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    Adicionar ao Carrinho
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Continue */}
+        <div className="text-center mt-8">
+          <Button asChild variant="outline" className="font-montserrat">
             <Link href="/explorar">Continuar Explorando</Link>
           </Button>
-        </motion.div>
-      </motion.div>
-    </>
+        </div>
+      </div>
+    </div>
   )
 }
 

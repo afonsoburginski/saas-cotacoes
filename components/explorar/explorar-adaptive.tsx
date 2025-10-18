@@ -1,12 +1,15 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, memo } from "react"
 import { ExplorarMobile } from "./mobile/explorar"
 import { ExplorarDesktop } from "./desktop/explorar"
 import { type FilterState } from "@/components/features/filters-bar"
-import { mockProducts, mockStores } from "@/lib/mock-data"
+import { useProducts } from "@/hooks/use-products"
+import { useStores } from "@/hooks/use-stores"
+import { useCategories } from "@/hooks/use-categories"
+import { useDebounce } from "@/hooks/use-debounce"
 
-export function ExplorarAdaptive() {
+const ExplorarAdaptive = memo(function ExplorarAdaptive() {
   const [filters, setFilters] = useState<FilterState>({
     search: "",
     categoria: "",
@@ -14,32 +17,30 @@ export function ExplorarAdaptive() {
     ordenarPor: "prioridade-desc",
   })
 
-  const categorias = useMemo(() => {
-    return Array.from(new Set(mockProducts.map((p) => p.categoria))).sort()
-  }, [])
+  // Debounce search to avoid too many API calls - mais rápido para melhor UX
+  const debouncedSearch = useDebounce(filters.search)
 
+  // Fetch data with React Query
+  const { data: productsData, isLoading: isLoadingProducts } = useProducts({
+    search: debouncedSearch || undefined,
+    categoria: filters.categoria || undefined,
+    loja: filters.loja || undefined,
+  })
+
+  const { data: storesData, isLoading: isLoadingStores } = useStores({ status: "ativo" })
+  const { data: categoriesData } = useCategories()
+
+  const products = productsData?.data || []
+  const stores = storesData?.data || []
+  const categorias = categoriesData?.data || []
   const lojas = useMemo(() => {
-    return Array.from(new Set(mockProducts.map((p) => p.storeNome))).sort()
-  }, [])
+    return Array.from(new Set(products.map((p) => p.storeNome))).sort()
+  }, [products])
 
   const filteredProducts = useMemo(() => {
-    const filtered = mockProducts.filter((product) => {
-      if (!product.ativo) return false
-
-      if (filters.search && !product.nome.toLowerCase().includes(filters.search.toLowerCase())) {
-        return false
-      }
-
-      if (filters.categoria && product.categoria !== filters.categoria) {
-        return false
-      }
-
-      if (filters.loja && product.storeNome !== filters.loja) {
-        return false
-      }
-
-      return true
-    })
+    if (!products.length) return []
+    
+    const filtered = [...products]
 
     // Apply sorting with priority consideration
     filtered.sort((a, b) => {
@@ -51,8 +52,8 @@ export function ExplorarAdaptive() {
       if (!hasRealImageA && hasRealImageB) return 1
       
       // Se ambos têm imagens reais ou ambos não têm, aplica a ordenação selecionada
-      const storeA = mockStores.find((s) => s.id === a.storeId)
-      const storeB = mockStores.find((s) => s.id === b.storeId)
+      const storeA = stores.find((s) => s.id === a.storeId)
+      const storeB = stores.find((s) => s.id === b.storeId)
 
       switch (filters.ordenarPor) {
         case "rating-desc":
@@ -64,7 +65,7 @@ export function ExplorarAdaptive() {
     })
 
     return filtered
-  }, [filters])
+  }, [products, stores, filters.ordenarPor])
 
   return (
     <>
@@ -76,6 +77,8 @@ export function ExplorarAdaptive() {
           filteredProducts={filteredProducts}
           categorias={categorias}
           lojas={lojas}
+          stores={stores}
+          isLoading={isLoadingProducts || isLoadingStores}
         />
       </div>
       
@@ -87,8 +90,12 @@ export function ExplorarAdaptive() {
           filteredProducts={filteredProducts}
           categorias={categorias}
           lojas={lojas}
+          stores={stores}
+          isLoading={isLoadingProducts || isLoadingStores}
         />
       </div>
     </>
   )
-}
+})
+
+export { ExplorarAdaptive }

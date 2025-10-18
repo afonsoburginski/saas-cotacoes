@@ -15,6 +15,7 @@ interface CarrinhoDesktopProps {
   onClearCart: () => void
   onGeneratePDF: () => void
   onGenerateList: () => void
+  stores?: any[]
 }
 
 export function CarrinhoDesktop({
@@ -23,7 +24,8 @@ export function CarrinhoDesktop({
   onRemoveItem,
   onClearCart,
   onGeneratePDF,
-  onGenerateList
+  onGenerateList,
+  stores
 }: CarrinhoDesktopProps) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
@@ -79,7 +81,8 @@ export function CarrinhoDesktop({
                 <CartGroupByStore 
                   cartItems={cartItems} 
                   onUpdateQuantity={onUpdateQuantity} 
-                  onRemoveItem={onRemoveItem} 
+                  onRemoveItem={onRemoveItem}
+                  stores={stores}
                 />
               </div>
 
@@ -99,7 +102,7 @@ export function CarrinhoDesktop({
                         className="w-full bg-[#0052FF] hover:bg-[#0052FF]/90 text-white font-montserrat"
                       >
                         <ListPlus className="h-4 w-4 mr-2" />
-                        Enviar Orçamento
+                        Gerar Orçamento
                       </Button>
                       
                       <Button 

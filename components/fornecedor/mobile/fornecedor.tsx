@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -10,6 +10,7 @@ import { ProductCardAdaptive } from "@/components/explorar/product-card-adaptive
 import { TypographyH3, TypographyH4, TypographyP, TypographySmall, TypographyMuted } from "@/components/ui/typography"
 import { Input } from "@/components/ui/input"
 import { FaArrowRightLong } from "react-icons/fa6"
+import { useDebounce } from "@/hooks/use-debounce"
 import { 
   Star, 
   MapPin, 
@@ -38,10 +39,15 @@ export function FornecedorMobile({ store, storeProducts }: FornecedorMobileProps
   const [activeTab, setActiveTab] = useState("produtos")
   const [searchTerm, setSearchTerm] = useState("")
   
+  // Debounce search
+  const debouncedSearch = useDebounce(searchTerm)
+  
   // Filter products by search
-  const filteredProducts = searchTerm 
-    ? storeProducts.filter(p => p.nome.toLowerCase().includes(searchTerm.toLowerCase()))
-    : storeProducts
+  const filteredProducts = useMemo(() => {
+    return debouncedSearch 
+      ? storeProducts.filter(p => p.nome.toLowerCase().includes(debouncedSearch.toLowerCase()))
+      : storeProducts
+  }, [storeProducts, debouncedSearch])
     
   // Group products by category
   const productsByCategory = filteredProducts.reduce((acc: any, product: any) => {

@@ -8,6 +8,7 @@ import { SmartComparisonProvider } from "@/hooks/use-smart-comparison"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { Providers } from "@/lib/providers"
+import { QueryProvider } from "@/providers/query-provider"
 import { Suspense } from "react"
 
 import { GeistSans } from "geist/font/sans"
@@ -62,22 +63,24 @@ export default function RootLayout({
       <body
         className={`min-h-screen bg-background font-sans antialiased ${GeistSans.variable} ${GeistMono.variable} ${inter.variable} ${montserrat.variable} ${marlinSoft.variable}`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem={false}
-          disableTransitionOnChange
-          forcedTheme="light"
-        >
-          <Providers>
-            <RoleProvider>
-              <SmartComparisonProvider>
-                <Suspense>{children}</Suspense>
-                <Toaster />
-              </SmartComparisonProvider>
-            </RoleProvider>
-          </Providers>
-        </ThemeProvider>
+        <QueryProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="light"
+            enableSystem={false}
+            disableTransitionOnChange
+            forcedTheme="light"
+          >
+            <Providers>
+              <RoleProvider>
+                <SmartComparisonProvider>
+                  <Suspense>{children}</Suspense>
+                  <Toaster />
+                </SmartComparisonProvider>
+              </RoleProvider>
+            </Providers>
+          </ThemeProvider>
+        </QueryProvider>
         <Analytics />
       </body>
     </html>

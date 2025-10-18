@@ -5,6 +5,7 @@ import { useCartStore, type CartItem } from "@/stores/cart-store"
 import { useToast } from "@/hooks/use-toast"
 import { useListsStore } from "@/stores/lists-store"
 import { useRouter } from "next/navigation"
+import { useStores } from "@/hooks/use-stores"
 import jsPDF from "jspdf"
 import { PageBackground } from "@/components/layout/page-background"
 import { CarrinhoAdaptive } from "@/components/carrinho"
@@ -25,6 +26,8 @@ import {
   const router = useRouter()
   const { toast } = useToast()
   const [showQuoteDialog, setShowQuoteDialog] = useState(false)
+  const { data: storesData } = useStores()
+  const stores = storesData?.data || []
   
   console.log("🛒 [Zustand] Carrinho carregado com", cartItems.length, "itens:", cartItems)
 
@@ -34,14 +37,12 @@ import {
     const groupedItems = cartItems.reduce((groups, item) => {
       const storeId = item.storeId
       if (!groups[storeId]) {
-        groups[storeId] = { storeNome: item.storeNome, items: [], subtotal: 0 }
+        groups[storeId] = { storeNome: item.storeNome, items: [] }
       }
       groups[storeId].items.push(item)
-      groups[storeId].subtotal += item.precoUnit * item.qty
       return groups
-    }, {} as Record<string, { storeNome: string; items: CartItem[]; subtotal: number }>)
+    }, {} as Record<string, { storeNome: string; items: CartItem[] }>)
 
-    const total = Object.values(groupedItems).reduce((sum, group) => sum + group.subtotal, 0)
     const date = new Date().toLocaleDateString('pt-BR')
     
     // Criar PDF
@@ -49,7 +50,7 @@ import {
     
     // Header
     doc.setFontSize(20)
-    doc.text('ORÇAMENTO DE MATERIAIS', 20, 30)
+    doc.text('SOLICITACAO DE ORCAMENTO', 20, 30)
     
     doc.setFontSize(12)
     doc.text(`Data: ${date}`, 20, 45)
@@ -70,26 +71,22 @@ import {
       doc.setFont('helvetica', 'normal')
       
       group.items.forEach(item => {
-        const itemTotal = item.precoUnit * item.qty
         doc.text(`• ${item.productNome}`, 25, yPosition)
         yPosition += 7
-        doc.text(`  Qtd: ${item.qty} | Preço: R$ ${item.precoUnit.toFixed(2)} | Total: R$ ${itemTotal.toFixed(2)}`, 30, yPosition)
+        doc.text(`  Quantidade: ${item.qty}`, 30, yPosition)
         yPosition += 12
       })
       
-      // Subtotal
-      doc.setFont('helvetica', 'bold')
-      doc.text(`Subtotal: R$ ${group.subtotal.toFixed(2)}`, 25, yPosition)
-      yPosition += 20
+      yPosition += 10
     })
     
-    // Total geral
-    doc.setFontSize(14)
-    doc.setFont('helvetica', 'bold')
-    doc.text(`TOTAL GERAL: R$ ${total.toFixed(2)}`, 20, yPosition)
+    // Footer note
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'italic')
+    doc.text('Precos e valores serao informados apos analise do orcamento pelas lojas.', 20, yPosition)
     
     // Baixar PDF
-    doc.save(`Orcamento_${date.replace(/\//g, '-')}.pdf`)
+    doc.save(`Solicitacao-Orcamento_${date.replace(/\//g, '-')}.pdf`)
   }
 
   const handleGenerateQuote = () => {
@@ -152,12 +149,13 @@ import {
         onClearCart={clearCart}
         onGeneratePDF={handleGenerateQuote}
         onGenerateList={handleSendQuote}
+        stores={stores}
       />
 
       <AlertDialog open={showQuoteDialog} onOpenChange={setShowQuoteDialog}>
         <AlertDialogContent className="font-montserrat">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-marlin text-xl">Enviar Orçamento</AlertDialogTitle>
+            <AlertDialogTitle className="font-marlin text-xl">Gerar Orçamento</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-600">
               Seu orçamento será enviado para cotação. As lojas receberão sua solicitação e entrarão em contato em breve com as melhores ofertas.
             </AlertDialogDescription>
