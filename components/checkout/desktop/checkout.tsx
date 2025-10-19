@@ -21,10 +21,9 @@ const plans = [
     features: [
       "Perfil profissional no diretório",
       "Receber cotações ilimitadas",
-      "Cadastro de até 50 produtos/serviços",
+      "Cadastro ilimitado de produtos/serviços",
       "Painel de controle",
       "Relatórios básicos de desempenho",
-      "Otimização SEO básica",
       "Suporte por email 7 dias/semana"
     ],
     popular: false,
@@ -39,11 +38,10 @@ const plans = [
     icon: Rocket,
     features: [
       "Tudo do plano Básico",
-      "Cadastro de até 300 produtos/serviços",
       "Divulgação automática nas buscas",
       "Destaque nos resultados",
       "Campanhas de marketing mensais",
-      "Relatórios avançados e analytics",
+      "Design de artes digitais",
       "Análises de desempenho",
       "Suporte prioritário"
     ],
@@ -59,12 +57,10 @@ const plans = [
     icon: Video,
     features: [
       "Tudo do plano Plus",
-      "Produtos/serviços ilimitados",
       "2 vídeos promocionais por mês",
       "Cada vídeo fica 15 dias no ar",
       "Campanhas de marketing semanais",
       "Divulgação em múltiplas plataformas",
-      "Relatórios completos detalhados",
       "Suporte prioritário 24/7"
     ],
     popular: false,

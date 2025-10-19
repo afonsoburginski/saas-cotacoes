@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { useSmartComparison } from "@/hooks/use-smart-comparison"
 import { useCartStore } from "@/stores/cart-store"
 import { useToast } from "@/hooks/use-toast"
-import { Star, ShoppingCart, Sparkles } from "lucide-react"
+import { Star, ShoppingCart, ShoppingBag, Package } from "lucide-react"
 import { TypographyH3, TypographyH4, TypographyMuted, TypographySmall } from "@/components/ui/typography"
 import Image from "next/image"
 import Link from "next/link"
@@ -28,12 +28,9 @@ function FallbackImage({ src, alt }: { src?: string; alt: string }) {
 export function CompararDesktop() {
   const { comparisonProducts, clearComparison } = useSmartComparison()
   const addToCart = useCartStore((state) => state.addToCart)
+  const cartItems = useCartStore((state) => state.cartItems)
   const { toast } = useToast()
   const [activeProductId, setActiveProductId] = useState<string>("")
-
-  const topRated = useMemo(() => {
-    return [...comparisonProducts].sort((a, b) => b.rating - a.rating)[0]
-  }, [comparisonProducts])
 
   const visibleProducts = useMemo(() => {
     return comparisonProducts.filter(p => !activeProductId || p.id === activeProductId)
@@ -57,7 +54,7 @@ export function CompararDesktop() {
             }}
           />
           <div className="text-center relative z-10">
-            <Sparkles className="h-16 w-16 mx-auto text-white/70 mb-4" />
+            <Package className="h-16 w-16 mx-auto text-white/70 mb-4" />
             <TypographyH3 className="text-white font-montserrat mb-2">Nenhuma comparação ativa</TypographyH3>
             <TypographyMuted className="text-white/80 font-montserrat">Clique em "Comparação Inteligente" em qualquer produto para começar</TypographyMuted>
             <Button asChild className="mt-6 bg-white text-[#0052FF] hover:bg-white/90 font-montserrat">
@@ -112,9 +109,22 @@ export function CompararDesktop() {
               </button>
             ))}
           </div>
-          <Button variant="outline" onClick={clearComparison} className="font-montserrat">
-            Nova Comparação
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="default" className="font-montserrat relative">
+              <Link href="/carrinho">
+                <ShoppingBag className="h-4 w-4 mr-2" />
+                Ver Carrinho
+                {cartItems.length > 0 && (
+                  <Badge className="ml-2 h-5 min-w-5 rounded-full px-1.5 text-xs">
+                    {cartItems.length}
+                  </Badge>
+                )}
+              </Link>
+            </Button>
+            <Button variant="outline" onClick={clearComparison} className="font-montserrat">
+              Nova Comparação
+            </Button>
+          </div>
         </div>
 
         {/* Products Grid */}
@@ -122,22 +132,8 @@ export function CompararDesktop() {
           {visibleProducts.map((product) => (
             <div 
               key={product.id} 
-              className={`bg-white rounded-2xl shadow-sm overflow-hidden transition-all relative ${
-                product.id === topRated?.id ? 'ring-2 ring-blue-500/50' : ''
-              }`}
+              className="bg-white rounded-2xl shadow-sm overflow-hidden transition-all relative"
             >
-              {/* Badge Recomendado - Absolute positioning */}
-              {product.id === topRated?.id && (
-                <div className="absolute top-4 right-4 z-10">
-                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-3 py-1.5 rounded-full shadow-lg">
-                    <TypographySmall className="text-white font-semibold font-montserrat flex items-center gap-1 text-xs">
-                      <Sparkles className="h-3 w-3" />
-                      Recomendado
-                    </TypographySmall>
-                  </div>
-                </div>
-              )}
-              
               {/* Image - Full Width, Maior */}
               <div className="relative h-80 w-full bg-gray-50 overflow-hidden">
                 <FallbackImage src={product.imagemUrl} alt={product.nome} />

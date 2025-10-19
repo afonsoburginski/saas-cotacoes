@@ -32,10 +32,23 @@ export type Product = {
   nome: string
   categoria: string
   preco: number
+  precoPromocional?: number
   estoque: number
+  unidadeMedida?: string
   rating: number
   imagemUrl?: string
+  imagens?: string[]
   ativo: boolean
+  destacado?: boolean
+  sku?: string
+  descricao?: string
+  temVariacaoPreco?: boolean
+  peso?: number
+  dimensoes?: {
+    comprimento: number
+    largura: number
+    altura: number
+  }
 }
 
 export type Review = {

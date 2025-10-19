@@ -209,8 +209,10 @@ export const mockProducts: Product[] = [
     categoria: "Cimento",
     preco: 28.9,
     estoque: 150,
+    unidadeMedida: "Saco (sc)",
     rating: 4.8,
     imagemUrl: "/mock/cimento-forte.png",
+    sku: "CIM-001-CMX",
     ativo: true,
   },
   {
@@ -973,23 +975,47 @@ export const mockReviews: Review[] = [
 export const mockPlans: Plan[] = [
   {
     id: "plan1",
-    nome: "Basic",
-    preco: 99.9,
+    nome: "Básico",
+    preco: 99.0,
     periodicidade: "mensal",
-    recursos: ["Até 100 produtos", "Relatórios básicos", "Suporte por email"],
+    recursos: [
+      "Perfil profissional no diretório",
+      "Receber cotações ilimitadas",
+      "Cadastro ilimitado de produtos/serviços",
+      "Painel de controle",
+      "Relatórios básicos de desempenho",
+      "Suporte por email 7 dias/semana"
+    ],
     ativo: true,
   },
   {
     id: "plan2",
-    nome: "Pro",
-    preco: 199.9,
+    nome: "Plus",
+    preco: 189.99,
     periodicidade: "mensal",
     recursos: [
-      "Produtos ilimitados",
-      "Relatórios avançados",
-      "Suporte prioritário",
-      "API de integração",
-      "Prioridade nos resultados",
+      "Tudo do plano Básico",
+      "Divulgação automática nas buscas",
+      "Destaque nos resultados",
+      "Campanhas de marketing mensais",
+      "Design de artes digitais",
+      "Análises de desempenho",
+      "Suporte prioritário"
+    ],
+    ativo: true,
+  },
+  {
+    id: "plan3",
+    nome: "Premium",
+    preco: 249.99,
+    periodicidade: "mensal",
+    recursos: [
+      "Tudo do plano Plus",
+      "2 vídeos promocionais por mês",
+      "Cada vídeo fica 15 dias no ar",
+      "Campanhas de marketing semanais",
+      "Divulgação em múltiplas plataformas",
+      "Suporte prioritário 24/7"
     ],
     ativo: true,
   },

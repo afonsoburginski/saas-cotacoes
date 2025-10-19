@@ -3,8 +3,9 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Trash2, Download, ListPlus, Package, ShoppingBag } from "lucide-react"
+import { Trash2, Download, ListPlus, Package, ShoppingBag, ArrowLeft } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { CartGroupByStore } from "@/components/features/cart-group-by-store"
 import type { CartItem } from "@/stores/cart-store"
 
@@ -27,22 +28,35 @@ export function CarrinhoDesktop({
   onGenerateList,
   stores
 }: CarrinhoDesktopProps) {
+  const router = useRouter()
+  
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <div className="container mx-auto max-w-[1400px] px-6 py-8">
         <div className="space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between pb-4 border-b border-gray-200">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 font-marlin">
-                Carrinho
-              </h1>
-              <p className="text-sm text-gray-600 mt-1 font-montserrat">
-                {cartItems.length > 0 
-                  ? `${cartItems.length} ${cartItems.length === 1 ? 'produto' : 'produtos'} no carrinho`
-                  : 'Vazio'
-                }
-              </p>
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.back()}
+                className="font-montserrat"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Voltar
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 font-marlin">
+                  Carrinho
+                </h1>
+                <p className="text-sm text-gray-600 mt-1 font-montserrat">
+                  {cartItems.length > 0 
+                    ? `${cartItems.length} ${cartItems.length === 1 ? 'produto' : 'produtos'} no carrinho`
+                    : 'Vazio'
+                  }
+                </p>
+              </div>
             </div>
             {cartItems.length > 0 && (
               <Button 

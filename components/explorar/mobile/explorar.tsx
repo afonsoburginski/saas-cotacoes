@@ -1,6 +1,16 @@
 "use client"
 
 import { useState, useMemo, useEffect, useCallback, memo } from "react"
+
+// Fisher-Yates shuffle algorithm para randomizar arrays
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  return shuffled
+}
 import { ProductCardAdaptive } from "@/components/explorar/product-card-adaptive"
 import { FiltersBar, type FilterState } from "@/components/features/filters-bar"
 import { useSmartComparison } from "@/hooks/use-smart-comparison"
@@ -51,6 +61,9 @@ const ExplorarMobile = memo(function ExplorarMobile({
   
   // Use Zustand para compartilhar estado com desktop
   const { activeTab, supplierSearch, setActiveTab, setSupplierSearch } = useExplorarStore()
+  
+  // Random seed que muda a cada mount para forçar re-shuffle
+  const [shuffleSeed] = useState(() => Math.random())
 
   // Listen for supplier modal events from ProductCard - memoized
   const handleOpenSupplierModal = useCallback((event: CustomEvent) => {
@@ -66,12 +79,13 @@ const ExplorarMobile = memo(function ExplorarMobile({
     }
   }, [handleOpenSupplierModal])
 
-  // Group products by category for Netflix-style rows - memoized
+  // Group products by category for Netflix-style rows - memoized with shuffle
   const productsByCategory = useMemo(() => {
     if (!filteredProducts.length) return {}
     
     const grouped: { [key: string]: any[] } = {}
     
+    // First group products
     filteredProducts.forEach(product => {
       if (!grouped[product.categoria]) {
         grouped[product.categoria] = []
@@ -79,8 +93,15 @@ const ExplorarMobile = memo(function ExplorarMobile({
       grouped[product.categoria].push(product)
     })
     
+    // Shuffle products within each category for variety
+    // Using shuffleSeed to force re-shuffle on mount
+    const seededRandom = shuffleSeed
+    Object.keys(grouped).forEach(categoria => {
+      grouped[categoria] = shuffleArray(grouped[categoria])
+    })
+    
     return grouped
-  }, [filteredProducts])
+  }, [filteredProducts, shuffleSeed])
 
   // Memoized handlers for better performance
   const handleSearchChange = useCallback((value: string) => {
@@ -101,17 +122,23 @@ const ExplorarMobile = memo(function ExplorarMobile({
     }
   }, [setFilters, setActiveTab, setSupplierSearch])
 
-  // Filtrar fornecedores baseado na busca
+  // Filtrar fornecedores baseado na busca e randomizar
   const filteredStores = useMemo(() => {
-    if (!supplierSearch) return stores.filter(s => s.status === "ativo")
+    let filtered
+    if (!supplierSearch) {
+      filtered = stores.filter(s => s.status === "ativo")
+    } else {
+      const searchLower = supplierSearch.toLowerCase()
+      filtered = stores.filter(s => 
+        s.status === "ativo" && 
+        (s.nome.toLowerCase().includes(searchLower) || 
+         s.cidade?.toLowerCase().includes(searchLower))
+      )
+    }
     
-    const searchLower = supplierSearch.toLowerCase()
-    return stores.filter(s => 
-      s.status === "ativo" && 
-      (s.nome.toLowerCase().includes(searchLower) || 
-       s.cidade?.toLowerCase().includes(searchLower))
-    )
-  }, [stores, supplierSearch])
+    // Shuffle stores for variety on each load
+    return shuffleArray(filtered)
+  }, [stores, supplierSearch, shuffleSeed])
 
   // Placeholder e value dinâmicos baseados na tab ativa
   const searchPlaceholder = activeTab === "produtos" 
@@ -284,12 +311,10 @@ const ExplorarMobile = memo(function ExplorarMobile({
                     </div>
                   ) : (
                     <div className="space-y-6">
-                {filteredStores
-                  .sort((a, b) => b.priorityScore - a.priorityScore)
-                  .map((store) => {
-                    const storeProducts = filteredProducts
-                      .filter(p => p.storeId === store.id)
-                      .slice(0, 6) // show a few products like a preview
+                {filteredStores.map((store) => {
+                    const storeProducts = shuffleArray(
+                      filteredProducts.filter(p => p.storeId === store.id)
+                    ).slice(0, 6) // show a few products like a preview
 
                     return (
                       <div key={store.id} className="">
