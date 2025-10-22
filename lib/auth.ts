@@ -24,6 +24,11 @@ export const auth = betterAuth({
     },
   },
   baseURL: process.env.BETTER_AUTH_URL,
+  trustedOrigins: [
+    "http://localhost:3000",
+    "https://www.orcanorte.com.br",
+    "https://orcanorte.com.br",
+  ],
   user: {
     additionalFields: {
       phone: {
@@ -70,6 +75,11 @@ export const auth = betterAuth({
   },
   advanced: {
     cookiePrefix: "orca-norte",
+    useSecureCookies: process.env.NODE_ENV === "production",
+    crossSubDomainCookies: {
+      enabled: true,
+      domain: ".orcanorte.com.br",
+    },
   },
 })
 
