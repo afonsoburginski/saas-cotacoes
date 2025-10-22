@@ -1,15 +1,29 @@
 import { useQuery } from "@tanstack/react-query"
+import { useSession } from "@/lib/auth-client"
+
+interface StoreData {
+  slug: string | null
+  storeName: string | null
+  id: number | null
+}
 
 export function useStoreSlug() {
-  return useQuery({
+  const { data: session } = useSession()
+  
+  return useQuery<StoreData | null>({
     queryKey: ["store-slug"],
     queryFn: async () => {
       const res = await fetch("/api/user/store")
       if (!res.ok) return null
       const data = await res.json()
-      return data.slug as string | null
+      return {
+        slug: data.slug,
+        storeName: data.store?.nome,
+        id: data.storeId,
+      }
     },
-    staleTime: Infinity, // Slug não muda, cache permanente
+    enabled: !!session?.user,
+    staleTime: Infinity,
   })
 }
 

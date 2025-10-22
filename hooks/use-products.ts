@@ -1,4 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useEffect } from "react"
+import { createRealtimeSubscription } from "@/lib/supabase"
 import type { Product } from "@/lib/types"
 
 interface ProductsResponse {
@@ -15,6 +17,7 @@ interface UseProductsParams {
 }
 
 export function useProducts(params?: UseProductsParams) {
+  const queryClient = useQueryClient()
   const searchParams = new URLSearchParams()
   
   if (params?.search) searchParams.set("search", params.search)
@@ -23,6 +26,17 @@ export function useProducts(params?: UseProductsParams) {
   if (params?.storeId) searchParams.set("storeId", params.storeId)
   if (params?.includeInactive) searchParams.set("includeInactive", "true")
   
+  // 🔴 REALTIME: Ouvir mudanças em produtos
+  useEffect(() => {
+    const channel = createRealtimeSubscription('products', () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] })
+    })
+    
+    return () => {
+      channel.unsubscribe()
+    }
+  }, [queryClient])
+  
   return useQuery({
     queryKey: ["products", params],
     queryFn: async () => {
@@ -30,6 +44,8 @@ export function useProducts(params?: UseProductsParams) {
       if (!res.ok) throw new Error("Failed to fetch products")
       return res.json() as Promise<ProductsResponse>
     },
+    staleTime: 1000 * 60 * 5, // 5 minutos de cache
+    enabled: !!params?.storeId, // Apenas executa a query se storeId estiver definido
   })
 }
 

@@ -1,13 +1,14 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import type { Product, CartItem } from '@/lib/types'
+import type { Product, Service, CartItem } from '@/lib/types'
 
 export type { CartItem }
 
 interface CartState {
   cartItems: CartItem[]
   recentlyAdded: string | null
-  addToCart: (product: Product, qty?: number) => void
+  addToCart: (item: Product | Service, qty?: number) => void
+  addServiceToCart: (service: Service, qty?: number) => void
   removeFromCart: (itemId: string) => void
   updateQuantity: (itemId: string, qty: number) => void
   clearCart: () => void
@@ -22,38 +23,56 @@ export const useCartStore = create<CartState>()(
       cartItems: [],
       recentlyAdded: null,
 
-      addToCart: (product: Product, qty = 1) => {
+      addToCart: (item: Product | Service, qty = 1) => {
         set((state) => {
-          const existingItem = state.cartItems.find((item) => item.productId === product.id)
+          // Determinar se é produto ou serviço
+          const isService = 'tipoPrecificacao' in item
+          const itemId = isService ? item.id : item.id
+          
+          const existingItem = state.cartItems.find((cartItem) => 
+            isService 
+              ? cartItem.serviceId === item.id
+              : cartItem.productId === item.id
+          )
           
           if (existingItem) {
             return {
-              cartItems: state.cartItems.map((item) =>
-                item.productId === product.id ? { ...item, qty: item.qty + qty } : item
+              cartItems: state.cartItems.map((cartItem) =>
+                (isService ? cartItem.serviceId === item.id : cartItem.productId === item.id) 
+                  ? { ...cartItem, qty: cartItem.qty + qty } 
+                  : cartItem
               ),
             }
           }
           
+          const cartItem: CartItem = {
+            id: `cart-${Date.now()}-${item.id}`,
+            storeId: item.storeId,
+            qty,
+            productNome: item.nome,
+            storeNome: item.storeNome,
+            precoUnit: item.preco,
+            imagemUrl: item.imagemUrl,
+            tipo: isService ? 'service' : 'product',
+            ...(isService 
+              ? { serviceId: item.id, productId: undefined }
+              : { productId: item.id, serviceId: undefined }
+            ),
+          }
+          
           return {
-            cartItems: [
-              ...state.cartItems,
-              {
-                id: `cart-${Date.now()}-${product.id}`,
-                productId: product.id,
-                storeId: product.storeId,
-                qty,
-                productNome: product.nome,
-                storeNome: product.storeNome,
-                precoUnit: product.preco,
-                imagemUrl: product.imagemUrl,
-              },
-            ],
+            cartItems: [...state.cartItems, cartItem],
           }
         })
         
         // Trigger animation
-        set({ recentlyAdded: product.id })
+        set({ recentlyAdded: item.id })
         setTimeout(() => set({ recentlyAdded: null }), 2000)
+      },
+
+      addServiceToCart: (service: Service, qty = 1) => {
+        // Função específica para serviços (mantida para compatibilidade)
+        get().addToCart(service, qty)
       },
 
       removeFromCart: (itemId: string) => {

@@ -1,66 +1,77 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { auth } from '@/lib/auth'
 
 export async function middleware(request: NextRequest) {
-  const path = request.nextUrl.pathname
+  const { pathname } = request.nextUrl
 
-  // Rotas públicas (não precisam autenticação)
-  const publicPaths = ['/', '/api/auth', '/api/products', '/api/services', '/api/stores', '/api/categories', '/api/plans', '/api/webhooks', '/api/user/subscription-status', '/explorar', '/categoria', '/fornecedor', '/subscription/expired']
-  if (publicPaths.some(p => path.startsWith(p))) {
+  // 1. Definição de rotas com diferentes níveis de acesso
+  const fullyPublicPaths = ['/', '/explorar', '/categoria', '/fornecedor', '/subscription/expired']
+  const authApiPaths = ['/api/auth', '/api/webhooks']
+  const storeExceptions = ['/loja/assinatura', '/checkout']
+
+  // 2. Rotas totalmente públicas que não requerem sessão
+  if (fullyPublicPaths.some(p => pathname.startsWith(p)) || authApiPaths.some(p => pathname.startsWith(p))) {
     return NextResponse.next()
   }
 
-  // Verificar se tem cookie de sessão do better-auth
-  const sessionToken = request.cookies.get('better-auth.session_token')?.value
-  
-  // Se não tem sessão, redireciona para home
-  if (!sessionToken) {
+  // 3. Verificar sessão para todas as outras rotas
+  const session = await auth.api.getSession({ headers: request.headers })
+
+  if (!session?.user) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
-  // Para rotas protegidas complexas (/loja, /admin, etc), deixar a verificação
-  // detalhada para as próprias páginas/API routes que rodam no Node.js runtime
-  // O middleware só faz a verificação básica de sessão
+  const { user } = session
 
-  // Proteção básica de rotas /admin
-  if (path.startsWith('/admin')) {
-    // Verificação detalhada de role será feita na página
-    return NextResponse.next()
+  // 4. Proteção de rotas de Admin
+  if (pathname.startsWith('/admin') && user.role !== 'admin') {
+    return NextResponse.redirect(new URL('/', request.url))
   }
 
-  // Proteção básica de rotas /loja
-  if (path.startsWith('/loja')) {
-    // Exceções: assinatura expirada e checkout
-    if (path === '/subscription/expired' || path === '/checkout') {
+  // 5. Proteção de rotas da Loja (requer assinatura)
+  if (pathname.startsWith('/loja')) {
+    // Permitir acesso a páginas de gerenciamento de assinatura
+    if (storeExceptions.some(p => pathname.startsWith(p))) {
       return NextResponse.next()
     }
-    
-    // Verificação detalhada de subscription será feita na página
-    return NextResponse.next()
-  }
 
-  // Proteção básica de rotas consumidor
-  const consumerPaths = ['/carrinho', '/listas']
-  if (consumerPaths.some(p => path.startsWith(p))) {
-    // Verificação detalhada de role será feita na página
-    return NextResponse.next()
-  }
+    // Apenas fornecedores podem acessar
+    if (!['fornecedor', 'loja'].includes(user.role || '')) {
+      return NextResponse.redirect(new URL('/', request.url))
+    }
 
+    // Delegar verificação de assinatura para uma API Route para manter o middleware leve
+    const checkSubUrl = new URL('/api/auth/check-sub', request.url)
+    const response = await fetch(checkSubUrl, {
+      headers: { cookie: request.headers.get('cookie') || '' },
+    })
+
+    // Se a verificação falhar (API fora do ar ou erro), bloqueia por segurança
+    if (!response.ok) {
+      return NextResponse.redirect(new URL('/subscription/expired', request.url))
+    }
+
+    const { isActive } = await response.json()
+    if (!isActive) {
+      return NextResponse.redirect(new URL('/subscription/expired', request.url))
+    }
+  }
+  
+  // 6. Se todas as verificações passaram, permitir acesso
   return NextResponse.next()
 }
 
 export const config = {
   matcher: [
-    '/admin/:path*',
-    '/loja/:path*',
-    '/explorar/:path*',
-    '/carrinho/:path*',
-    '/comparar/:path*',
-    '/listas/:path*',
-    '/categoria/:path*',
-    '/fornecedor/:path*',
-    '/onboarding',
-    '/checkout',
-  ]
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * Isso previne que o middleware rode em assets desnecessários.
+     */
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
 }
 

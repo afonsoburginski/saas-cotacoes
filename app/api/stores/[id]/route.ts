@@ -3,8 +3,6 @@ import { db } from '@/drizzle'
 import { stores } from '@/drizzle/schema'
 import { eq } from 'drizzle-orm'
 
-export const dynamic = 'force-dynamic'
-
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
@@ -29,6 +27,16 @@ export async function GET(
       telefone: store.telefone,
       cnpj: store.cnpj,
       endereco: store.endereco,
+      cep: store.cep,
+      rua: store.rua,
+      numero: store.numero,
+      complemento: store.complemento,
+      bairro: store.bairro,
+      cidade: store.cidade,
+      estado: store.estado,
+      horarioFuncionamento: store.horarioFuncionamento,
+      logo: store.logo,
+      coverImage: store.coverImage,
       status: store.status,
       priorityScore: store.priorityScore,
       plano: store.plano,
@@ -43,6 +51,45 @@ export async function GET(
     console.error('Error fetching store:', error)
     return NextResponse.json(
       { error: 'Failed to fetch store' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function PUT(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const body = await request.json()
+    const id = parseInt(params.id)
+    const data: any = {}
+    if (body.nome !== undefined) data.nome = body.nome
+    if (body.email !== undefined) data.email = body.email
+    if (body.telefone !== undefined) data.telefone = body.telefone
+    if (body.cnpj !== undefined) data.cnpj = body.cnpj
+    if (body.endereco !== undefined) data.endereco = body.endereco
+    if (body.cep !== undefined) data.cep = body.cep
+    if (body.rua !== undefined) data.rua = body.rua
+    if (body.numero !== undefined) data.numero = body.numero
+    if (body.complemento !== undefined) data.complemento = body.complemento
+    if (body.bairro !== undefined) data.bairro = body.bairro
+    if (body.cidade !== undefined) data.cidade = body.cidade
+    if (body.estado !== undefined) data.estado = body.estado
+    if (body.horarioFuncionamento !== undefined) data.horarioFuncionamento = body.horarioFuncionamento
+    if (body.logo !== undefined) data.logo = body.logo
+    if (body.coverImage !== undefined) data.coverImage = body.coverImage
+
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
+    }
+
+    await db.update(stores).set(data).where(eq(stores.id, id))
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    console.error('Error updating store:', error)
+    return NextResponse.json(
+      { error: 'Failed to update store' },
       { status: 500 }
     )
   }

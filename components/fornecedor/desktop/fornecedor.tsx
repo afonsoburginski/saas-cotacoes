@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useCartStore } from "@/stores/cart-store"
 import { useToast } from "@/hooks/use-toast"
 import { Button } from "@/components/ui/button"
@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ProductCardAdaptive } from "@/components/explorar/product-card-adaptive"
 import { TypographyH1, TypographyH3, TypographyH4, TypographyP, TypographySmall, TypographyMuted } from "@/components/ui/typography"
+import { useReviews } from "@/hooks/use-reviews"
 import { 
   Star, 
   MapPin, 
@@ -24,6 +25,8 @@ import {
   Share2
 } from "lucide-react"
 import Link from "next/link"
+import { calculateDistance } from "@/lib/utils"
+import { formatServicePrice } from "@/lib/service-price-formatter"
 
 interface FornecedorDesktopProps {
   store: any
@@ -35,6 +38,30 @@ export function FornecedorDesktop({ store, storeProducts, storeServices }: Forne
   const [activeTab, setActiveTab] = useState("produtos")
   const addToCart = useCartStore((state) => state.addToCart)
   const { toast } = useToast()
+  const [distanceKm, setDistanceKm] = useState<number | null>(null)
+
+  // 🔴 Buscar avaliações reais da database
+  const { data: reviews = [], isLoading: isLoadingReviews } = useReviews({ 
+    storeId: store.id.toString() 
+  })
+
+  useEffect(() => {
+    if (!store?.address?.lat || !store?.address?.lng) return
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const d = calculateDistance(
+          pos.coords.latitude,
+          pos.coords.longitude,
+          store.address.lat,
+          store.address.lng
+        )
+        setDistanceKm(d)
+      },
+      () => setDistanceKm(null),
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }, [store?.address?.lat, store?.address?.lng])
   
   const handleShare = async () => {
     const url = `${window.location.origin}/fornecedor/${store.id}`
@@ -62,8 +89,16 @@ export function FornecedorDesktop({ store, storeProducts, storeServices }: Forne
   const handleWhatsApp = () => {
     const profileUrl = `${window.location.origin}/fornecedor/${store.id}`
     const message = `Olá! Vi seu perfil no Orça Norte e gostaria de fazer um orçamento.\n\n${profileUrl}`
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
-    window.open(whatsappUrl, '_blank')
+    
+    // Usar o telefone da loja se disponível, senão usar URL genérica
+    if (store.telefone) {
+      const phoneNumber = store.telefone.replace(/\D/g, '') // Remove caracteres não numéricos
+      const whatsappUrl = `https://wa.me/55${phoneNumber}?text=${encodeURIComponent(message)}`
+      window.open(whatsappUrl, '_blank')
+    } else {
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
+      window.open(whatsappUrl, '_blank')
+    }
   }
   
   // Combinar produtos e serviços em um só catálogo
@@ -73,46 +108,13 @@ export function FornecedorDesktop({ store, storeProducts, storeServices }: Forne
   ]
   
   const handleAddService = (service: any) => {
-    // Converter serviço para formato de produto para adicionar ao carrinho
-    const serviceAsProduct = {
-      ...service,
-      preco: service.precoMinimo || 0,
-      estoque: 999, // Serviços sempre disponíveis
-    }
-    addToCart(serviceAsProduct as any)
+    // Adicionar serviço diretamente ao carrinho
+    addToCart(service)
     toast({
       title: "Serviço adicionado!",
       description: `${service.nome} foi adicionado ao orçamento.`,
     })
   }
-
-  // Mock reviews data
-  const reviews = [
-    {
-      id: "1",
-      userName: "João Silva",
-      rating: 5,
-      comment: "Excelente atendimento e produtos de qualidade. Recomendo!",
-      date: "2024-01-15",
-      verified: true
-    },
-    {
-      id: "2", 
-      userName: "Maria Santos",
-      rating: 4,
-      comment: "Bom preço e entrega rápida. Voltarei a comprar.",
-      date: "2024-01-10",
-      verified: true
-    },
-    {
-      id: "3",
-      userName: "Pedro Costa",
-      rating: 5,
-      comment: "Melhor empresa da região. Produtos sempre em estoque.",
-      date: "2024-01-08",
-      verified: false
-    }
-  ]
 
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
@@ -149,8 +151,18 @@ export function FornecedorDesktop({ store, storeProducts, storeServices }: Forne
         {/* Store Header */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-6">
           {/* Cover Photo */}
-          <div className="h-64 bg-gradient-to-br from-[#0052FF] to-[#22C55E] relative">
-            <div className="absolute inset-0 bg-black/10" />
+          <div className="h-64 relative">
+            {store.coverImage ? (
+              <img
+                src={store.coverImage}
+                alt="Capa"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="h-full bg-gradient-to-br from-[#0052FF] to-[#22C55E]">
+                <div className="absolute inset-0 bg-black/10" />
+              </div>
+            )}
           </div>
           
           {/* Profile Section */}
@@ -158,9 +170,14 @@ export function FornecedorDesktop({ store, storeProducts, storeServices }: Forne
             {/* Avatar */}
             <div className="flex items-start gap-4 -mt-16 relative z-10">
               <Avatar className="h-32 w-32 rounded-2xl ring-4 ring-white shadow-lg">
-                <AvatarFallback className="bg-white text-[#0052FF] text-4xl font-bold rounded-2xl font-marlin">
-                  {store.nome.charAt(0)}
-                </AvatarFallback>
+                {store.logo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={store.logo} alt={store.nome} className="h-full w-full object-cover rounded-2xl" />
+                ) : (
+                  <AvatarFallback className="bg-white text-[#0052FF] text-4xl font-bold rounded-2xl font-marlin">
+                    {store.nome.charAt(0)}
+                  </AvatarFallback>
+                )}
               </Avatar>
               
               <div className="flex-1 mt-20">
@@ -181,7 +198,12 @@ export function FornecedorDesktop({ store, storeProducts, storeServices }: Forne
                     </div>
                     <div className="flex items-center gap-1 mt-2 text-gray-600">
                       <MapPin className="h-4 w-4" />
-                      <span className="font-montserrat">São Paulo, SP • 2.5 km de distância</span>
+                      <span className="font-montserrat">
+                        {store.rua && store.cidade && store.estado
+                          ? `${store.rua}${store.numero ? `, ${store.numero}` : ''} - ${store.bairro || ''}, ${store.cidade} - ${store.estado}`
+                          : store.endereco || 'Endereço não informado'}
+                        {distanceKm !== null ? ` • ${distanceKm < 10 ? distanceKm.toFixed(1) : distanceKm.toFixed(0)} km de distância` : ''}
+                      </span>
                     </div>
                   </div>
                   
@@ -234,13 +256,9 @@ export function FornecedorDesktop({ store, storeProducts, storeServices }: Forne
                     <h4 className="font-bold text-sm mb-1 line-clamp-2">{item.nome}</h4>
                     <p className="text-xs text-gray-600 mb-3">{item.categoria}</p>
                     <div className="mt-auto">
-                      {item.precoMinimo && item.precoMaximo ? (
-                        <p className="text-xs font-semibold text-green-700 mb-2">
-                          R$ {item.precoMinimo} - {item.precoMaximo}
-                        </p>
-                      ) : (
-                        <p className="text-xs text-amber-600 mb-2">Sob consulta</p>
-                      )}
+                      <p className={`text-xs font-semibold mb-2 ${formatServicePrice(item).includes('Sob consulta') ? 'text-amber-600' : 'text-green-700'}`}>
+                        {formatServicePrice(item)}
+                      </p>
                       <Button 
                         size="sm" 
                         className="w-full text-xs bg-green-600 text-white hover:bg-green-700"
@@ -265,39 +283,56 @@ export function FornecedorDesktop({ store, storeProducts, storeServices }: Forne
 
           {/* Avaliações Tab */}
           <TabsContent value="avaliacoes" className="space-y-6">
-            <div className="grid gap-4">
-              {reviews.map((review) => (
-                <Card key={review.id} className="p-6 rounded-2xl">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback className="bg-gray-100 text-gray-600">
-                          {review.userName.charAt(0)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold font-montserrat">{review.userName}</span>
-                          {review.verified && (
-                            <Badge variant="outline" className="text-xs font-montserrat">
-                              <Shield className="h-3 w-3 mr-1" />
-                              Verificado
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <div className="flex">{renderStars(review.rating)}</div>
-                          <span className="text-sm text-gray-500 font-montserrat">
-                            {new Date(review.date).toLocaleDateString('pt-BR')}
-                          </span>
+            {isLoadingReviews ? (
+              <Card className="p-12 text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0052FF] mx-auto mb-4"></div>
+                <TypographyMuted>Carregando avaliações...</TypographyMuted>
+              </Card>
+            ) : reviews.length === 0 ? (
+              <Card className="p-12 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                  <Star className="h-8 w-8 text-gray-400" />
+                </div>
+                <TypographyH3 className="mb-2">Nenhuma avaliação ainda</TypographyH3>
+                <TypographyMuted>Seja o primeiro a avaliar este fornecedor!</TypographyMuted>
+              </Card>
+            ) : (
+              <div className="grid gap-4">
+                {reviews.map((review) => (
+                  <Card key={review.id} className="p-6 rounded-2xl">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback className="bg-gray-100 text-gray-600">
+                            {review.userName.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold font-montserrat">{review.userName}</span>
+                            {review.verified && (
+                              <Badge variant="outline" className="text-xs font-montserrat">
+                                <Shield className="h-3 w-3 mr-1" />
+                                Verificado
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className="flex">{renderStars(review.rating)}</div>
+                            <span className="text-sm text-gray-500 font-montserrat">
+                              {new Date(review.createdAt).toLocaleDateString('pt-BR')}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  <p className="text-gray-700 font-montserrat">{review.comment}</p>
-                </Card>
-              ))}
-            </div>
+                    {review.comentario && (
+                      <p className="text-gray-700 font-montserrat">{review.comentario}</p>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           {/* Sobre Tab */}
@@ -309,7 +344,7 @@ export function FornecedorDesktop({ store, storeProducts, storeServices }: Forne
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                   <Phone className="h-5 w-5 text-gray-500" />
                   <div>
-                    <p className="font-medium font-montserrat">(11) 99999-9999</p>
+                    <p className="font-medium font-montserrat">{store.telefone || '(00) 00000-0000'}</p>
                     <p className="text-sm text-gray-600 font-montserrat">Telefone</p>
                   </div>
                 </div>
@@ -317,7 +352,7 @@ export function FornecedorDesktop({ store, storeProducts, storeServices }: Forne
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                   <Mail className="h-5 w-5 text-gray-500" />
                   <div>
-                    <p className="font-medium font-montserrat">contato@{store.nome.toLowerCase().replace(/\s+/g, '')}.com</p>
+                    <p className="font-medium font-montserrat">{store.email || `contato@${store.nome.toLowerCase().replace(/\s+/g, '')}.com`}</p>
                     <p className="text-sm text-gray-600 font-montserrat">Email</p>
                   </div>
                 </div>
@@ -325,15 +360,21 @@ export function FornecedorDesktop({ store, storeProducts, storeServices }: Forne
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                   <MapPin className="h-5 w-5 text-gray-500" />
                   <div>
-                    <p className="font-medium font-montserrat">Rua das Construções, 123</p>
-                    <p className="text-sm text-gray-600 font-montserrat">Vila Madalena, São Paulo - SP</p>
+                    <p className="font-medium font-montserrat">
+                      {store.rua && store.cidade && store.estado
+                        ? `${store.rua}${store.numero ? `, ${store.numero}` : ''} - ${store.bairro || ''}, ${store.cidade} - ${store.estado}`
+                        : store.endereco || 'Endereço não informado'}
+                    </p>
+                    {store.cep && (
+                      <p className="text-sm text-gray-600 font-montserrat">CEP: {store.cep}</p>
+                    )}
                   </div>
                 </div>
                 
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                   <Clock className="h-5 w-5 text-gray-500" />
                   <div>
-                    <p className="font-medium font-montserrat">Seg-Sex: 08:00-18:00 | Sáb: 08:00-12:00</p>
+                    <p className="font-medium font-montserrat">{store.horarioFuncionamento || 'Seg-Sex: 08:00-18:00 | Sáb: 08:00-12:00'}</p>
                     <p className="text-sm text-gray-600 font-montserrat">Horário de funcionamento</p>
                   </div>
                 </div>

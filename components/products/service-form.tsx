@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import { CurrencyInput } from "@/components/ui/currency-input"
 import {
   Dialog,
   DialogContent,
@@ -274,54 +275,33 @@ export function ServiceForm({ service, isOpen, onClose, onSubmit }: ServiceFormP
                 <Label htmlFor="preco" className="text-sm font-medium text-gray-700">
                   Preço (por {tiposPrecificacao.find(t => t.value === formData.tipoPrecificacao)?.label.toLowerCase().replace('por ', '')}) *
                 </Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">R$</span>
-                  <Input
-                    id="preco"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.preco}
-                    onChange={(e) => setFormData({ ...formData, preco: parseFloat(e.target.value) || 0 })}
-                    className="pl-10"
-                    required
-                  />
-                </div>
+                <CurrencyInput
+                  id="preco"
+                  value={formData.preco}
+                  onValueChange={(value) => setFormData({ ...formData, preco: value || 0 })}
+                  required
+                />
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="precoMinimo" className="text-sm font-medium text-gray-700">Preço Mínimo *</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">R$</span>
-                    <Input
-                      id="precoMinimo"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.precoMinimo || ""}
-                      onChange={(e) => setFormData({ ...formData, precoMinimo: parseFloat(e.target.value) || undefined })}
-                      className="pl-10"
-                      required
-                    />
-                  </div>
+                  <CurrencyInput
+                    id="precoMinimo"
+                    value={formData.precoMinimo}
+                    onValueChange={(value) => setFormData({ ...formData, precoMinimo: value })}
+                    required
+                  />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="precoMaximo" className="text-sm font-medium text-gray-700">Preço Máximo *</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">R$</span>
-                    <Input
-                      id="precoMaximo"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.precoMaximo || ""}
-                      onChange={(e) => setFormData({ ...formData, precoMaximo: parseFloat(e.target.value) || undefined })}
-                      className="pl-10"
-                      required
-                    />
-                  </div>
+                  <CurrencyInput
+                    id="precoMaximo"
+                    value={formData.precoMaximo}
+                    onValueChange={(value) => setFormData({ ...formData, precoMaximo: value })}
+                    required
+                  />
                 </div>
               </div>
             )}

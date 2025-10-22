@@ -24,6 +24,8 @@ export function ProductCardDesktop({ product }: ProductCardDesktopProps) {
   
   const isRecentlyAdded = recentlyAdded === product.id
 
+  const isSobConsulta = product.temVariacaoPreco || !product.preco || product.preco <= 0
+
   const handleAddToCart = () => {
     addToCart(product)
     toast({
@@ -73,6 +75,9 @@ export function ProductCardDesktop({ product }: ProductCardDesktopProps) {
               <h3 className="pointer-events-auto text-white font-bold text-base leading-snug line-clamp-2 drop-shadow font-marlin">
                 {product.nome}
               </h3>
+              {isSobConsulta && (
+                <Badge className="bg-amber-500/90 text-white border-0 text-[10px] font-semibold w-fit">Sob consulta</Badge>
+              )}
               <div className="pointer-events-auto flex items-center justify-between text-white/90 text-xs">
                 <button 
                   className="uppercase tracking-wide hover:text-white transition-colors underline text-left font-montserrat"

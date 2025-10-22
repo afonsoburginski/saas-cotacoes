@@ -27,7 +27,11 @@ const ExplorarAdaptive = memo(function ExplorarAdaptive() {
     loja: filters.loja || undefined,
   })
 
-  const { data: storesData, isLoading: isLoadingStores } = useStores({ status: "active" })
+  // Buscar APENAS lojas/comércios (businessType='comercio')
+  const { data: storesData, isLoading: isLoadingStores } = useStores({ 
+    status: "ativo",
+    businessType: "comercio" 
+  })
   const { data: categoriesData } = useCategories()
 
   const products = productsData?.data || []

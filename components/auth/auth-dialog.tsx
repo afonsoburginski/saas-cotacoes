@@ -26,13 +26,23 @@ export function AuthDialog({ open, onOpenChange, mode = 'login', selectedPlan }:
     setIsGoogleLoading(true)
     
     try {
-      // Se selectedPlan foi passado (pricing section), redireciona com plano
-      // Senão, vai pro checkout interno
-      const callbackURL = selectedPlan 
-        ? `/api/auth-callback?plan=${selectedPlan}`
-        : "/api/auth-callback-checkout"
+      // Detectar de onde veio o login
+      const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/'
       
-      console.log('🔐 Login iniciado. Plano:', selectedPlan || 'nenhum', 'Callback:', callbackURL)
+      let callbackURL: string
+      
+      if (selectedPlan) {
+        // Pricing section - vai direto pro Stripe
+        callbackURL = `/api/auth-callback?plan=${selectedPlan}`
+      } else if (currentPath.startsWith('/explorar') || currentPath.startsWith('/fornecedor') || currentPath.startsWith('/categoria')) {
+        // Páginas públicas - usuário consumidor
+        callbackURL = "/api/auth-callback-consumer"
+      } else {
+        // Landing - usuário empresa
+        callbackURL = "/api/auth-callback-checkout"
+      }
+      
+      console.log('🔐 Login iniciado. Path:', currentPath, 'Plano:', selectedPlan || 'nenhum', 'Callback:', callbackURL)
       
       await authClient.signIn.social({
         provider: "google",

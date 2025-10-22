@@ -4,8 +4,6 @@ import { stripe } from '@/lib/stripe'
 import { headers } from 'next/headers'
 import { getStripeCustomerByEmail, hasActiveSubscription } from '@/lib/stripe-helpers'
 
-export const dynamic = 'force-dynamic'
-
 export async function POST(request: Request) {
   try {
     // Verificar se Stripe está configurado
@@ -43,9 +41,13 @@ export async function POST(request: Request) {
     
     // 🛡️ PROTEÇÃO: Verificar se já tem subscription ativa
     const existingCustomer = await getStripeCustomerByEmail(session.user.email)
+    let customerId: string | undefined = undefined
     
     if (existingCustomer) {
-      const hasActive = await hasActiveSubscription((existingCustomer as any).id)
+      customerId = (existingCustomer as any).id
+      console.log('💳 Customer existente encontrado:', customerId)
+      
+      const hasActive = customerId ? await hasActiveSubscription(customerId) : false
       
       if (hasActive) {
         console.log('🚨 BLOQUEADO: User tentou criar 2ª subscription')
@@ -54,6 +56,10 @@ export async function POST(request: Request) {
           { status: 409 } // 409 Conflict
         )
       }
+      
+      console.log('✅ Customer existe mas sem subscription ativa - pode renovar')
+    } else {
+      console.log('📝 Novo customer será criado no checkout')
     }
     
     // IDs dos produtos do Stripe
@@ -75,7 +81,7 @@ export async function POST(request: Request) {
     
     // Criar Stripe Checkout Session usando o Price do produto
     const checkoutSession = await stripe.checkout.sessions.create({
-      customer_email: session.user.email,
+      ...(customerId ? { customer: customerId } : { customer_email: session.user.email }),
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [

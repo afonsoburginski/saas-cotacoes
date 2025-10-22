@@ -1,4 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useEffect } from "react"
+import { createRealtimeSubscription } from "@/lib/supabase"
 import type { Service } from "@/lib/types"
 
 interface ServicesResponse {
@@ -15,6 +17,7 @@ interface UseServicesParams {
 }
 
 export function useServices(params?: UseServicesParams) {
+  const queryClient = useQueryClient()
   const searchParams = new URLSearchParams()
   
   if (params?.search) searchParams.set("search", params.search)
@@ -23,6 +26,17 @@ export function useServices(params?: UseServicesParams) {
   if (params?.storeId) searchParams.set("storeId", params.storeId)
   if (params?.includeInactive) searchParams.set("includeInactive", "true")
   
+  // 🔴 REALTIME: Ouvir mudanças em serviços
+  useEffect(() => {
+    const channel = createRealtimeSubscription('services', () => {
+      queryClient.invalidateQueries({ queryKey: ["services"] })
+    })
+    
+    return () => {
+      channel.unsubscribe()
+    }
+  }, [queryClient])
+  
   return useQuery({
     queryKey: ["services", params],
     queryFn: async () => {
@@ -30,6 +44,8 @@ export function useServices(params?: UseServicesParams) {
       if (!res.ok) throw new Error("Failed to fetch services")
       return res.json() as Promise<ServicesResponse>
     },
+    staleTime: 1000 * 60 * 5, // 5 minutos de cache
+    enabled: !!params?.storeId, // Apenas executa a query se storeId estiver definido
   })
 }
 

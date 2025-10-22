@@ -8,8 +8,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Badge } from "@/components/ui/badge"
 import { ImageUpload } from "@/components/ui/image-upload"
+import { CurrencyInput } from "@/components/ui/currency-input"
 import {
   Dialog,
   DialogContent,
@@ -27,6 +27,7 @@ interface ProductFormProps {
   isOpen: boolean
   onClose: () => void
   onSubmit: (productData: ProductFormData) => void
+  storeId: string
 }
 
 export interface ProductFormData {
@@ -38,10 +39,11 @@ export interface ProductFormData {
   unidadeMedida: string
   sku: string
   descricao: string
-  imagens: string[]
+  imagemUrl?: string // URL única da imagem no Supabase Storage
   ativo: boolean
   destacado: boolean
   temVariacaoPreco: boolean
+  precoHabilitado?: boolean
   peso?: number
   dimensoes?: {
     comprimento: number
@@ -74,7 +76,7 @@ const unidadesMedida = [
   "Balde (balde)"
 ]
 
-export function ProductForm({ product, isOpen, onClose, onSubmit }: ProductFormProps) {
+export function ProductForm({ product, isOpen, onClose, onSubmit, storeId }: ProductFormProps) {
   const { toast } = useToast()
   const [formData, setFormData] = useState<ProductFormData>({
     nome: product?.nome || "",
@@ -85,15 +87,50 @@ export function ProductForm({ product, isOpen, onClose, onSubmit }: ProductFormP
     unidadeMedida: product?.unidadeMedida || "Unidade (un)",
     sku: product?.sku || "",
     descricao: product?.descricao || "",
-    imagens: product?.imagens || [],
+    imagemUrl: product?.imagemUrl || "",
     ativo: product?.ativo ?? true,
     destacado: product?.destacado ?? false,
     temVariacaoPreco: product?.temVariacaoPreco ?? false,
+    precoHabilitado: product?.preco ? true : false,
     peso: product?.peso || 0,
     dimensoes: product?.dimensoes || { comprimento: 0, largura: 0, altura: 0 }
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Derivar requisitos conforme a unidade de medida
+  const getMeasureKind = (unidade: string): "unit" | "length" | "area" | "volume" | "weight" => {
+    if (!unidade) return "unit"
+    if (unidade.includes("m³")) return "volume"
+    if (unidade.includes("m²")) return "area"
+    if (unidade.includes("Metro (m)")) return "length"
+    if (unidade.includes("kg") || unidade.includes("Tonelada")) return "weight"
+    return "unit"
+  }
+
+  const getUnitAbbrev = (unidade: string): string => {
+    const match = unidade.match(/\(([^)]+)\)/)
+    return match?.[1] || "un"
+  }
+
+  const measureKind = getMeasureKind(formData.unidadeMedida)
+  const requiresVolume = measureKind === "volume"
+  const requiresArea = measureKind === "area"
+  const requiresLength = measureKind === "length"
+  const requiresWeight = measureKind === "weight"
+  const dimUnit = requiresVolume || requiresArea || requiresLength ? "m" : "cm"
+  const unitAbbrev = getUnitAbbrev(formData.unidadeMedida)
+
+  // Máscara para estoque com sufixo de unidade
+  const [estoqueDisplay, setEstoqueDisplay] = useState<string>(
+    formData.estoque ? `${formData.estoque} ${unitAbbrev}` : ""
+  )
+
+  React.useEffect(() => {
+    // Atualiza a máscara quando a unidade muda
+    setEstoqueDisplay(formData.estoque ? `${formData.estoque} ${unitAbbrev}` : "")
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.unidadeMedida])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -110,13 +147,67 @@ export function ProductForm({ product, isOpen, onClose, onSubmit }: ProductFormP
         return
       }
 
-      if (formData.preco <= 0) {
-        toast({
-          title: "Erro de validação",
-          description: "O preço deve ser maior que zero.",
-          variant: "destructive",
-        })
-        return
+      if (formData.precoHabilitado) {
+        if (formData.preco <= 0) {
+          toast({
+            title: "Erro de validação",
+            description: "O preço deve ser maior que zero quando habilitado.",
+            variant: "destructive",
+          })
+          return
+        }
+      }
+
+      // Validações condicionais por unidade de medida
+      if (requiresWeight) {
+        const pesoVal = formData.peso ?? 0
+        if (pesoVal <= 0) {
+          toast({
+            title: "Erro de validação",
+            description: "Informe o peso em kg (maior que zero).",
+            variant: "destructive",
+          })
+          return
+        }
+      }
+
+      if (requiresLength) {
+        const comprimento = formData.dimensoes?.comprimento ?? 0
+        if (comprimento <= 0) {
+          toast({
+            title: "Erro de validação",
+            description: "Informe o comprimento em metros (maior que zero).",
+            variant: "destructive",
+          })
+          return
+        }
+      }
+
+      if (requiresArea) {
+        const comprimento = formData.dimensoes?.comprimento ?? 0
+        const largura = formData.dimensoes?.largura ?? 0
+        if (comprimento <= 0 || largura <= 0) {
+          toast({
+            title: "Erro de validação",
+            description: "Informe comprimento e largura em metros (maiores que zero).",
+            variant: "destructive",
+          })
+          return
+        }
+      }
+
+      if (requiresVolume) {
+        const comprimento = formData.dimensoes?.comprimento ?? 0
+        const largura = formData.dimensoes?.largura ?? 0
+        const altura = formData.dimensoes?.altura ?? 0
+        if (comprimento <= 0 || largura <= 0 || altura <= 0) {
+          toast({
+            title: "Erro de validação",
+            description: "Informe comprimento, largura e altura em metros (maiores que zero).",
+            variant: "destructive",
+          })
+          return
+        }
       }
 
       await onSubmit(formData)
@@ -258,6 +349,149 @@ export function ProductForm({ product, isOpen, onClose, onSubmit }: ProductFormP
                 </Select>
               </div>
             </div>
+
+            {/* UI combinada: Estoque, Status e Medidas condicionais */}
+            <div className="pt-4 mt-2 border-t border-dashed border-gray-200 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="estoque" className="text-sm font-medium text-gray-700">Quantidade em Estoque *</Label>
+                  <Input
+                    id="estoque"
+                    value={estoqueDisplay}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/[^0-9]/g, '')
+                      const num = parseInt(digits || '0', 10)
+                      setFormData(prev => ({ ...prev, estoque: isNaN(num) ? 0 : num }))
+                      setEstoqueDisplay(digits ? `${parseInt(digits, 10)} ${unitAbbrev}` : '')
+                    }}
+                    placeholder={`0 ${unitAbbrev}`}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Status do Produto</Label>
+                  <div className="flex items-center space-x-6 p-3 bg-gray-50 rounded-md">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="ativo"
+                        checked={formData.ativo}
+                        onCheckedChange={(checked) => setFormData(prev => ({ ...prev, ativo: checked }))}
+                      />
+                      <Label htmlFor="ativo" className="cursor-pointer text-sm">Produto Ativo</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="destacado"
+                        checked={formData.destacado}
+                        onCheckedChange={(checked) => setFormData(prev => ({ ...prev, destacado: checked }))}
+                      />
+                      <Label htmlFor="destacado" className="cursor-pointer text-sm">Produto Destacado</Label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {(requiresWeight || requiresLength || requiresArea || requiresVolume) && (
+                <div className="space-y-3">
+                  <div className="text-sm font-medium text-gray-700">
+                    {requiresWeight ? "Peso" : "Medidas"} {requiresWeight ? "(kg)" : `(${dimUnit})`}
+                  </div>
+
+                  {requiresWeight && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="peso" className="text-sm font-medium text-gray-700">Peso (kg) *</Label>
+                        <Input
+                          id="peso"
+                          value={formData.peso || ""}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/[^0-9.,]/g, '').replace(',', '.')
+                            setFormData(prev => ({ ...prev, peso: parseFloat(value) || undefined }))
+                          }}
+                          placeholder="0.0"
+                          required
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {(requiresLength || requiresArea || requiresVolume) && (
+                    <div className={`grid gap-4 ${requiresVolume ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1 md:grid-cols-2'}`}>
+                      <div className="space-y-2">
+                        <Label htmlFor="comprimento" className="text-sm font-medium text-gray-700">Comprimento ({dimUnit}) *</Label>
+                        <Input
+                          id="comprimento"
+                          value={formData.dimensoes?.comprimento || ""}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/[^0-9.,]/g, '').replace(',', '.')
+                            setFormData(prev => ({ 
+                              ...prev, 
+                              dimensoes: { ...prev.dimensoes!, comprimento: parseFloat(value) || 0 } 
+                            }))
+                          }}
+                          placeholder={`0.0 ${dimUnit}`}
+                          required
+                        />
+                      </div>
+
+                      {(requiresArea || requiresVolume) && (
+                        <div className="space-y-2">
+                          <Label htmlFor="largura" className="text-sm font-medium text-gray-700">Largura ({dimUnit}) *</Label>
+                          <Input
+                            id="largura"
+                            value={formData.dimensoes?.largura || ""}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/[^0-9.,]/g, '').replace(',', '.')
+                              setFormData(prev => ({ 
+                                ...prev, 
+                                dimensoes: { ...prev.dimensoes!, largura: parseFloat(value) || 0 } 
+                              }))
+                            }}
+                            placeholder={`0.0 ${dimUnit}`}
+                            required
+                          />
+                        </div>
+                      )}
+
+                      {requiresVolume && (
+                        <div className="space-y-2">
+                          <Label htmlFor="altura" className="text-sm font-medium text-gray-700">Altura ({dimUnit}) *</Label>
+                          <Input
+                            id="altura"
+                            value={formData.dimensoes?.altura || ""}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/[^0-9.,]/g, '').replace(',', '.')
+                              setFormData(prev => ({ 
+                                ...prev, 
+                                dimensoes: { ...prev.dimensoes!, altura: parseFloat(value) || 0 } 
+                              }))
+                            }}
+                            placeholder={`0.0 ${dimUnit}`}
+                            required
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-md p-3">
+                    {requiresVolume && (
+                      <span>Para itens por volume (m³), informe comprimento, largura e altura em metros. Ex.: Areia por m³.</span>
+                    )}
+                    {requiresArea && (
+                      <span>Para itens por área (m²), informe comprimento e largura em metros. Ex.: Pisos, revestimentos.</span>
+                    )}
+                    {requiresLength && (
+                      <span>Para itens por metro (m), informe o comprimento total em metros.</span>
+                    )}
+                    {requiresWeight && (
+                      <span>Para itens por peso (kg/t), informe o peso por unidade.</span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Preços */}
@@ -266,37 +500,50 @@ export function ProductForm({ product, isOpen, onClose, onSubmit }: ProductFormP
               <DollarSign className="h-5 w-5 text-gray-600" />
               Preços e Valores
             </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="preco" className="text-sm font-medium text-gray-700">Preço Base (R$) *</Label>
-                <Input
-                  id="preco"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.preco}
-                  onChange={(e) => setFormData(prev => ({ ...prev, preco: parseFloat(e.target.value) || 0 }))}
-                  placeholder="0,00"
-                  required
-                />
-                <p className="text-xs text-gray-500">Preço unitário padrão</p>
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+              <div>
+                <Label htmlFor="precoHabilitado" className="text-sm font-medium text-gray-700 cursor-pointer">
+                  Definir preço de referência
+                </Label>
+                <p className="text-xs text-gray-500 mt-1">
+                  Preço interno para sua referência. Clientes sempre veem "Sob consulta"
+                </p>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="precoPromocional" className="text-sm font-medium text-gray-700">Preço Promocional (R$)</Label>
-                <Input
-                  id="precoPromocional"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.precoPromocional || ""}
-                  onChange={(e) => setFormData(prev => ({ ...prev, precoPromocional: parseFloat(e.target.value) || undefined }))}
-                  placeholder="0,00 (opcional)"
-                />
-                <p className="text-xs text-gray-500">Preço em promoção</p>
-              </div>
+              <Switch
+                id="precoHabilitado"
+                checked={!!formData.precoHabilitado}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, precoHabilitado: checked }))}
+              />
             </div>
+            
+            {formData.precoHabilitado ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="preco" className="text-sm font-medium text-gray-700">Preço Base (R$) *</Label>
+                  <CurrencyInput
+                    id="preco"
+                    value={formData.preco}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, preco: value || 0 }))}
+                    required
+                  />
+                  <p className="text-xs text-gray-500">Preço unitário padrão</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="precoPromocional" className="text-sm font-medium text-gray-700">Preço Promocional (R$)</Label>
+                  <CurrencyInput
+                    id="precoPromocional"
+                    value={formData.precoPromocional}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, precoPromocional: value }))}
+                  />
+                  <p className="text-xs text-gray-500">Preço em promoção</p>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-900">
+                Preço sob consulta — o cliente fará orçamento pelo carrinho.
+              </div>
+            )}
 
             {/* Switch para Variação de Preços */}
             <div className="pt-4 border-t border-dashed border-gray-200">
@@ -326,142 +573,20 @@ export function ProductForm({ product, isOpen, onClose, onSubmit }: ProductFormP
             </div>
           </div>
 
-          {/* Estoque e Status */}
-          <div className="space-y-4 pb-6 border-b-2 border-dashed border-gray-300">
-            <h3 className="text-base font-semibold flex items-center gap-2 text-gray-800">
-              <Package className="h-5 w-5 text-gray-600" />
-              Estoque e Configurações
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="estoque" className="text-sm font-medium text-gray-700">Quantidade em Estoque *</Label>
-                <Input
-                  id="estoque"
-                  type="number"
-                  min="0"
-                  value={formData.estoque}
-                  onChange={(e) => setFormData(prev => ({ ...prev, estoque: parseInt(e.target.value) || 0 }))}
-                  placeholder="0"
-                  required
-                />
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="peso" className="text-sm font-medium text-gray-700">Peso (kg)</Label>
-                <Input
-                  id="peso"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={formData.peso || ""}
-                  onChange={(e) => setFormData(prev => ({ ...prev, peso: parseFloat(e.target.value) || undefined }))}
-                  placeholder="0.0 (opcional)"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-700">Status do Produto</Label>
-              <div className="flex items-center space-x-6 p-3 bg-gray-50 rounded-md">
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="ativo"
-                    checked={formData.ativo}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, ativo: checked }))}
-                  />
-                  <Label htmlFor="ativo" className="cursor-pointer text-sm">Produto Ativo</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="destacado"
-                    checked={formData.destacado}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, destacado: checked }))}
-                  />
-                  <Label htmlFor="destacado" className="cursor-pointer text-sm">Produto Destacado</Label>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Dimensões */}
-          <div className="space-y-4 pb-6 border-b-2 border-dashed border-gray-300">
-            <h3 className="text-base font-semibold flex items-center gap-2 text-gray-800">
-              <Package className="h-5 w-5 text-gray-600" />
-              Dimensões (cm)
-            </h3>
-            
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="comprimento" className="text-sm font-medium text-gray-700">Comprimento</Label>
-                <Input
-                  id="comprimento"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={formData.dimensoes?.comprimento || ""}
-                  onChange={(e) => setFormData(prev => ({ 
-                    ...prev, 
-                    dimensoes: { 
-                      ...prev.dimensoes!, 
-                      comprimento: parseFloat(e.target.value) || 0 
-                    } 
-                  }))}
-                  placeholder="0.0"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="largura" className="text-sm font-medium text-gray-700">Largura</Label>
-                <Input
-                  id="largura"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={formData.dimensoes?.largura || ""}
-                  onChange={(e) => setFormData(prev => ({ 
-                    ...prev, 
-                    dimensoes: { 
-                      ...prev.dimensoes!, 
-                      largura: parseFloat(e.target.value) || 0 
-                    } 
-                  }))}
-                  placeholder="0.0"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="altura" className="text-sm font-medium text-gray-700">Altura</Label>
-                <Input
-                  id="altura"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={formData.dimensoes?.altura || ""}
-                  onChange={(e) => setFormData(prev => ({ 
-                    ...prev, 
-                    dimensoes: { 
-                      ...prev.dimensoes!, 
-                      altura: parseFloat(e.target.value) || 0 
-                    } 
-                  }))}
-                  placeholder="0.0"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Imagens */}
+          {/* Imagem do Produto */}
           <div className="space-y-4">
             <h3 className="text-base font-semibold flex items-center gap-2 text-gray-800">
               <ImageIcon className="h-5 w-5 text-gray-600" />
-              Imagens do Produto
+              Imagem do Produto
             </h3>
             
             <ImageUpload
-              value={formData.imagens}
-              onChange={(imagens) => setFormData(prev => ({ ...prev, imagens }))}
-              maxImages={5}
+              value={formData.imagemUrl ? [formData.imagemUrl] : []}
+              onChange={(urls) => setFormData(prev => ({ ...prev, imagemUrl: urls[0] || '' }))}
+              maxImages={1}
+              bucket="images"
+              pathPrefix={`stores/${storeId}/products`}
             />
           </div>
 

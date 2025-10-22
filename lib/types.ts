@@ -8,17 +8,16 @@ export type ShippingPolicy = {
   minOrderForFreeShipping?: number // valor mínimo para frete grátis
 }
 
-export type Store = {
+export interface Store {
   id: string
   nome: string
   email?: string
   telefone?: string
   cnpj: string
   endereco?: string
-  status: "active" | "suspended" | "pending" | "rejected"
-  businessType?: "comercio" | "servico"
+  status: "ativo" | "suspended" | "approved" | "pending" | "rejected"
   priorityScore: number
-  plano: "Basic" | "Pro" | "Premium"
+  plano: "basic" | "pro" | "premium"
   createdAt: string
   shippingPolicy: ShippingPolicy
   address?: {
@@ -89,7 +88,7 @@ export type Review = {
   comentario: string
   productId?: string
   storeId?: string
-  status: "pending" | "approved" | "hidden"
+  status: "pendente" | "aprovado" | "oculto"
   createdAt: string
 }
 

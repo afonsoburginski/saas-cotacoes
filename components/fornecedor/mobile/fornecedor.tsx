@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useCartStore } from "@/stores/cart-store"
 import { useToast } from "@/hooks/use-toast"
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,7 @@ import { TypographyH3, TypographyH4, TypographyP, TypographySmall, TypographyMut
 import { Input } from "@/components/ui/input"
 import { FaArrowRightLong } from "react-icons/fa6"
 import { useDebounce } from "@/hooks/use-debounce"
+import { useReviews } from "@/hooks/use-reviews"
 import { 
   Star, 
   MapPin, 
@@ -31,6 +32,8 @@ import {
   Search
 } from "lucide-react"
 import Link from "next/link"
+import { calculateDistance } from "@/lib/utils"
+import { formatServicePrice } from "@/lib/service-price-formatter"
 
 interface FornecedorMobileProps {
   store: any
@@ -43,6 +46,30 @@ export function FornecedorMobile({ store, storeProducts, storeServices }: Fornec
   const [searchTerm, setSearchTerm] = useState("")
   const addToCart = useCartStore((state) => state.addToCart)
   const { toast } = useToast()
+  const [distanceKm, setDistanceKm] = useState<number | null>(null)
+
+  // 🔴 Buscar avaliações reais da database
+  const { data: reviews = [], isLoading: isLoadingReviews } = useReviews({ 
+    storeId: store.id.toString() 
+  })
+
+  useEffect(() => {
+    if (!store?.address?.lat || !store?.address?.lng) return
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const d = calculateDistance(
+          pos.coords.latitude,
+          pos.coords.longitude,
+          store.address.lat,
+          store.address.lng
+        )
+        setDistanceKm(d)
+      },
+      () => setDistanceKm(null),
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }, [store?.address?.lat, store?.address?.lng])
   
   const handleShare = async () => {
     const url = `${window.location.origin}/fornecedor/${store.id}`
@@ -69,8 +96,16 @@ export function FornecedorMobile({ store, storeProducts, storeServices }: Fornec
   const handleWhatsApp = () => {
     const profileUrl = `${window.location.origin}/fornecedor/${store.id}`
     const message = `Olá! Vi seu perfil no Orça Norte e gostaria de fazer um orçamento.\n\n${profileUrl}`
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
-    window.open(whatsappUrl, '_blank')
+    
+    // Usar o telefone da loja se disponível, senão usar URL genérica
+    if (store.telefone) {
+      const phoneNumber = store.telefone.replace(/\D/g, '') // Remove caracteres não numéricos
+      const whatsappUrl = `https://wa.me/55${phoneNumber}?text=${encodeURIComponent(message)}`
+      window.open(whatsappUrl, '_blank')
+    } else {
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
+      window.open(whatsappUrl, '_blank')
+    }
   }
   
   // Combinar produtos e serviços
@@ -80,12 +115,8 @@ export function FornecedorMobile({ store, storeProducts, storeServices }: Fornec
   ]
   
   const handleAddService = (service: any) => {
-    const serviceAsProduct = {
-      ...service,
-      preco: service.precoMinimo || 0,
-      estoque: 999,
-    }
-    addToCart(serviceAsProduct as any)
+    // Adicionar serviço diretamente ao carrinho
+    addToCart(service)
     toast({
       title: "Serviço adicionado!",
       description: `${service.nome} foi adicionado ao orçamento.`,
@@ -111,34 +142,6 @@ export function FornecedorMobile({ store, storeProducts, storeServices }: Fornec
     return acc
   }, {})
 
-  // Mock reviews data
-  const reviews = [
-    {
-      id: "1",
-      userName: "João Silva",
-      rating: 5,
-      comment: "Excelente atendimento e produtos de qualidade. Recomendo!",
-      date: "2024-01-15",
-      verified: true
-    },
-    {
-      id: "2", 
-      userName: "Maria Santos",
-      rating: 4,
-      comment: "Bom preço e entrega rápida. Voltarei a comprar.",
-      date: "2024-01-10",
-      verified: true
-    },
-    {
-      id: "3",
-      userName: "Pedro Costa",
-      rating: 5,
-      comment: "Melhor empresa da região. Produtos sempre em estoque.",
-      date: "2024-01-08",
-      verified: false
-    }
-  ]
-
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
       <Star
@@ -152,18 +155,25 @@ export function FornecedorMobile({ store, storeProducts, storeServices }: Fornec
     <div className="min-h-screen bg-white pb-32">
       {/* Cover Photo - Facebook Marketplace Style */}
       <div className="relative">
-        <div className="h-52 bg-[#0052FF] relative overflow-hidden">
-          {/* Texture overlay */}
-          <div 
-            className="absolute inset-0 opacity-40"
-            style={{
-              backgroundImage: 'url(/texture.png)',
-              backgroundSize: '150px 150px',
-              backgroundRepeat: 'repeat',
-              mixBlendMode: 'overlay'
-            }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/10" />
+        <div className="h-52 relative overflow-hidden">
+          {store.coverImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={store.coverImage} alt="Capa" className="w-full h-full object-cover" />
+          ) : (
+            <div className="h-full bg-[#0052FF]">
+              {/* Texture overlay */}
+              <div 
+                className="absolute inset-0 opacity-40"
+                style={{
+                  backgroundImage: 'url(/texture.png)',
+                  backgroundSize: '150px 150px',
+                  backgroundRepeat: 'repeat',
+                  mixBlendMode: 'overlay'
+                }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/10" />
+            </div>
+          )}
           
           {/* Header Buttons */}
           <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
@@ -189,9 +199,14 @@ export function FornecedorMobile({ store, storeProducts, storeServices }: Fornec
         <div className="px-4 -mt-14 relative z-10">
           <div className="flex items-end gap-3">
             <Avatar className="h-20 w-20 rounded-full ring-4 ring-white shadow-lg">
-              <AvatarFallback className="bg-white text-[#0052FF] text-2xl font-bold">
-                {store.nome.charAt(0)}
-              </AvatarFallback>
+              {store.logo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={store.logo} alt={store.nome} className="h-full w-full object-cover rounded-full" />
+              ) : (
+                <AvatarFallback className="bg-white text-[#0052FF] text-2xl font-bold">
+                  {store.nome.charAt(0)}
+                </AvatarFallback>
+              )}
             </Avatar>
             <div className="flex-1 pb-10">
               <h3 className="text-xl font-bold text-white font-montserrat mb-0 leading-tight text-shadow-lg">@{store.nome}</h3>
@@ -218,7 +233,12 @@ export function FornecedorMobile({ store, storeProducts, storeServices }: Fornec
           
           <div className="flex items-center gap-1 mb-4">
             <MapPin className="h-4 w-4 text-gray-500" />
-            <TypographyMuted>São Paulo, SP • 2.5 km de distância</TypographyMuted>
+            <TypographyMuted>
+              {store.rua && store.cidade && store.estado
+                ? `${store.rua}${store.numero ? `, ${store.numero}` : ''} - ${store.bairro || ''}, ${store.cidade} - ${store.estado}`
+                : store.endereco || 'Endereço não informado'}
+              {distanceKm !== null ? ` • ${distanceKm < 10 ? distanceKm.toFixed(1) : distanceKm.toFixed(0)} km de distância` : ''}
+            </TypographyMuted>
           </div>
           
           {/* Action Button - WhatsApp */}
@@ -310,13 +330,9 @@ export function FornecedorMobile({ store, storeProducts, storeServices }: Fornec
                                     <Badge className="mb-2 bg-green-600 text-white text-[10px]">Serviço</Badge>
                                     <h4 className="font-bold text-xs mb-1 line-clamp-2">{item.nome}</h4>
                                     <p className="text-[10px] text-gray-600 mb-2">{item.categoria}</p>
-                                    {item.precoMinimo && item.precoMaximo ? (
-                                      <p className="text-[10px] font-semibold text-green-700 mb-2">
-                                        R$ {item.precoMinimo} - {item.precoMaximo}
-                                      </p>
-                                    ) : (
-                                      <p className="text-[10px] text-amber-600 mb-2">Sob consulta</p>
-                                    )}
+                                    <p className={`text-[10px] font-semibold mb-2 ${formatServicePrice(item).includes('Sob consulta') ? 'text-amber-600' : 'text-green-700'}`}>
+                                      {formatServicePrice(item)}
+                                    </p>
                                     <Button 
                                       size="sm" 
                                       className="w-full text-[10px] h-7 bg-green-600 text-white"
@@ -344,46 +360,65 @@ export function FornecedorMobile({ store, storeProducts, storeServices }: Fornec
           <TabsContent value="avaliacoes" className="mt-0">
             <div className="bg-gray-50 min-h-screen">
               <div className="px-4 py-4">
-                <div className="flex items-center justify-between mb-4">
-                  <TypographyH4>Avaliações</TypographyH4>
-                  <div className="flex items-center gap-1">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <TypographySmall className="font-semibold">4.8</TypographySmall>
-                    <TypographyMuted className="text-xs">(127)</TypographyMuted>
+                {isLoadingReviews ? (
+                  <div className="bg-white rounded-2xl p-8 text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0052FF] mx-auto mb-4"></div>
+                    <TypographyMuted className="font-montserrat">Carregando avaliações...</TypographyMuted>
                   </div>
-                </div>
-                
-                <div className="space-y-3">
-                  {reviews.map((review) => (
-                    <div key={review.id} className="bg-white rounded-lg p-4 shadow-sm">
-                      <div className="flex items-start gap-3 mb-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarFallback className="bg-gray-100 text-gray-600">
-                            {review.userName.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <TypographySmall className="font-semibold">{review.userName}</TypographySmall>
-                            {review.verified && (
-                              <Badge variant="outline" className="text-xs">
-                                <Shield className="h-3 w-3 mr-1" />
-                                Verificado
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="flex">{renderStars(review.rating)}</div>
-                            <TypographyMuted className="text-xs">
-                              {new Date(review.date).toLocaleDateString('pt-BR')}
-                            </TypographyMuted>
-                          </div>
-                          <TypographyP className="text-sm mt-0">{review.comment}</TypographyP>
-                        </div>
+                ) : reviews.length === 0 ? (
+                  <div className="bg-white rounded-2xl p-8 text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                      <Star className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <TypographyH4 className="mb-2 font-montserrat">Nenhuma avaliação ainda</TypographyH4>
+                    <TypographyMuted className="font-montserrat">Seja o primeiro a avaliar este fornecedor!</TypographyMuted>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between mb-4">
+                      <TypographyH4>Avaliações</TypographyH4>
+                      <div className="flex items-center gap-1">
+                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                        <TypographySmall className="font-semibold">4.8</TypographySmall>
+                        <TypographyMuted className="text-xs">({reviews.length})</TypographyMuted>
                       </div>
                     </div>
-                  ))}
-                </div>
+                    
+                    <div className="space-y-3">
+                      {reviews.map((review) => (
+                        <div key={review.id} className="bg-white rounded-lg p-4 shadow-sm">
+                          <div className="flex items-start gap-3 mb-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarFallback className="bg-gray-100 text-gray-600">
+                                {review.userName.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <TypographySmall className="font-semibold">{review.userName}</TypographySmall>
+                                {review.verified && (
+                                  <Badge variant="outline" className="text-xs">
+                                    <Shield className="h-3 w-3 mr-1" />
+                                    Verificado
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="flex">{renderStars(review.rating)}</div>
+                                <TypographyMuted className="text-xs">
+                                  {new Date(review.createdAt).toLocaleDateString('pt-BR')}
+                                </TypographyMuted>
+                              </div>
+                              {review.comentario && (
+                                <TypographyP className="text-sm mt-0">{review.comentario}</TypographyP>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </TabsContent>
@@ -401,7 +436,7 @@ export function FornecedorMobile({ store, storeProducts, storeServices }: Fornec
                     <div className="flex items-center gap-3">
                       <Phone className="h-5 w-5 text-gray-500" />
                       <div>
-                        <TypographySmall className="font-medium">(11) 99999-9999</TypographySmall>
+                        <TypographySmall className="font-medium">{store.telefone || '(00) 00000-0000'}</TypographySmall>
                         <TypographyMuted className="text-xs">Telefone</TypographyMuted>
                       </div>
                     </div>
@@ -409,7 +444,7 @@ export function FornecedorMobile({ store, storeProducts, storeServices }: Fornec
                     <div className="flex items-center gap-3">
                       <Mail className="h-5 w-5 text-gray-500" />
                       <div>
-                        <TypographySmall className="font-medium">contato@{store.nome.toLowerCase().replace(/\s+/g, '')}.com</TypographySmall>
+                        <TypographySmall className="font-medium">{store.email || `contato@${store.nome.toLowerCase().replace(/\s+/g, '')}.com`}</TypographySmall>
                         <TypographyMuted className="text-xs">Email</TypographyMuted>
                       </div>
                     </div>
@@ -422,8 +457,14 @@ export function FornecedorMobile({ store, storeProducts, storeServices }: Fornec
                   <div className="flex items-start gap-3">
                     <MapPin className="h-5 w-5 text-gray-500 mt-0.5" />
                     <div>
-                      <TypographySmall className="font-medium">Rua das Construções, 123</TypographySmall>
-                      <TypographyMuted className="text-xs">Vila Madalena, São Paulo - SP</TypographyMuted>
+                      <TypographySmall className="font-medium">
+                        {store.rua && store.cidade && store.estado
+                          ? `${store.rua}${store.numero ? `, ${store.numero}` : ''} - ${store.bairro || ''}, ${store.cidade} - ${store.estado}`
+                          : store.endereco || 'Endereço não informado'}
+                      </TypographySmall>
+                      {store.cep && (
+                        <TypographyMuted className="text-xs">CEP: {store.cep}</TypographyMuted>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -434,8 +475,7 @@ export function FornecedorMobile({ store, storeProducts, storeServices }: Fornec
                   <div className="flex items-start gap-3">
                     <Clock className="h-5 w-5 text-gray-500 mt-0.5" />
                     <div>
-                      <TypographySmall className="font-medium">Seg-Sex: 08:00-18:00</TypographySmall>
-                      <TypographyMuted className="text-xs">Sáb: 08:00-12:00</TypographyMuted>
+                      <TypographySmall className="font-medium">{store.horarioFuncionamento || 'Seg-Sex: 08:00-18:00 | Sáb: 08:00-12:00'}</TypographySmall>
                     </div>
                   </div>
                 </div>

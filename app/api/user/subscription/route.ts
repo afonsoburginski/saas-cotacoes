@@ -3,8 +3,6 @@ import { auth } from '@/lib/auth'
 import { stripe } from '@/lib/stripe'
 import { headers } from 'next/headers'
 
-export const dynamic = 'force-dynamic'
-
 export async function GET() {
   try {
     const session = await auth.api.getSession({

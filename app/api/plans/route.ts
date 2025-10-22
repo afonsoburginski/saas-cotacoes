@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server'
 import { db } from '@/drizzle'
 import { sql } from 'drizzle-orm'
 
-export const dynamic = 'force-dynamic'
-
 export async function GET() {
   try {
     // Buscar produtos do Stripe via Foreign Tables

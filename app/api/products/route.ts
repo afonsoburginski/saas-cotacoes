@@ -3,8 +3,6 @@ import { db } from '@/drizzle'
 import { products, stores } from '@/drizzle/schema'
 import { eq, and, like, or, sql } from 'drizzle-orm'
 
-export const dynamic = 'force-dynamic'
-
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
@@ -28,7 +26,6 @@ export async function GET(request: Request) {
         unidadeMedida: products.unidadeMedida,
         rating: products.rating,
         imagemUrl: products.imagemUrl,
-        imagens: products.imagens,
         ativo: products.ativo,
         destacado: products.destacado,
         sku: products.sku,
@@ -79,7 +76,6 @@ export async function GET(request: Request) {
       precoPromocional: p.precoPromocional ? parseFloat(p.precoPromocional as string) : undefined,
       rating: parseFloat(p.rating as string || '0'),
       peso: p.peso ? parseFloat(p.peso as string) : undefined,
-      imagens: p.imagens as string[] || [],
       dimensoes: p.dimensoes as any,
     }))
     
@@ -110,7 +106,6 @@ export async function POST(request: Request) {
       unidadeMedida: body.unidadeMedida,
       rating: '0',
       imagemUrl: body.imagemUrl,
-      imagens: body.imagens,
       ativo: body.ativo,
       destacado: body.destacado,
       sku: body.sku,

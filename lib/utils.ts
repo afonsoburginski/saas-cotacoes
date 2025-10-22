@@ -61,7 +61,9 @@ export function calculateShippingCost(
 }
 
 // Função para formatar informação de frete
-export function formatShippingInfo(policy: ShippingPolicy): string {
+export function formatShippingInfo(policy: ShippingPolicy | null): string {
+  if (!policy) return "Consultar frete"
+  
   switch (policy.type) {
     case "free":
       return "Frete Grátis"

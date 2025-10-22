@@ -64,7 +64,7 @@ export const mockStores: Store[] = [
     id: "4",
     nome: "Depot Construção",
     cnpj: "55.666.777/0001-88",
-    status: "suspenso",
+    status: "suspended",
     priorityScore: 75,
     plano: "Basic",
     createdAt: "2024-01-05",

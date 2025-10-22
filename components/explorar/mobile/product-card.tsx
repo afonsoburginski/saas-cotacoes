@@ -23,6 +23,7 @@ export function ProductCardMobile({ product }: ProductCardMobileProps) {
   const { toast } = useToast()
   
   const isRecentlyAdded = recentlyAdded === product.id
+  const isSobConsulta = product.temVariacaoPreco || !product.preco || product.preco <= 0
 
   const handleAddToCart = () => {
     addToCart(product)
@@ -74,6 +75,9 @@ export function ProductCardMobile({ product }: ProductCardMobileProps) {
               <h3 className="text-white font-bold text-xs leading-tight line-clamp-2 drop-shadow-lg font-marlin">
                 {product.nome}
               </h3>
+              {isSobConsulta && (
+                <Badge className="bg-amber-500/90 text-white border-0 text-[9px] font-semibold w-fit">Sob consulta</Badge>
+              )}
               <div className="flex items-center justify-between text-white/90 text-[10px]">
                 <button 
                   className="uppercase tracking-wide hover:text-white transition-colors underline text-left font-montserrat"

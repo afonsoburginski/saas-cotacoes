@@ -25,6 +25,7 @@ export function ProductCard({ product, variant = "compact" }: ProductCardProps) 
   const { toast } = useToast()
   
   const isRecentlyAdded = recentlyAdded === product.id
+  const isSobConsulta = product.temVariacaoPreco || !product.preco || product.preco <= 0
 
   const handleAddToCart = () => {
     addToCart(product)
@@ -76,9 +77,12 @@ export function ProductCard({ product, variant = "compact" }: ProductCardProps) 
             <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/35 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 p-4 space-y-3">
-                <h3 className="pointer-events-auto text-white font-bold text-base leading-snug line-clamp-2 drop-shadow">
+              <h3 className="pointer-events-auto text-white font-bold text-base leading-snug line-clamp-2 drop-shadow">
                   {product.nome}
                 </h3>
+              {isSobConsulta && (
+                <Badge className="bg-amber-500/90 text-white border-0 text-[10px] font-semibold w-fit">Sob consulta</Badge>
+              )}
                 <div className="pointer-events-auto flex items-center justify-between text-white/90 text-xs">
                   <span className="uppercase tracking-wide">
                     {product.storeNome}

@@ -1,4 +1,6 @@
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useEffect } from "react"
+import { createRealtimeSubscription } from "@/lib/supabase"
 import type { Store } from "@/lib/types"
 
 interface StoresResponse {
@@ -8,12 +10,26 @@ interface StoresResponse {
 
 interface UseStoresParams {
   status?: string
+  businessType?: string
 }
 
 export function useStores(params?: UseStoresParams) {
+  const queryClient = useQueryClient()
   const searchParams = new URLSearchParams()
   
   if (params?.status) searchParams.set("status", params.status)
+  if (params?.businessType) searchParams.set("businessType", params.businessType)
+  
+  // 🔴 REALTIME: Ouvir mudanças em stores
+  useEffect(() => {
+    const channel = createRealtimeSubscription('stores', () => {
+      queryClient.invalidateQueries({ queryKey: ["stores"] })
+    })
+    
+    return () => {
+      channel.unsubscribe()
+    }
+  }, [queryClient])
   
   return useQuery({
     queryKey: ["stores", params],

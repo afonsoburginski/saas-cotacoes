@@ -5,28 +5,35 @@ import { stores } from '@/drizzle/schema'
 import { eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 
-export const dynamic = 'force-dynamic'
-
 export async function GET() {
   try {
     const session = await auth.api.getSession({
       headers: await headers()
     })
     
+    console.log('🔐 /api/user/store - Session:', session?.user?.email || 'não logado')
+    
     if (!session?.user) {
+      console.log('❌ Não autorizado')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     
     // Buscar store do usuário
+    console.log('🔍 Buscando store para userId:', session.user.id)
+    
     const [store] = await db
       .select()
       .from(stores)
       .where(eq(stores.userId, session.user.id))
       .limit(1)
     
+    console.log('📦 Store encontrada:', store ? store.id : 'nenhuma')
+    
     if (!store) {
+      console.log('⚠️ Usuário não tem loja ainda')
       return NextResponse.json({ 
         storeId: null,
+        slug: null,
         hasStore: false 
       })
     }

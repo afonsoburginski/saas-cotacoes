@@ -27,7 +27,8 @@ import {
   MapPin, 
   Star, 
   Shield, 
-  Sparkles
+  Sparkles,
+  Wrench
 } from "lucide-react"
 import { FaArrowRightLong } from "react-icons/fa6"
 import { Card } from "@/components/ui/card"
@@ -64,6 +65,19 @@ const ExplorarMobile = memo(function ExplorarMobile({
   
   // Random seed que muda a cada mount para forçar re-shuffle
   const [shuffleSeed] = useState(() => Math.random())
+  
+  // Buscar prestadores de serviço
+  const [shuffledProviders, setShuffledProviders] = useState<any[]>([])
+  
+  useEffect(() => {
+    fetch('/api/service-providers?limit=15')
+      .then(res => res.json())
+      .then(data => {
+        if (data.data) {
+          setShuffledProviders(shuffleArray(data.data))
+        }
+      })
+  }, [])
 
   // Listen for supplier modal events from ProductCard - memoized
   const handleOpenSupplierModal = useCallback((event: CustomEvent) => {
@@ -122,42 +136,23 @@ const ExplorarMobile = memo(function ExplorarMobile({
     }
   }, [setFilters, setActiveTab, setSupplierSearch])
 
-  // Filtrar FORNECEDORES (comercio) baseado na busca
-  const filteredFornecedores = useMemo(() => {
+  // Filtrar fornecedores baseado na busca e randomizar
+  const filteredStores = useMemo(() => {
     let filtered
     if (!supplierSearch) {
-      filtered = stores.filter(s => s.status === "active" && s.businessType === "comercio")
+      filtered = stores.filter(s => s.status === "approved")
     } else {
       const searchLower = supplierSearch.toLowerCase()
       filtered = stores.filter(s => 
-        s.status === "active" && 
-        s.businessType === "comercio" &&
+        s.status === "approved" && 
         (s.nome.toLowerCase().includes(searchLower) || 
          s.cidade?.toLowerCase().includes(searchLower))
       )
     }
+    
+    // Shuffle stores for variety on each load
     return shuffleArray(filtered)
   }, [stores, supplierSearch, shuffleSeed])
-
-  // Filtrar PRESTADORES (servico) baseado na busca
-  const filteredPrestadores = useMemo(() => {
-    let filtered
-    if (!supplierSearch) {
-      filtered = stores.filter(s => s.status === "active" && s.businessType === "servico")
-    } else {
-      const searchLower = supplierSearch.toLowerCase()
-      filtered = stores.filter(s => 
-        s.status === "active" && 
-        s.businessType === "servico" &&
-        (s.nome.toLowerCase().includes(searchLower) || 
-         s.cidade?.toLowerCase().includes(searchLower))
-      )
-    }
-    return shuffleArray(filtered)
-  }, [stores, supplierSearch, shuffleSeed])
-
-  // Total combinado para exibir
-  const totalStores = filteredFornecedores.length + filteredPrestadores.length
 
   // Placeholder e value dinâmicos baseados na tab ativa
   const searchPlaceholder = activeTab === "produtos" 
@@ -313,38 +308,35 @@ const ExplorarMobile = memo(function ExplorarMobile({
               ) : (
                 <>
                   <div className="flex items-center justify-between mb-4 px-4">
-                    <TypographyH4 className="font-montserrat">Marketplace</TypographyH4>
+                    <TypographyH4 className="font-montserrat">Fornecedores Disponíveis</TypographyH4>
                     <Badge variant="outline" className="bg-gray-50">
-                      {totalStores} empresas
+                      {filteredStores.length} fornecedores
                     </Badge>
                   </div>
 
-                  {/* Empty state */}
-                  {totalStores === 0 ? (
+                  {/* Supplier rows with mini product carousel */}
+                  {filteredStores.length === 0 ? (
                     <div className="text-center py-16 bg-white rounded-2xl mx-4">
                       <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
                         <Search className="h-8 w-8 text-gray-400" />
                       </div>
-                      <TypographyH4 className="mb-2 font-montserrat">Nenhuma empresa encontrada</TypographyH4>
+                      <TypographyH4 className="mb-2 font-montserrat">Nenhum fornecedor encontrado</TypographyH4>
                       <TypographyMuted className="font-montserrat">Tente buscar por outro termo</TypographyMuted>
                     </div>
                   ) : (
-                    <>
-                      {/* SEÇÃO 1: FORNECEDORES (comercio) */}
-                      {filteredFornecedores.length > 0 && (
-                        <div className="space-y-4 mb-8">
-                          <div className="flex items-center gap-2 px-4">
-                            <TypographyH4 className="font-montserrat">Fornecedores</TypographyH4>
-                            <Badge variant="outline" className="bg-gray-50">{filteredFornecedores.length}</Badge>
-                          </div>
-                          <div className="space-y-6">
-                            {filteredFornecedores.map((store) => {
+                    <div className="space-y-6">
+                {filteredStores.map((store, index) => {
                     const storeProducts = shuffleArray(
                       filteredProducts.filter(p => p.storeId === store.id)
                     ).slice(0, 6)
+                    
+                    const showProviders = (index + 1) % 2 === 0
+                    const providerStart = Math.floor(index / 2) * 10
+                    const providersToShow = shuffledProviders.slice(providerStart, providerStart + 10)
 
                     return (
-                      <div key={`store-${store.id}`} className="">
+                      <div key={`store-${store.id}`}>
+                      <div className="">
                         {/* Supplier Row (no card) */}
                         <div 
                           className="px-4 py-3 active:opacity-70 transition-opacity cursor-pointer bg-gray-50"
@@ -391,82 +383,65 @@ const ExplorarMobile = memo(function ExplorarMobile({
                           </div>
                         )}
                       </div>
-                    )
-                  })}
+                      
+                      {/* Row de Prestadores */}
+                      {showProviders && providersToShow.length > 0 && (
+                        <div className="my-6 px-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Wrench className="h-4 w-4 text-green-600" />
+                            <TypographySmall className="font-semibold">Prestadores de Serviço</TypographySmall>
+                            <Badge variant="outline" className="text-green-700 border-green-200 bg-green-50 text-xs">
+                              Qualificados
+                            </Badge>
+                          </div>
+                          
+                          <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
+                            <div className="flex gap-3 pb-2">
+                              {providersToShow.map((provider: any) => (
+                                <Card 
+                                  key={provider.id}
+                                  className="flex-none w-[160px] p-3 border-green-100"
+                                  onClick={() => router.push(`/fornecedor/${provider.id}`)}
+                                >
+                                  <div className="flex flex-col items-center text-center">
+                                    <Avatar className="h-12 w-12 mb-2 border-2 border-green-200">
+                                      <AvatarFallback className="bg-green-600 text-white font-bold text-xs">
+                                        {provider.nome?.split(' ')[0]?.charAt(0)}{provider.nome?.split(' ')[1]?.charAt(0) || ''}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    
+                                    <TypographySmall className="font-semibold mb-1 line-clamp-2 text-xs leading-tight">
+                                      {provider.nome}
+                                    </TypographySmall>
+                                    
+                                    <div className="flex items-center gap-1 mb-3">
+                                      <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
+                                      <span className="text-[10px] font-medium">{provider.rating || 5.0}</span>
+                                      <Shield className="h-2.5 w-2.5 text-green-600" />
+                                    </div>
+                                    
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline" 
+                                      className="w-full text-[10px] h-6 border-green-600 text-green-700 hover:bg-green-50"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        router.push(`/fornecedor/${provider.id}`);
+                                      }}
+                                    >
+                                      Ver Perfil
+                                    </Button>
+                                  </div>
+                                </Card>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       )}
-
-                      {/* SEÇÃO 2: PRESTADORES DE SERVIÇOS (servico) */}
-                      {filteredPrestadores.length > 0 && (
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-2 px-4">
-                            <TypographyH4 className="font-montserrat">Prestadores de Serviços</TypographyH4>
-                            <Badge variant="outline" className="bg-gray-50">{filteredPrestadores.length}</Badge>
-                          </div>
-                          <div className="space-y-6">
-                            {filteredPrestadores.map((store) => {
-                    const storeProducts = shuffleArray(
-                      filteredProducts.filter(p => p.storeId === store.id)
-                    ).slice(0, 6)
-
-                    return (
-                      <div key={`store-${store.id}`} className="">
-                        {/* Supplier Row (no card) */}
-                        <div 
-                          className="px-4 py-3 active:opacity-70 transition-opacity cursor-pointer bg-gray-50"
-                          onClick={() => router.push(`/fornecedor/${store.id}`)}
-                        >
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-12 w-12 rounded-full">
-                              <AvatarFallback className="bg-blue-500 text-white font-semibold rounded-full">
-                                {store.nome.charAt(0)}
-                              </AvatarFallback>
-                            </Avatar>
-
-                            <div className="flex-1 min-w-0">
-                              
-                              <div className="flex items-center gap-2 mb-1">
-                                <TypographySmall className="font-semibold truncate font-montserrat">@{store.nome}</TypographySmall>
-                                <Badge className="bg-green-100 text-green-700 border-green-200 text-xs shrink-0">
-                                  <Shield className="h-3 w-3 mr-1" />
-                                  Verificado
-                                </Badge>
-                              </div>
-
-                              <div className="flex items-center gap-3 text-xs text-gray-600 font-montserrat">
-                                <div className="flex items-center gap-1">
-                                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                                  <span>4.8</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <MapPin className="h-3 w-3" />
-                                  <span className="truncate">2.5 km</span>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Divider */}
-                            <div className="border-t border-gray-200 w-full" />
-                          </div>
-                        </div>
-
-                        {/* Products mini-row (horizontal scroll) */}
-                        {storeProducts.length > 0 && (
-                          <div className="overflow-x-auto scrollbar-hide">
-                            <VirtualizedProductList 
-                              products={storeProducts} 
-                              alwaysShowButtons={true}
-                            />
-                          </div>
-                        )}
                       </div>
                     )
                   })}
-                          </div>
-                        </div>
-                      )}
-                    </>
+                    </div>
                   )}
                 </>
               )}

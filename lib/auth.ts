@@ -24,12 +24,6 @@ export const auth = betterAuth({
     },
   },
   baseURL: process.env.BETTER_AUTH_URL,
-  secret: process.env.BETTER_AUTH_SECRET,
-  trustedOrigins: [
-    "http://localhost:3000",
-    "https://www.orcanorte.com.br",
-    "https://orcanorte.com.br",
-  ],
   user: {
     additionalFields: {
       phone: {
@@ -76,21 +70,6 @@ export const auth = betterAuth({
   },
   advanced: {
     cookiePrefix: "orca-norte",
-    useSecureCookies: process.env.NODE_ENV === "production",
-    defaultCookieAttributes: {
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      httpOnly: true,
-      path: "/",
-    },
-  },
-  session: {
-    expiresIn: 60 * 60 * 24 * 7, // 7 dias
-    updateAge: 60 * 60 * 24, // Atualiza a cada 1 dia
-    cookieCache: {
-      enabled: true,
-      maxAge: 5 * 60 * 1000, // 5 minutos
-    },
   },
 })
 

@@ -73,12 +73,20 @@ export const stores = pgTable('stores', {
   email: varchar('email', { length: 256 }),
   telefone: varchar('telefone', { length: 20 }),
   cnpj: varchar('cnpj', { length: 18 }),
-  endereco: text('endereco'), // Endereço completo em texto
+  endereco: text('endereco'), // Endereço completo em texto (legacy)
+  cep: varchar('cep', { length: 10 }),
+  rua: text('rua'),
+  numero: varchar('numero', { length: 20 }),
+  complemento: text('complemento'),
+  bairro: text('bairro'),
+  cidade: text('cidade'),
+  estado: varchar('estado', { length: 2 }),
   descricao: text('descricao'), // Sobre a loja
   logo: text('logo'), // URL do logo da loja
+  coverImage: text('cover_image'), // URL da imagem de capa
   horarioFuncionamento: text('horario_funcionamento'), // Ex: "Seg-Sex: 08:00-18:00"
-  status: varchar('status', { length: 20 }).default('pending'), // 'active' | 'pending' | 'suspended' | 'rejected'
-  plano: varchar('plano', { length: 20 }).default('Basic'), // 'Basic' | 'Pro' | 'Premium'
+  status: varchar('status', { length: 20 }).default('pending'), // 'approved' | 'pending' | 'rejected' | 'ativo' | 'suspended'
+  plano: varchar('plano', { length: 20 }).default('basic'), // 'basic' | 'pro' | 'premium'
   priorityScore: integer('priority_score').default(0),
   shippingPolicy: jsonb('shipping_policy'),
   address: jsonb('address'), // Lat/Lng para mapa
@@ -104,8 +112,7 @@ export const products = pgTable('products', {
   estoque: integer('estoque').default(0),
   unidadeMedida: varchar('unidade_medida', { length: 50 }),
   rating: decimal('rating', { precision: 3, scale: 2 }).default('0'),
-  imagemUrl: text('imagem_url'),
-  imagens: jsonb('imagens'),
+  imagemUrl: text('imagem_url'), // URL principal da imagem no Supabase Storage
   ativo: boolean('ativo').default(true),
   destacado: boolean('destacado').default(false),
   sku: varchar('sku', { length: 100 }),
@@ -128,8 +135,7 @@ export const services = pgTable('services', {
   precoMaximo: decimal('preco_maximo', { precision: 10, scale: 2 }),
   tipoPrecificacao: varchar('tipo_precificacao', { length: 20 }).notNull(), // 'hora' | 'dia' | 'projeto' | 'm2' | 'visita'
   rating: decimal('rating', { precision: 3, scale: 2 }).default('0'),
-  imagemUrl: text('imagem_url'),
-  imagens: jsonb('imagens'),
+  imagemUrl: text('imagem_url'), // URL principal da imagem no Supabase Storage
   ativo: boolean('ativo').default(true),
   destacado: boolean('destacado').default(false),
   descricao: text('descricao'),
@@ -147,7 +153,7 @@ export const reviews = pgTable('reviews', {
   serviceId: integer('service_id').references(() => services.id),
   rating: integer('rating').notNull(),
   comentario: text('comentario'),
-  status: varchar('status', { length: 20 }).default('pending'), // 'pending' | 'approved' | 'hidden'
+  status: varchar('status', { length: 20 }).default('pendente'), // 'pendente' | 'aprovado' | 'oculto'
   verified: boolean('verified').default(false), // Compra verificada
   createdAt: timestamp('created_at').defaultNow(),
 });
@@ -187,7 +193,7 @@ export const orders = pgTable('orders', {
   userId: text('user_id').references(() => user.id).notNull(),
   storeId: integer('store_id').references(() => stores.id),
   tipo: varchar('tipo', { length: 20 }).notNull(), // 'cotacao' | 'pedido'
-  status: varchar('status', { length: 30 }).default('pending'), // 'pending' | 'answered' | 'accepted' | 'rejected' | 'completed'
+  status: varchar('status', { length: 30 }).default('pendente'), // 'pendente' | 'respondida' | 'aceita' | 'rejeitada' | 'concluida'
   total: decimal('total', { precision: 12, scale: 2 }),
   observacoes: text('observacoes'),
   enderecoEntrega: text('endereco_entrega'),

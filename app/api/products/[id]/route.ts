@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/drizzle'
 import { products, stores } from '@/drizzle/schema'
-import { eq } from 'drizzle-orm'
-
-export const dynamic = 'force-dynamic'
+import { eq, sql } from 'drizzle-orm'
 
 export async function GET(
   request: Request,
@@ -23,7 +21,6 @@ export async function GET(
         unidadeMedida: products.unidadeMedida,
         rating: products.rating,
         imagemUrl: products.imagemUrl,
-        imagens: products.imagens,
         ativo: products.ativo,
         destacado: products.destacado,
         sku: products.sku,
@@ -51,7 +48,6 @@ export async function GET(
       precoPromocional: product.precoPromocional ? parseFloat(product.precoPromocional as string) : undefined,
       rating: parseFloat(product.rating as string || '0'),
       peso: product.peso ? parseFloat(product.peso as string) : undefined,
-      imagens: product.imagens as string[] || [],
       dimensoes: product.dimensoes as any,
     }
     
@@ -87,7 +83,6 @@ export async function PUT(
     if (body.temVariacaoPreco !== undefined) updateData.temVariacaoPreco = body.temVariacaoPreco
     if (body.unidadeMedida !== undefined) updateData.unidadeMedida = body.unidadeMedida
     if (body.imagemUrl !== undefined) updateData.imagemUrl = body.imagemUrl
-    if (body.imagens !== undefined) updateData.imagens = body.imagens
     
     const [updated] = await db
       .update(products)

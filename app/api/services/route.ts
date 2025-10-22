@@ -3,8 +3,6 @@ import { db } from '@/drizzle'
 import { services, stores } from '@/drizzle/schema'
 import { eq, and, like, or } from 'drizzle-orm'
 
-export const dynamic = 'force-dynamic'
-
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
@@ -27,7 +25,6 @@ export async function GET(request: Request) {
         tipoPrecificacao: services.tipoPrecificacao,
         rating: services.rating,
         imagemUrl: services.imagemUrl,
-        imagens: services.imagens,
         ativo: services.ativo,
         destacado: services.destacado,
         descricao: services.descricao,
@@ -72,7 +69,6 @@ export async function GET(request: Request) {
       precoMinimo: s.precoMinimo ? parseFloat(s.precoMinimo as string) : undefined,
       precoMaximo: s.precoMaximo ? parseFloat(s.precoMaximo as string) : undefined,
       rating: parseFloat(s.rating as string || '0'),
-      imagens: s.imagens as string[] || [],
     }))
     
     return NextResponse.json({
@@ -102,7 +98,6 @@ export async function POST(request: Request) {
       tipoPrecificacao: body.tipoPrecificacao,
       rating: '0',
       imagemUrl: body.imagemUrl,
-      imagens: body.imagens,
       ativo: body.ativo,
       destacado: body.destacado,
       descricao: body.descricao,

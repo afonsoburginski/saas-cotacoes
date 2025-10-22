@@ -1,31 +1,59 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/drizzle'
-import { stores, user } from '@/drizzle/schema'
-import { eq, desc } from 'drizzle-orm'
-
-export const dynamic = 'force-dynamic'
+import { stores, user as userTable } from '@/drizzle/schema'
+import { eq, desc, and } from 'drizzle-orm'
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
+    const businessType = searchParams.get('businessType') // 'comercio' | 'servico'
     
-    // JOIN com user para pegar businessType
-    let query = db
+    console.log('🔍 /api/stores - Filtros:', { status, businessType })
+    
+    // Join com user para filtrar por businessType
+    const query = db
       .select({
-        store: stores,
-        businessType: user.businessType,
+        id: stores.id,
+        nome: stores.nome,
+        email: stores.email,
+        telefone: stores.telefone,
+        cnpj: stores.cnpj,
+        endereco: stores.endereco,
+        status: stores.status,
+        priorityScore: stores.priorityScore,
+        plano: stores.plano,
+        createdAt: stores.createdAt,
+        shippingPolicy: stores.shippingPolicy,
+        address: stores.address,
+        totalProducts: stores.totalProducts,
+        totalSales: stores.totalSales,
+        rating: stores.rating,
+        slug: stores.slug,
+        userId: stores.userId,
       })
       .from(stores)
-      .leftJoin(user, eq(stores.userId, user.id))
+      .innerJoin(userTable, eq(stores.userId, userTable.id))
     
-    if (status) {
-      query = query.where(eq(stores.status, status)) as any
+    const conditions = []
+    
+    if (status === 'ativo') {
+      conditions.push(eq(stores.status, 'approved'))
+    } else if (status) {
+      conditions.push(eq(stores.status, status))
     }
     
-    const result = await query.orderBy(desc(stores.priorityScore))
+    if (businessType) {
+      conditions.push(eq(userTable.businessType, businessType))
+    }
     
-    const formatted = result.map(({ store: s, businessType }) => ({
+    const result = conditions.length > 0
+      ? await query.where(and(...conditions)).orderBy(desc(stores.priorityScore))
+      : await query.orderBy(desc(stores.priorityScore))
+    
+    console.log('✅ Stores encontradas:', result.length)
+    
+    const formatted = result.map((s: any) => ({
       id: s.id.toString(),
       nome: s.nome,
       email: s.email,
@@ -35,13 +63,13 @@ export async function GET(request: Request) {
       status: s.status,
       priorityScore: s.priorityScore,
       plano: s.plano,
-      businessType: businessType || 'comercio', // Default para comercio
       createdAt: s.createdAt?.toISOString().split('T')[0],
       shippingPolicy: s.shippingPolicy,
       address: s.address,
       totalProducts: s.totalProducts,
       totalSales: s.totalSales ? parseFloat(s.totalSales as string) : 0,
       rating: s.rating ? parseFloat(s.rating as string) : 0,
+      slug: s.slug,
     }))
     
     return NextResponse.json({
@@ -56,4 +84,3 @@ export async function GET(request: Request) {
     )
   }
 }
-

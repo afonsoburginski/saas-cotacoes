@@ -2,12 +2,38 @@
 
 import { Button } from "@/components/ui/button"
 import { AuthDialog } from "@/components/auth/auth-dialog"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useEffect, useState } from "react"
+import { useSession, signOut } from "@/lib/auth-client"
+import { useRouter } from "next/navigation"
+import { useStoreSlug } from "@/hooks/use-store-slug"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Settings, LogOut, Store } from "lucide-react"
 import Image from "next/image"
 
 export function LandingTopbar() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [authDialogOpen, setAuthDialogOpen] = useState(false)
+  const { data: session } = useSession()
+  const { data: storeSlug, isLoading: isLoadingSlug } = useStoreSlug()
+  const router = useRouter()
+  
+  const user = session?.user
+  const userRole = (user as any)?.role
+  const isFornecedor = userRole === 'fornecedor' || userRole === 'loja'
+  const displayInitials = ((user?.name || "U").trim().split(/\s+/).map((n) => n.charAt(0)).slice(0, 2).join("") || "U").toUpperCase()
+  
+  const handleLogout = async () => {
+    await signOut()
+    router.push('/')
+  }
 
   useEffect(() => {
     const handleScroll = () => {
@@ -51,12 +77,41 @@ export function LandingTopbar() {
             >
               Buscar Produtos
             </Button>
-            <Button
-              onClick={() => setAuthDialogOpen(true)}
-              className="bg-[#22C55E] text-white hover:bg-[#22C55E]/90 transition-all duration-200 px-4 sm:px-6 text-sm sm:text-base h-9 sm:h-10"
-            >
-              Entrar
-            </Button>
+            
+            {!user ? (
+              <Button
+                onClick={() => setAuthDialogOpen(true)}
+                className="bg-[#22C55E] text-white hover:bg-[#22C55E]/90 transition-all duration-200 px-4 sm:px-6 text-sm sm:text-base h-9 sm:h-10"
+              >
+                Entrar
+              </Button>
+            ) : isFornecedor ? (
+              <Button
+                onClick={() => {
+                  if (isLoadingSlug) return
+                  if (storeSlug) {
+                    router.push(`/loja/${storeSlug}`)
+                  } else {
+                    router.push('/checkout')
+                  }
+                }}
+                className="bg-[#22C55E] text-white hover:bg-[#22C55E]/90 transition-all duration-200 h-9 sm:h-10 gap-2 px-4 sm:px-6"
+              >
+                <Avatar className="h-6 w-6">
+                  <AvatarFallback className="bg-white text-[#22C55E] font-semibold text-xs">
+                    {displayInitials}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-sm sm:text-base">Entrar</span>
+              </Button>
+            ) : (
+              <Button
+                onClick={() => router.push('/explorar')}
+                className="bg-[#22C55E] text-white hover:bg-[#22C55E]/90 transition-all duration-200 px-4 sm:px-6 text-sm sm:text-base h-9 sm:h-10"
+              >
+                Ir para Explorar
+              </Button>
+            )}
           </div>
         </div>
       </div>

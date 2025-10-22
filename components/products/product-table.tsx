@@ -49,7 +49,6 @@ import {
   Package,
   Search,
   Filter,
-  Download,
   Upload,
   Plus,
   X,
@@ -81,11 +80,13 @@ import {
 } from "@/hooks/use-services"
 import type { Service } from "@/lib/types"
 
-type CatalogTab = 'products' | 'services' | 'all'
+type CatalogTab = 'products' | 'services'
 
 interface ProductTableProps {
   storeId: string
   isLoading?: boolean
+  activeTab?: 'produtos' | 'servicos'
+  onTabChange?: (tab: 'produtos' | 'servicos') => void
 }
 
 interface FilterState {
@@ -96,11 +97,12 @@ interface FilterState {
   preco: string[]
 }
 
-export function ProductTable({ storeId, isLoading: isLoadingProp }: ProductTableProps) {
+export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'produtos', onTabChange }: ProductTableProps) {
   const { toast } = useToast()
   
-  // Tab State
-  const [activeTab, setActiveTab] = useState<CatalogTab>('products')
+  // Tab State - usar prop externa se disponível
+  const [internalTab, setInternalTab] = useState<CatalogTab>('products')
+  const currentTab = activeTab === 'produtos' ? 'products' : 'services'
   
   // React Query - Products
   const [searchTerm, setSearchTerm] = useState("")
@@ -145,9 +147,7 @@ export function ProductTable({ storeId, isLoading: isLoadingProp }: ProductTable
   const [filterSearch, setFilterSearch] = useState<{[key: string]: string}>({})
 
   // Combinar dados baseado na tab ativa
-  const currentItems = activeTab === 'products' ? products : 
-                       activeTab === 'services' ? services :
-                       [...products, ...services]
+  const currentItems = currentTab === 'products' ? products : services
   
   // Obter opções únicas para filtros
   const uniqueCategories = [...new Set(currentItems.map(p => p.categoria))]
@@ -164,7 +164,7 @@ export function ProductTable({ storeId, isLoading: isLoadingProp }: ProductTable
   const isService = (item: Product | Service): item is Service => 'tipoPrecificacao' in item
 
   // Filtro de estoque apenas para produtos
-  const uniqueEstoque = activeTab !== 'services' ? [
+  const uniqueEstoque = currentTab !== 'services' ? [
     { value: "baixo", label: "Estoque Baixo", count: products.filter(p => p.estoque < 10).length },
     { value: "normal", label: "Estoque Normal", count: products.filter(p => p.estoque >= 10).length },
     { value: "zerado", label: "Sem Estoque", count: products.filter(p => p.estoque === 0).length }
@@ -440,7 +440,7 @@ export function ProductTable({ storeId, isLoading: isLoadingProp }: ProductTable
       // Atualizar produto existente
       const productData = {
         ...formData,
-        imagemUrl: formData.imagens[0] || editingProduct.imagemUrl,
+        imagemUrl: formData.imagemUrl || editingProduct.imagemUrl,
       }
       
       updateProduct.mutate(
@@ -474,10 +474,9 @@ export function ProductTable({ storeId, isLoading: isLoadingProp }: ProductTable
         unidadeMedida: formData.unidadeMedida,
         rating: 0,
         ativo: formData.ativo,
-        imagemUrl: formData.imagens[0] || "/placeholder.svg",
+        imagemUrl: formData.imagemUrl || "/placeholder.svg",
         sku: formData.sku,
         descricao: formData.descricao,
-        imagens: formData.imagens,
         destacado: formData.destacado,
         peso: formData.peso,
         dimensoes: formData.dimensoes,
@@ -492,10 +491,11 @@ export function ProductTable({ storeId, isLoading: isLoadingProp }: ProductTable
             description: "O produto foi criado com sucesso.",
           })
         },
-        onError: () => {
+        onError: (err) => {
+          console.error("Erro ao criar produto:", err)
           toast({
             title: "Erro!",
-            description: "Não foi possível criar o produto.",
+            description: "Não foi possível criar o produto. Verifique os dados e tente novamente.",
             variant: "destructive",
           })
         },
@@ -551,10 +551,11 @@ export function ProductTable({ storeId, isLoading: isLoadingProp }: ProductTable
             description: "O serviço foi criado com sucesso.",
           })
         },
-        onError: () => {
+        onError: (err) => {
+          console.error("Erro ao criar serviço:", err)
           toast({
             title: "Erro!",
-            description: "Não foi possível criar o serviço.",
+            description: "Não foi possível criar o serviço. Verifique os dados e tente novamente.",
             variant: "destructive",
           })
         },
@@ -562,50 +563,6 @@ export function ProductTable({ storeId, isLoading: isLoadingProp }: ProductTable
     }
   }
 
-  const handleExportCSV = () => {
-    const headers = activeTab === 'services' 
-      ? ["Nome", "Categoria", "Preço", "Tipo Precificação", "Status", "Destacado"]
-      : ["Nome", "SKU", "Categoria", "Preço", "Estoque", "Status", "Destacado"]
-    
-    const rows = filteredProducts.map(p => {
-      if (isService(p)) {
-        return [
-          p.nome,
-          p.categoria,
-          p.preco.toString(),
-          p.tipoPrecificacao,
-          p.ativo ? "Ativo" : "Inativo",
-          p.destacado ? "Sim" : "Não"
-        ]
-      } else {
-        const prod = p as Product
-        return [
-          prod.nome,
-          prod.sku || "",
-          prod.categoria,
-          prod.preco.toString(),
-          prod.estoque.toString(),
-          prod.ativo ? "Ativo" : "Inativo",
-          prod.destacado ? "Sim" : "Não"
-        ]
-      }
-    })
-    
-    const csvContent = [headers, ...rows].map(row => row.join(",")).join("\n")
-    
-    const blob = new Blob([csvContent], { type: "text/csv" })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = "produtos.csv"
-    a.click()
-    window.URL.revokeObjectURL(url)
-    
-    toast({
-      title: "Exportação concluída!",
-      description: "Arquivo CSV foi baixado com sucesso.",
-    })
-  }
 
   // Loading State
   if (isLoading) {
@@ -620,10 +577,9 @@ export function ProductTable({ storeId, isLoading: isLoadingProp }: ProductTable
   }
 
   const getTabLabel = () => {
-    switch(activeTab) {
+    switch(currentTab) {
       case 'products': return 'Produtos'
       case 'services': return 'Serviços'
-      case 'all': return 'Todos'
     }
   }
 
@@ -635,7 +591,7 @@ export function ProductTable({ storeId, isLoading: isLoadingProp }: ProductTable
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-              placeholder={activeTab === 'products' ? "Filtrar produtos..." : activeTab === 'services' ? "Filtrar serviços..." : "Filtrar itens..."}
+              placeholder={currentTab === 'products' ? "Filtrar produtos..." : "Filtrar serviços..."}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 w-64 h-9 !bg-white !border !border-gray-300 rounded-sm focus-visible:ring-0 focus-visible:ring-offset-0 !shadow-none"
@@ -773,7 +729,7 @@ export function ProductTable({ storeId, isLoading: isLoadingProp }: ProductTable
             </DropdownMenu>
 
             {/* Estoque Filter - Apenas para produtos */}
-            {activeTab !== 'services' && (
+            {currentTab !== 'services' && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="relative h-9 border-2 !border-dotted rounded-sm">
@@ -943,9 +899,7 @@ export function ProductTable({ storeId, isLoading: isLoadingProp }: ProductTable
                   <Filter className="h-4 w-4" />
                   <span>{getTabLabel()}</span>
                   <Badge variant="secondary" className="ml-1 h-5 w-auto px-1.5 text-xs">
-                    {activeTab === 'products' ? products.length : 
-                     activeTab === 'services' ? services.length :
-                     products.length + services.length}
+                    {currentTab === 'products' ? products.length : services.length}
                   </Badge>
                 </div>
                 <ChevronDown className="h-4 w-4 ml-2" />
@@ -955,8 +909,14 @@ export function ProductTable({ storeId, isLoading: isLoadingProp }: ProductTable
               <DropdownMenuLabel>Tipo de Catálogo</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
-                onClick={() => setActiveTab('products')}
-                className={activeTab === 'products' ? 'bg-blue-50' : ''}
+                onClick={() => {
+                  if (onTabChange) {
+                    onTabChange('produtos')
+                  } else {
+                    setInternalTab('products')
+                  }
+                }}
+                className={currentTab === 'products' ? 'bg-blue-50' : ''}
               >
                 <Package className="h-4 w-4 mr-2" />
                 <span className="flex-1">Produtos</span>
@@ -965,8 +925,14 @@ export function ProductTable({ storeId, isLoading: isLoadingProp }: ProductTable
                 </Badge>
               </DropdownMenuItem>
               <DropdownMenuItem 
-                onClick={() => setActiveTab('services')}
-                className={activeTab === 'services' ? 'bg-blue-50' : ''}
+                onClick={() => {
+                  if (onTabChange) {
+                    onTabChange('servicos')
+                  } else {
+                    setInternalTab('services')
+                  }
+                }}
+                className={currentTab === 'services' ? 'bg-blue-50' : ''}
               >
                 <Package className="h-4 w-4 mr-2" />
                 <span className="flex-1">Serviços</span>
@@ -974,27 +940,12 @@ export function ProductTable({ storeId, isLoading: isLoadingProp }: ProductTable
                   {services.length}
                 </Badge>
               </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => setActiveTab('all')}
-                className={activeTab === 'all' ? 'bg-blue-50' : ''}
-              >
-                <Package className="h-4 w-4 mr-2" />
-                <span className="flex-1">Todos</span>
-                <Badge variant="outline" className="ml-2 text-xs">
-                  {products.length + services.length}
-                </Badge>
-              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button variant="outline" size="sm" onClick={handleExportCSV}>
-            <Download className="h-4 w-4 mr-2" />
-            Exportar CSV
-          </Button>
-          
           <Button onClick={() => setShowCreateForm(true)}>
             <Package className="h-4 w-4 mr-2" />
-            {activeTab === 'products' ? 'Novo Produto' : activeTab === 'services' ? 'Novo Serviço' : 'Novo Item'}
+            {activeTab === 'produtos' ? 'Novo Produto' : 'Novo Serviço'}
           </Button>
         </div>
       </div>
@@ -1012,10 +963,10 @@ export function ProductTable({ storeId, isLoading: isLoadingProp }: ProductTable
                     className="border border-gray-400 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                   />
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">{activeTab === 'services' ? 'Serviço' : 'Produto'}</th>
-                {activeTab !== 'services' && <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Unidade</th>}
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">{currentTab === 'services' ? 'Serviço' : 'Produto'}</th>
+                {activeTab !== 'servicos' && <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Unidade</th>}
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Preço</th>
-                {activeTab !== 'services' && <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Estoque</th>}
+                {activeTab !== 'servicos' && <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Estoque</th>}
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Ações</th>
               </tr>
             </thead>
@@ -1099,7 +1050,7 @@ export function ProductTable({ storeId, isLoading: isLoadingProp }: ProductTable
                           </div>
                         </div>
                       </td>
-                      {activeTab !== 'services' && (
+                      {currentTab !== 'services' && (
                         <td className="px-4 py-3 text-sm text-gray-600">
                           {'unidadeMedida' in product ? product.unidadeMedida || "Unidade (un)" : "-"}
                         </td>
@@ -1112,20 +1063,20 @@ export function ProductTable({ storeId, isLoading: isLoadingProp }: ProductTable
                             `R$ ${product.preco.toFixed(2)}`
                           )
                         ) : (
-                          (product as Service).precoMinimo && (product as Service).precoMaximo ? (
+                          (product as Service).precoMinimo != null && (product as Service).precoMaximo != null ? (
                             <div>
-                              <span className="text-gray-900">R$ {(product as Service).precoMinimo} - R$ {(product as Service).precoMaximo}</span>
+                              <span className="text-gray-900">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format((product as Service).precoMinimo!)} - {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format((product as Service).precoMaximo!)}</span>
                               <span className="text-xs text-gray-500 block">/{(product as Service).tipoPrecificacao}</span>
                             </div>
                           ) : (
                             <div>
-                              <span className="text-gray-900">R$ {product.preco.toFixed(2)}</span>
+                              <span className="text-gray-900">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.preco)}</span>
                               <span className="text-xs text-gray-500 block">/{(product as Service).tipoPrecificacao}</span>
                             </div>
                           )
                         )}
                       </td>
-                      {activeTab !== 'services' && (
+                      {currentTab !== 'services' && (
                         <td className="px-4 py-3 text-sm">
                           <span className={'estoque' in product && product.estoque > 0 ? "text-gray-900" : "text-red-600"}>
                             {'estoque' in product ? `${product.estoque} unidades` : "-"}
@@ -1270,14 +1221,16 @@ export function ProductTable({ storeId, isLoading: isLoadingProp }: ProductTable
           isOpen={!!editingProduct}
           onClose={() => setEditingProduct(null)}
           onSubmit={handleProductFormSubmit}
+          storeId={storeId}
         />
       )}
 
-      {showCreateForm && activeTab === 'products' && (
+      {showCreateForm && activeTab === 'produtos' && (
         <ProductForm
           isOpen={showCreateForm}
           onClose={() => setShowCreateForm(false)}
           onSubmit={handleProductFormSubmit}
+          storeId={storeId}
         />
       )}
       
@@ -1291,7 +1244,7 @@ export function ProductTable({ storeId, isLoading: isLoadingProp }: ProductTable
         />
       )}
 
-      {showCreateForm && activeTab === 'services' && (
+      {showCreateForm && activeTab === 'servicos' && (
         <ServiceForm
           isOpen={showCreateForm}
           onClose={() => setShowCreateForm(false)}

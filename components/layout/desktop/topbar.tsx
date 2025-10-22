@@ -16,6 +16,7 @@ import { useEffect, useState } from "react"
 import { useSession, signOut } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
 import { useCartStore } from "@/stores/cart-store"
+import { AuthDialog } from "@/components/auth/auth-dialog"
 import Image from "next/image"
 
 export function TopbarDesktop() {
@@ -24,6 +25,7 @@ export function TopbarDesktop() {
   const router = useRouter()
   const getCartItemsCount = useCartStore((state) => state.getCartItemsCount)
   const [isClient, setIsClient] = useState(false)
+  const [authDialogOpen, setAuthDialogOpen] = useState(false)
   
   useEffect(() => {
     setIsClient(true)
@@ -34,8 +36,19 @@ export function TopbarDesktop() {
   const displayInitials = ((user?.name || "U").trim().split(/\s+/).map((n) => n.charAt(0)).slice(0, 2).join("") || "U").toUpperCase()
   
   const handleLogout = async () => {
+    const currentPath = window.location.pathname
+    
     await signOut()
-    router.push('/')
+    
+    // Se estiver em páginas públicas (consumidor), não redireciona
+    const publicPaths = ['/explorar', '/carrinho', '/listas', '/categoria', '/fornecedor']
+    const isPublicPage = publicPaths.some(path => currentPath.startsWith(path))
+    
+    if (!isPublicPage) {
+      // Páginas de empresa/admin - redireciona pra home
+      router.push('/')
+    }
+    // Senão, permanece na página atual
   }
 
   useEffect(() => {
@@ -76,6 +89,14 @@ export function TopbarDesktop() {
         </div>
 
         <div className="flex items-center gap-4">
+          {!user ? (
+            <Button
+              onClick={() => setAuthDialogOpen(true)}
+              className="bg-[#22C55E] hover:bg-[#22C55E]/90 text-white px-6"
+            >
+              Entrar
+            </Button>
+          ) : (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -103,25 +124,26 @@ export function TopbarDesktop() {
 
               <DropdownMenuSeparator />
 
-              <DropdownMenuItem className="p-3 cursor-pointer hover:bg-gray-50">
-                <UserCircle className="mr-3 h-4 w-4 text-gray-500" />
-                <span>Meu Perfil</span>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem 
-                className="p-3 cursor-pointer hover:bg-gray-50"
-                onClick={() => router.push('/carrinho')}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center">
-                    <ShoppingCart className="mr-3 h-4 w-4 text-gray-500" />
-                    <span>Meu Carrinho</span>
-                  </div>
-                  {cartCount > 0 && (
-                    <Badge className="ml-2 bg-green-600 text-white">{cartCount}</Badge>
-                  )}
-                </div>
-              </DropdownMenuItem>
+              {/* Carrinho só para consumidores */}
+              {(user as any)?.role === 'consumidor' || (user as any)?.role === 'usuario' ? (
+                <>
+                  <DropdownMenuItem 
+                    className="p-3 cursor-pointer hover:bg-gray-50"
+                    onClick={() => router.push('/carrinho')}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center">
+                        <ShoppingCart className="mr-3 h-4 w-4 text-gray-500" />
+                        <span>Meu Carrinho</span>
+                      </div>
+                      {cartCount > 0 && (
+                        <Badge className="ml-2 bg-green-600 text-white">{cartCount}</Badge>
+                      )}
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              ) : null}
 
               <DropdownMenuItem className="p-3 cursor-pointer hover:bg-gray-50">
                 <Settings className="mr-3 h-4 w-4 text-gray-500" />
@@ -139,9 +161,19 @@ export function TopbarDesktop() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          )}
         </div>
         </div>
       </div>
+      
+      {/* Auth Dialog para usuários não logados (consumidor) */}
+      {authDialogOpen && (
+        <AuthDialog 
+          open={authDialogOpen} 
+          onOpenChange={setAuthDialogOpen}
+          mode="login"
+        />
+      )}
     </header>
   )
 }

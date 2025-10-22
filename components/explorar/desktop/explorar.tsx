@@ -73,6 +73,24 @@ const ExplorarDesktop = memo(function ExplorarDesktop({
   
   // Random seed que muda a cada mount para forçar re-shuffle
   const [shuffleSeed] = useState(() => Math.random())
+  
+  // Embaralhar prestadores (buscar do banco)
+  const [shuffledProviders, setShuffledProviders] = useState<any[]>([])
+  
+  useEffect(() => {
+    // Buscar prestadores de serviço
+    console.log('🔍 Buscando prestadores de serviço...')
+    fetch('/api/service-providers?limit=15')
+      .then(res => res.json())
+      .then(data => {
+        console.log('📦 Prestadores recebidos:', data)
+        if (data.data) {
+          setShuffledProviders(shuffleArray(data.data))
+          console.log('✅ Prestadores embaralhados:', data.data.length)
+        }
+      })
+      .catch(err => console.error('❌ Erro ao buscar prestadores:', err))
+  }, [])
 
   // Listen for supplier modal events from ProductCard - memoized
   const handleOpenSupplierModal = useCallback((event: CustomEvent) => {
@@ -121,42 +139,26 @@ const ExplorarDesktop = memo(function ExplorarDesktop({
     }
   }, [setFilters, setActiveTab, setSupplierSearch])
 
-  // Filtrar FORNECEDORES (comercio) baseado na busca
-  const filteredFornecedores = useMemo(() => {
+  // Filtrar fornecedores baseado na busca e randomizar
+  const filteredStores = useMemo(() => {
+    console.log('🏪 Total stores:', stores.length)
     let filtered
     if (!supplierSearch) {
-      filtered = stores.filter(s => s.status === "active" && s.businessType === "comercio")
+      filtered = stores.filter(s => s.status === "approved")
+      console.log('📍 Filtradas (approved):', filtered.length)
     } else {
       const searchLower = supplierSearch.toLowerCase()
       filtered = stores.filter(s => 
-        s.status === "active" && 
-        s.businessType === "comercio" &&
+        s.status === "approved" && 
         (s.nome.toLowerCase().includes(searchLower) || 
          s.cidade?.toLowerCase().includes(searchLower))
       )
+      console.log('🔍 Filtradas por busca:', filtered.length)
     }
+    
+    // Shuffle stores for variety on each load
     return shuffleArray(filtered)
   }, [stores, supplierSearch, shuffleSeed])
-
-  // Filtrar PRESTADORES (servico) baseado na busca
-  const filteredPrestadores = useMemo(() => {
-    let filtered
-    if (!supplierSearch) {
-      filtered = stores.filter(s => s.status === "active" && s.businessType === "servico")
-    } else {
-      const searchLower = supplierSearch.toLowerCase()
-      filtered = stores.filter(s => 
-        s.status === "active" && 
-        s.businessType === "servico" &&
-        (s.nome.toLowerCase().includes(searchLower) || 
-         s.cidade?.toLowerCase().includes(searchLower))
-      )
-    }
-    return shuffleArray(filtered)
-  }, [stores, supplierSearch, shuffleSeed])
-
-  // Total combinado para exibir
-  const totalStores = filteredFornecedores.length + filteredPrestadores.length
 
   // Agrupar produtos por categoria para rows no desktop com shuffle
   const productsByCategory = useMemo(() => {
@@ -427,104 +429,86 @@ const ExplorarDesktop = memo(function ExplorarDesktop({
           </TabsContent>
 
           <TabsContent value="lojas" className="space-y-4">
-            <div className="space-y-8">
-              {/* Header com total */}
-              <div className="flex items-center justify-between">
-                <TypographyH3>Marketplace</TypographyH3>
-                <Badge variant="outline">{totalStores} empresas</Badge>
-              </div>
-              
-              {totalStores === 0 ? (
-                <div className="text-center py-16 bg-white rounded-xl border border-gray-200">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-gray-50 rounded-full flex items-center justify-center">
-                    <Search className="h-8 w-8 text-gray-400" />
+            <div className="space-y-4">
+              {/* Se NÃO tem fornecedores, mostra prestadores primeiro */}
+              {filteredStores.length === 0 && shuffledProviders.length > 0 && (
+                <div className="mb-8">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Wrench className="h-5 w-5 text-green-600" />
+                    <TypographyH3 className="font-montserrat">Prestadores de Serviço</TypographyH3>
+                    <Badge variant="outline" className="text-green-700 border-green-200 bg-green-50">
+                      {shuffledProviders.length} Profissionais
+                    </Badge>
                   </div>
-                  <TypographyH3 className="mb-2">Nenhuma empresa encontrada</TypographyH3>
-                  <TypographyP className="text-gray-600 mb-6 text-sm">Tente buscar por outro termo</TypographyP>
-                </div>
-              ) : (
-                <>
-                  {/* SEÇÃO 1: FORNECEDORES (comercio) */}
-                  {filteredFornecedores.length > 0 && (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <TypographyH4>Fornecedores</TypographyH4>
-                        <Badge variant="outline">{filteredFornecedores.length}</Badge>
-                      </div>
-                      <div className="space-y-8">
-                        {filteredFornecedores.map((store) => {
-                    const storeProducts = shuffleArray(
-                      filteredProducts.filter(p => p.storeId === store.id)
-                    ).slice(0, 6) // Preview de 6 produtos
-
-                    return (
-                      <div key={`store-${store.id}`} className="space-y-4">
-                        {/* Supplier Info */}
-                        <div 
-                          className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
-                          onClick={() => router.push(`/fornecedor/${store.id}`)}
+                  
+                  <HorizontalScrollContainer>
+                    <div className="flex gap-4 pb-2">
+                      {shuffledProviders.map((provider: any) => (
+                        <Card 
+                          key={provider.id}
+                          className="flex-none w-[200px] p-4 hover:shadow-lg transition-shadow cursor-pointer border-green-100"
+                          onClick={() => router.push(`/fornecedor/${provider.id}`)}
                         >
-                          <Avatar className="h-14 w-14 rounded-full border-2 border-white shadow-sm">
-                            <AvatarFallback className="bg-[#0052FF] text-white font-semibold text-lg">
-                              @{store.nome.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <TypographyH4 className="truncate font-montserrat">@{store.nome}</TypographyH4>
+                          <div className="flex flex-col items-center text-center">
+                            <Avatar className="h-16 w-16 mb-3 border-2 border-green-200">
+                              <AvatarFallback className="bg-green-600 text-white font-bold">
+                                {provider.nome?.split(' ')[0]?.charAt(0)}{provider.nome?.split(' ')[1]?.charAt(0) || ''}
+                              </AvatarFallback>
+                            </Avatar>
+                            
+                            <TypographySmall className="font-semibold mb-1 line-clamp-2">
+                              {provider.nome}
+                            </TypographySmall>
+                            
+                            <div className="flex items-center gap-1 mb-4">
+                              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                              <span className="text-xs font-medium">{provider.rating || 5.0}</span>
+                              <Shield className="h-3 w-3 text-green-600 ml-1" />
                             </div>
                             
-                            <div className="flex items-center gap-4 text-sm text-gray-600">
-                              <div className="flex items-center gap-1">
-                                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                                <TypographySmall className="font-medium font-montserrat">4.8</TypographySmall>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <MapPin className="h-4 w-4" />
-                                <TypographySmall className="font-montserrat">2.5 km</TypographySmall>
-                              </div>
-                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="w-full text-xs border-green-600 text-green-700 hover:bg-green-50"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/fornecedor/${provider.id}`);
+                              }}
+                            >
+                              Ver Perfil
+                            </Button>
                           </div>
-                        </div>
-
-                        {/* Separator */}
-                        <div className="border-t border-gray-200 w-full" />
-
-                        {/* Products Preview - Horizontal Scroll */}
-                        {storeProducts.length > 0 && (
-                          <HorizontalScrollContainer>
-                            <div className="flex gap-4 pb-2">
-                              {storeProducts.map((product) => (
-                                <div key={product.id} className="flex-none w-[220px]">
-                                  <ProductCardAdaptive product={product} alwaysShowButtons={false} />
-                                </div>
-                              ))}
-                            </div>
-                          </HorizontalScrollContainer>
-                        )}
-                      </div>
-                    )
-                  })}
-                      </div>
+                        </Card>
+                      ))}
                     </div>
-                  )}
-
-                  {/* SEÇÃO 2: PRESTADORES DE SERVIÇOS (servico) */}
-                  {filteredPrestadores.length > 0 && (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <TypographyH4>Prestadores de Serviços</TypographyH4>
-                        <Badge variant="outline">{filteredPrestadores.length}</Badge>
-                      </div>
-                      <div className="space-y-8">
-                        {filteredPrestadores.map((store) => {
+                  </HorizontalScrollContainer>
+                </div>
+              )}
+              
+              <div className="flex items-center justify-between">
+                <TypographyH3>Fornecedores (Lojas)</TypographyH3>
+                <Badge variant="outline">{filteredStores.length} lojas</Badge>
+              </div>
+              
+              {filteredStores.length === 0 ? (
+                <div className="text-center py-8 bg-white rounded-xl border border-gray-200">
+                  <TypographyP className="text-gray-600 text-sm">Nenhuma loja cadastrada ainda</TypographyP>
+                </div>
+              ) : (
+                <div className="space-y-8">
+                {filteredStores.map((store, index) => {
                     const storeProducts = shuffleArray(
                       filteredProducts.filter(p => p.storeId === store.id)
                     ).slice(0, 6)
+                    
+                    // A cada 2 fornecedores, mostrar row de prestadores
+                    const showProviders = (index + 1) % 2 === 0
+                    const providerStart = Math.floor(index / 2) * 10
+                    const providersToShow = shuffledProviders.slice(providerStart, providerStart + 10)
 
                     return (
-                      <div key={`store-${store.id}`} className="space-y-4">
+                      <div key={`store-${store.id}`}>
+                      <div className="space-y-4">
                         {/* Supplier Info */}
                         <div 
                           className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
@@ -570,12 +554,65 @@ const ExplorarDesktop = memo(function ExplorarDesktop({
                           </HorizontalScrollContainer>
                         )}
                       </div>
+                      
+                      {/* Row de Prestadores a cada 2 fornecedores */}
+                      {showProviders && providersToShow.length > 0 && (
+                        <div className="my-8">
+                          <div className="flex items-center gap-2 mb-4">
+                            <Wrench className="h-5 w-5 text-green-600" />
+                            <TypographyH4 className="font-montserrat">Prestadores de Serviço</TypographyH4>
+                            <Badge variant="outline" className="text-green-700 border-green-200 bg-green-50">
+                              Profissionais Qualificados
+                            </Badge>
+                          </div>
+                          
+                          <HorizontalScrollContainer>
+                            <div className="flex gap-4 pb-2">
+                              {providersToShow.map((provider: any) => (
+                                <Card 
+                                  key={provider.id}
+                                  className="flex-none w-[200px] p-4 hover:shadow-lg transition-shadow cursor-pointer border-green-100"
+                                  onClick={() => router.push(`/fornecedor/${provider.id}`)}
+                                >
+                                  <div className="flex flex-col items-center text-center">
+                                    <Avatar className="h-16 w-16 mb-3 border-2 border-green-200">
+                                      <AvatarFallback className="bg-green-600 text-white font-bold">
+                                        {provider.nome?.split(' ')[0]?.charAt(0)}{provider.nome?.split(' ')[1]?.charAt(0) || ''}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    
+                                    <TypographySmall className="font-semibold mb-1 line-clamp-2">
+                                      {provider.nome}
+                                    </TypographySmall>
+                                    
+                                    <div className="flex items-center gap-1 mb-4">
+                                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                                      <span className="text-xs font-medium">{provider.rating || 5.0}</span>
+                                      <Shield className="h-3 w-3 text-green-600 ml-1" />
+                                    </div>
+                                    
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline" 
+                                      className="w-full text-xs border-green-600 text-green-700 hover:bg-green-50"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        router.push(`/fornecedor/${provider.id}`);
+                                      }}
+                                    >
+                                      Ver Perfil
+                                    </Button>
+                                  </div>
+                                </Card>
+                              ))}
+                            </div>
+                          </HorizontalScrollContainer>
+                        </div>
+                      )}
+                      </div>
                     )
                   })}
-                      </div>
-                    </div>
-                  )}
-                </>
+                </div>
               )}
             </div>
           </TabsContent>
