@@ -125,11 +125,11 @@ const ExplorarDesktop = memo(function ExplorarDesktop({
   const filteredStores = useMemo(() => {
     let filtered
     if (!supplierSearch) {
-      filtered = stores.filter(s => s.status === "ativo")
+      filtered = stores.filter(s => s.status === "active")
     } else {
       const searchLower = supplierSearch.toLowerCase()
       filtered = stores.filter(s => 
-        s.status === "ativo" && 
+        s.status === "active" && 
         (s.nome.toLowerCase().includes(searchLower) || 
          s.cidade?.toLowerCase().includes(searchLower))
       )

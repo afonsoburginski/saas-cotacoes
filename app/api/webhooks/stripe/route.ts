@@ -115,7 +115,7 @@ export async function POST(request: Request) {
           telefone: phone || undefined,
           endereco: fullAddress,
           descricao: `${businessType === 'comercio' ? 'Comércio' : 'Prestador de serviço'} - ${businessName || 'Nova empresa'}`,
-          status: 'ativo',
+          status: 'active',
           plano: plan === 'basico' ? 'Basic' : plan === 'plus' ? 'Pro' : 'Premium',
           priorityScore: plan === 'basico' ? 70 : plan === 'plus' ? 85 : 95,
           rating: '0',
@@ -148,7 +148,7 @@ export async function POST(request: Request) {
         // Suspender loja
         await db
           .update(stores)
-          .set({ status: 'suspenso', updatedAt: new Date() })
+          .set({ status: 'suspended', updatedAt: new Date() })
           .where(eq(stores.userId, userData.id))
         
         // Criar notificação

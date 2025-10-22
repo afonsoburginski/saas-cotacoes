@@ -77,7 +77,7 @@ export const stores = pgTable('stores', {
   descricao: text('descricao'), // Sobre a loja
   logo: text('logo'), // URL do logo da loja
   horarioFuncionamento: text('horario_funcionamento'), // Ex: "Seg-Sex: 08:00-18:00"
-  status: varchar('status', { length: 20 }).default('pending'), // 'approved' | 'pending' | 'rejected' | 'ativo' | 'suspenso'
+  status: varchar('status', { length: 20 }).default('pending'), // 'active' | 'pending' | 'suspended' | 'rejected'
   plano: varchar('plano', { length: 20 }).default('Basic'), // 'Basic' | 'Pro' | 'Premium'
   priorityScore: integer('priority_score').default(0),
   shippingPolicy: jsonb('shipping_policy'),
@@ -147,7 +147,7 @@ export const reviews = pgTable('reviews', {
   serviceId: integer('service_id').references(() => services.id),
   rating: integer('rating').notNull(),
   comentario: text('comentario'),
-  status: varchar('status', { length: 20 }).default('pendente'), // 'pendente' | 'aprovado' | 'oculto'
+  status: varchar('status', { length: 20 }).default('pending'), // 'pending' | 'approved' | 'hidden'
   verified: boolean('verified').default(false), // Compra verificada
   createdAt: timestamp('created_at').defaultNow(),
 });
@@ -187,7 +187,7 @@ export const orders = pgTable('orders', {
   userId: text('user_id').references(() => user.id).notNull(),
   storeId: integer('store_id').references(() => stores.id),
   tipo: varchar('tipo', { length: 20 }).notNull(), // 'cotacao' | 'pedido'
-  status: varchar('status', { length: 30 }).default('pendente'), // 'pendente' | 'respondida' | 'aceita' | 'rejeitada' | 'concluida'
+  status: varchar('status', { length: 30 }).default('pending'), // 'pending' | 'answered' | 'accepted' | 'rejected' | 'completed'
   total: decimal('total', { precision: 12, scale: 2 }),
   observacoes: text('observacoes'),
   enderecoEntrega: text('endereco_entrega'),

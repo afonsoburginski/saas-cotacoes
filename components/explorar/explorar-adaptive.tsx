@@ -27,7 +27,7 @@ const ExplorarAdaptive = memo(function ExplorarAdaptive() {
     loja: filters.loja || undefined,
   })
 
-  const { data: storesData, isLoading: isLoadingStores } = useStores({ status: "ativo" })
+  const { data: storesData, isLoading: isLoadingStores } = useStores({ status: "active" })
   const { data: categoriesData } = useCategories()
 
   const products = productsData?.data || []

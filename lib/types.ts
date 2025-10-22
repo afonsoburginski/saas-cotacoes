@@ -15,7 +15,7 @@ export type Store = {
   telefone?: string
   cnpj: string
   endereco?: string
-  status: "ativo" | "suspenso" | "approved" | "pending" | "rejected"
+  status: "active" | "suspended" | "pending" | "rejected"
   priorityScore: number
   plano: "Basic" | "Pro" | "Premium"
   createdAt: string
@@ -88,7 +88,7 @@ export type Review = {
   comentario: string
   productId?: string
   storeId?: string
-  status: "pendente" | "aprovado" | "oculto"
+  status: "pending" | "approved" | "hidden"
   createdAt: string
 }
 
