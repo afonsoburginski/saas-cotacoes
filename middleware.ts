@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { auth } from '@/lib/auth'
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -15,14 +14,22 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // 3. Verificar sessão para todas as outras rotas
-  const session = await auth.api.getSession({ headers: request.headers })
+  // 3. Verificar sessão para todas as outras rotas via API
+  // Delegamos para uma API Route para evitar importar better-auth no Edge Runtime
+  const checkAuthUrl = new URL('/api/auth/check-session', request.url)
+  const authResponse = await fetch(checkAuthUrl, {
+    headers: { cookie: request.headers.get('cookie') || '' },
+  })
 
-  if (!session?.user) {
+  if (!authResponse.ok) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
-  const { user } = session
+  const { user } = await authResponse.json()
+
+  if (!user) {
+    return NextResponse.redirect(new URL('/', request.url))
+  }
 
   // 4. Proteção de rotas de Admin
   if (pathname.startsWith('/admin') && user.role !== 'admin') {
