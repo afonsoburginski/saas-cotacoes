@@ -76,9 +76,13 @@ export const auth = betterAuth({
   advanced: {
     cookiePrefix: "orca-norte",
     useSecureCookies: process.env.NODE_ENV === "production",
-    crossSubDomainCookies: {
+  },
+  session: {
+    expiresIn: 60 * 60 * 24 * 7, // 7 dias
+    updateAge: 60 * 60 * 24, // Atualiza a cada 1 dia
+    cookieCache: {
       enabled: true,
-      domain: ".orcanorte.com.br",
+      maxAge: 5 * 60 * 1000, // 5 minutos
     },
   },
 })
