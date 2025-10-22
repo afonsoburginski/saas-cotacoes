@@ -76,6 +76,13 @@ export async function POST(request: Request) {
           `${address.line1}${address.line2 ? ', ' + address.line2 : ''}, ${address.city} - ${address.state}, ${address.postal_code}` : 
           undefined
         
+        // Mapear businessType para role
+        const roleMap: Record<string, string> = {
+          'comercio': 'fornecedor',
+          'servico': 'prestador',
+        }
+        const userRole = roleMap[businessType || 'comercio'] || 'fornecedor'
+        
         // Atualizar usuário com TODOS os dados incluindo IDs do Stripe
         const [updatedUser] = await db.update(user).set({
           plan: plan,
@@ -83,7 +90,7 @@ export async function POST(request: Request) {
           businessType: businessType as 'comercio' | 'servico' | undefined,
           phone: phone || undefined,
           address: fullAddress,
-          role: 'fornecedor',
+          role: userRole,
           stripeCustomerId: stripeCustomerId, // ⭐ VINCULA COM stripe_customers
           updatedAt: new Date(),
         }).where(eq(user.id, userId)).returning()
