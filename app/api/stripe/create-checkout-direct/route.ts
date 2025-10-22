@@ -4,6 +4,8 @@ import { stripe } from '@/lib/stripe'
 import { headers } from 'next/headers'
 import { getStripeCustomerByEmail, hasActiveSubscription } from '@/lib/stripe-helpers'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)

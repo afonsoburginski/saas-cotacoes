@@ -4,6 +4,8 @@ import { stripe } from '@/lib/stripe'
 import { headers } from 'next/headers'
 import { getStripeCustomerByEmail, hasActiveSubscription } from '@/lib/stripe-helpers'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: Request) {
   try {
     // Verificar se Stripe está configurado

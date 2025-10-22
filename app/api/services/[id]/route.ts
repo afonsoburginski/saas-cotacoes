@@ -3,6 +3,8 @@ import { db } from '@/drizzle'
 import { services, stores } from '@/drizzle/schema'
 import { eq, sql } from 'drizzle-orm'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }

@@ -6,6 +6,8 @@ import { eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { getUserActiveSubscription } from '@/lib/stripe-helpers'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     const session = await auth.api.getSession({

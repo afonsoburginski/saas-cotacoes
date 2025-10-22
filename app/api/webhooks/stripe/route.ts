@@ -5,6 +5,8 @@ import { user, stores, processedWebhooks, notifications } from '@/drizzle/schema
 import { eq } from 'drizzle-orm'
 import Stripe from 'stripe'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: Request) {
   const body = await request.text()
   const signature = request.headers.get('stripe-signature')!

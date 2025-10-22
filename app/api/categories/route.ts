@@ -3,6 +3,8 @@ import { db } from '@/drizzle'
 import { products, services } from '@/drizzle/schema'
 import { sql } from 'drizzle-orm'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     // Pegar categorias de produtos
