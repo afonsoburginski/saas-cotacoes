@@ -115,7 +115,7 @@ export async function POST(request: Request) {
           telefone: phone || undefined,
           endereco: fullAddress,
           descricao: `${businessType === 'comercio' ? 'Comércio' : 'Prestador de serviço'} - ${businessName || 'Nova empresa'}`,
-          status: 'approved',
+          status: 'ativo',
           plano: plan === 'basico' ? 'Basic' : plan === 'plus' ? 'Pro' : 'Premium',
           priorityScore: plan === 'basico' ? 70 : plan === 'plus' ? 85 : 95,
           rating: '0',
