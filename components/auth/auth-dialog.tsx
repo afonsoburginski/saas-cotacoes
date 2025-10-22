@@ -1,10 +1,12 @@
 "use client"
 
+import { GoogleLoginButton } from "./google-login-button"
+
 import { useState } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { useAuthStore } from "@/stores/auth-store"
+import { authClient } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
 import Image from "next/image"
@@ -13,39 +15,33 @@ interface AuthDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   mode?: 'login' | 'register'
+  selectedPlan?: string | null // Plano pré-selecionado na landing
 }
 
-export function AuthDialog({ open, onOpenChange, mode = 'login' }: AuthDialogProps) {
+export function AuthDialog({ open, onOpenChange, mode = 'login', selectedPlan }: AuthDialogProps) {
   const router = useRouter()
-  const { loginWithGoogle, isLoading } = useAuthStore()
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
 
   const handleGoogleAuth = async () => {
     setIsGoogleLoading(true)
     
     try {
-      // Simular autenticação com Google (fake por enquanto)
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // Se selectedPlan foi passado (pricing section), redireciona com plano
+      // Senão, vai pro checkout interno
+      const callbackURL = selectedPlan 
+        ? `/api/auth-callback?plan=${selectedPlan}`
+        : "/api/auth-callback-checkout"
       
-      // Mock user data do Google
-      const mockGoogleUser = {
-        email: "usuario@gmail.com",
-        name: "Usuário Teste",
-        avatar: "/placeholder-user.jpg"
-      }
+      console.log('🔐 Login iniciado. Plano:', selectedPlan || 'nenhum', 'Callback:', callbackURL)
       
-      // Fazer login com Google
-      await loginWithGoogle(mockGoogleUser)
+      await authClient.signIn.social({
+        provider: "google",
+        callbackURL,
+      })
       
-      // Fechar dialog
       onOpenChange(false)
-      
-      // Redirecionar para onboarding
-      router.push('/onboarding')
-      
     } catch (error) {
       console.error('Erro na autenticação:', error)
-    } finally {
       setIsGoogleLoading(false)
     }
   }

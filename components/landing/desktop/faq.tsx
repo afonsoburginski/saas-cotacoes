@@ -13,12 +13,8 @@ const faqs = [
     answer: "NÃO! Você paga apenas a mensalidade do plano escolhido. Todo o lucro das suas vendas é 100% seu. Sem surpresas, sem taxas escondidas."
   },
   {
-    question: "Qual a diferença entre os planos?",
-    answer: "Básico (R$ 99): 50 produtos, relatórios básicos. Plus (R$ 189,99): 300 produtos + divulgação automática. Premium (R$ 249,99): produtos ilimitados + vídeos + campanhas semanais."
-  },
-  {
     question: "Como recebo os pagamentos dos clientes?",
-    answer: "A plataforma apenas conecta você com o cliente. Pagamentos diretamente com a empresa ou prestador escolhido."
+    answer: "A plataforma apenas conecta você com o cliente. Pagamentos são feitos diretamente com a Empresa escolhida."
   },
   {
     question: "Posso cancelar minha assinatura a qualquer momento?",

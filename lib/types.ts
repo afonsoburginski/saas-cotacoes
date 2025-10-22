@@ -11,10 +11,13 @@ export type ShippingPolicy = {
 export type Store = {
   id: string
   nome: string
+  email?: string
+  telefone?: string
   cnpj: string
-  status: "ativo" | "suspenso"
+  endereco?: string
+  status: "ativo" | "suspenso" | "approved" | "pending" | "rejected"
   priorityScore: number
-  plano: "Basic" | "Pro"
+  plano: "Basic" | "Pro" | "Premium"
   createdAt: string
   shippingPolicy: ShippingPolicy
   address?: {
@@ -23,6 +26,8 @@ export type Store = {
     cidade: string
     estado: string
   }
+  totalProducts?: number
+  totalSales?: number
 }
 
 export type Product = {
@@ -51,6 +56,31 @@ export type Product = {
   }
 }
 
+export type Service = {
+  id: string
+  storeId: string
+  storeNome: string
+  nome: string
+  categoria: string // Ex: "Alvenaria", "Elétrica", "Pintura"
+  preco: number
+  precoMinimo?: number // Para serviços com variação
+  precoMaximo?: number
+  tipoPrecificacao: 'hora' | 'dia' | 'projeto' | 'm2' | 'visita' // Como é cobrado
+  rating: number
+  imagemUrl?: string
+  imagens?: string[] // Portfolio de trabalhos
+  ativo: boolean
+  destacado?: boolean
+  descricao?: string
+}
+
+export type CatalogItemType = 'product' | 'service'
+
+// Tipo discriminado para catalog items
+export type CatalogItem = 
+  | (Product & { type: 'product' })
+  | (Service & { type: 'service' })
+
 export type Review = {
   id: string
   userNome: string
@@ -64,13 +94,15 @@ export type Review = {
 
 export type CartItem = {
   id: string
-  productId: string
+  productId?: string
+  serviceId?: string
   storeId: string
   qty: number
   productNome: string
   storeNome: string
   precoUnit: number
   imagemUrl?: string
+  tipo?: 'product' | 'service' // Para diferenciar produtos de serviços
 }
 
 export type PurchaseList = {

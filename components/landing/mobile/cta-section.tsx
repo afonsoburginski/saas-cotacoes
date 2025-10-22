@@ -1,4 +1,6 @@
 "use client";
+import { useState } from "react";
+import { AuthDialog } from "@/components/auth/auth-dialog";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Instagram, MessageCircle } from "lucide-react";
 import Link from "next/link";
@@ -9,7 +11,10 @@ const socialLinks = [
 ];
 
 export function CTASectionMobile() {
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
+  
   return (
+    <>
     <section className="py-8 px-4 bg-[#0052FF] text-white">
       <div className="max-w-md mx-auto text-center">
         {/* Badge */}
@@ -34,15 +39,14 @@ export function CTASectionMobile() {
         </p>
         
         {/* CTA Button */}
-        <Link href="/auth/register" className="block mb-6">
-          <Button 
-            size="lg"
-            className="w-full bg-[#22C55E] text-white hover:bg-[#22C55E]/90 font-semibold py-4 text-sm rounded-full border-0 active:scale-95 transition-transform"
-          >
-            Ver Planos e Começar
-            <ArrowRight className="ml-2 w-4 h-4" />
-          </Button>
-        </Link>
+        <Button 
+          onClick={() => setAuthDialogOpen(true)}
+          size="lg"
+          className="w-full bg-[#22C55E] text-white hover:bg-[#22C55E]/90 font-semibold py-4 text-sm rounded-full border-0 active:scale-95 transition-transform mb-6"
+        >
+          Ver Planos e Começar
+          <ArrowRight className="ml-2 w-4 h-4" />
+        </Button>
         
         {/* Benefits */}
         <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-white/70 mb-8 font-montserrat">
@@ -87,6 +91,13 @@ export function CTASectionMobile() {
         </div>
       </div>
     </section>
+    
+    <AuthDialog 
+      open={authDialogOpen} 
+      onOpenChange={setAuthDialogOpen}
+      mode="login"
+    />
+    </>
   );
 }
 

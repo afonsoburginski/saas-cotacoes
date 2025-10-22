@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import { useState, useMemo, useEffect, useCallback, memo } from "react"
 
 // Fisher-Yates shuffle algorithm para randomizar arrays
@@ -28,6 +29,8 @@ import {
   MapPin, 
   Star, 
   Shield, 
+  Briefcase,
+  Wrench,
   SlidersHorizontal, 
   ChevronsUpDown, 
   Check 
@@ -427,7 +430,7 @@ const ExplorarDesktop = memo(function ExplorarDesktop({
                     ).slice(0, 6) // Preview de 6 produtos
 
                     return (
-                      <div key={store.id} className="space-y-4">
+                      <div key={`store-${store.id}`} className="space-y-4">
                         {/* Supplier Info */}
                         <div 
                           className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"

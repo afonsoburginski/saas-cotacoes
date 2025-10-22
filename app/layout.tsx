@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { Providers } from "@/lib/providers"
 import { QueryProvider } from "@/providers/query-provider"
+import { SessionProvider } from "@/components/auth/session-provider"
 import { Suspense } from "react"
 
 import { GeistSans } from "geist/font/sans"
@@ -43,9 +44,12 @@ const marlinSoft = localFont({
 })
 
 export const metadata: Metadata = {
-  title: "SaaS Cotações - Materiais de Construção",
-  description: "Plataforma B2B para cotação de materiais de construção",
+  title: "Orça Norte - Cotações de Materiais de Construção",
+  description: "Plataforma B2B para cotação de materiais de construção e serviços",
   generator: "v0.app",
+}
+
+export const viewport = {
   themeColor: "#0052FF",
 }
 
@@ -57,30 +61,31 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning className="light">
       <head>
-        <meta name="theme-color" content="#0052FF" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
       <body
         className={`min-h-screen bg-background font-sans antialiased ${GeistSans.variable} ${GeistMono.variable} ${inter.variable} ${montserrat.variable} ${marlinSoft.variable}`}
       >
-        <QueryProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="light"
-            enableSystem={false}
-            disableTransitionOnChange
-            forcedTheme="light"
-          >
-            <Providers>
-              <RoleProvider>
-                <SmartComparisonProvider>
-                  <Suspense>{children}</Suspense>
-                  <Toaster />
-                </SmartComparisonProvider>
-              </RoleProvider>
-            </Providers>
-          </ThemeProvider>
-        </QueryProvider>
+        <SessionProvider>
+          <QueryProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="light"
+              enableSystem={false}
+              disableTransitionOnChange
+              forcedTheme="light"
+            >
+              <Providers>
+                <RoleProvider>
+                  <SmartComparisonProvider>
+                    <Suspense>{children}</Suspense>
+                    <Toaster />
+                  </SmartComparisonProvider>
+                </RoleProvider>
+              </Providers>
+            </ThemeProvider>
+          </QueryProvider>
+        </SessionProvider>
         <Analytics />
       </body>
     </html>

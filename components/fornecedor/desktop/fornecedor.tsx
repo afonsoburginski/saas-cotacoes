@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import { useCartStore } from "@/stores/cart-store"
+import { useToast } from "@/hooks/use-toast"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -26,10 +28,63 @@ import Link from "next/link"
 interface FornecedorDesktopProps {
   store: any
   storeProducts: any[]
+  storeServices: any[]
 }
 
-export function FornecedorDesktop({ store, storeProducts }: FornecedorDesktopProps) {
+export function FornecedorDesktop({ store, storeProducts, storeServices }: FornecedorDesktopProps) {
   const [activeTab, setActiveTab] = useState("produtos")
+  const addToCart = useCartStore((state) => state.addToCart)
+  const { toast } = useToast()
+  
+  const handleShare = async () => {
+    const url = `${window.location.origin}/fornecedor/${store.id}`
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: store.nome,
+          text: `Confira ${store.nome} no Orça Norte!`,
+          url: url,
+        })
+      } catch (error) {
+        // User cancelou ou erro
+      }
+    } else {
+      // Fallback: copiar para clipboard
+      navigator.clipboard.writeText(url)
+      toast({
+        title: "Link copiado!",
+        description: "O link do perfil foi copiado para área de transferência.",
+      })
+    }
+  }
+  
+  const handleWhatsApp = () => {
+    const profileUrl = `${window.location.origin}/fornecedor/${store.id}`
+    const message = `Olá! Vi seu perfil no Orça Norte e gostaria de fazer um orçamento.\n\n${profileUrl}`
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
+    window.open(whatsappUrl, '_blank')
+  }
+  
+  // Combinar produtos e serviços em um só catálogo
+  const catalogItems = [
+    ...storeProducts,
+    ...storeServices.map((s: any) => ({ ...s, isService: true }))
+  ]
+  
+  const handleAddService = (service: any) => {
+    // Converter serviço para formato de produto para adicionar ao carrinho
+    const serviceAsProduct = {
+      ...service,
+      preco: service.precoMinimo || 0,
+      estoque: 999, // Serviços sempre disponíveis
+    }
+    addToCart(serviceAsProduct as any)
+    toast({
+      title: "Serviço adicionado!",
+      description: `${service.nome} foi adicionado ao orçamento.`,
+    })
+  }
 
   // Mock reviews data
   const reviews = [
@@ -53,7 +108,7 @@ export function FornecedorDesktop({ store, storeProducts }: FornecedorDesktopPro
       id: "3",
       userName: "Pedro Costa",
       rating: 5,
-      comment: "Melhor fornecedor da região. Produtos sempre em estoque.",
+      comment: "Melhor empresa da região. Produtos sempre em estoque.",
       date: "2024-01-08",
       verified: false
     }
@@ -80,7 +135,12 @@ export function FornecedorDesktop({ store, storeProducts }: FornecedorDesktopPro
             </Button>
           </Link>
           <div className="flex-1" />
-          <Button variant="outline" size="sm" className="rounded-xl font-montserrat">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="rounded-xl font-montserrat"
+            onClick={handleShare}
+          >
             <Share2 className="h-4 w-4 mr-2" />
             Compartilhar
           </Button>
@@ -126,33 +186,14 @@ export function FornecedorDesktop({ store, storeProducts }: FornecedorDesktopPro
                   </div>
                   
                   <div className="flex gap-3">
-                    <Button className="bg-[#0052FF] hover:bg-[#0052FF]/90 text-white rounded-lg px-6 font-montserrat">
+                    <Button 
+                      className="bg-green-600 hover:bg-green-700 text-white rounded-lg px-6 font-montserrat"
+                      onClick={handleWhatsApp}
+                    >
                       <MessageCircle className="h-4 w-4 mr-2" />
-                      Mensagem
-                    </Button>
-                    <Button variant="outline" className="rounded-lg px-6 font-montserrat">
-                      <Phone className="h-4 w-4 mr-2" />
-                      Ligar
+                      WhatsApp
                     </Button>
                   </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Quick Info */}
-            <div className="mt-6 p-4 bg-gray-50 rounded-xl">
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <div className="text-xl font-bold text-gray-900 font-montserrat">150+</div>
-                  <div className="text-sm text-gray-600 font-montserrat">Produtos</div>
-                </div>
-                <div>
-                  <div className="text-xl font-bold text-gray-900 font-montserrat">98%</div>
-                  <div className="text-sm text-gray-600 font-montserrat">Taxa de resposta</div>
-                </div>
-                <div>
-                  <div className="text-xl font-bold text-gray-900 font-montserrat">24h</div>
-                  <div className="text-sm text-gray-600 font-montserrat">Tempo de resposta</div>
                 </div>
               </div>
             </div>
@@ -167,7 +208,7 @@ export function FornecedorDesktop({ store, storeProducts }: FornecedorDesktopPro
               value="produtos" 
               className="rounded-md px-4 py-2 text-sm data-[state=active]:bg-[#0052FF] data-[state=active]:text-white data-[state=active]:shadow-sm"
             >
-              Produtos
+              Catálogo ({catalogItems.length})
             </TabsTrigger>
             <TabsTrigger 
               value="avaliacoes"
@@ -183,17 +224,41 @@ export function FornecedorDesktop({ store, storeProducts }: FornecedorDesktopPro
             </TabsTrigger>
           </TabsList>
 
-          {/* Produtos Tab */}
+          {/* Catálogo Tab - Produtos + Serviços */}
           <TabsContent value="produtos" className="space-y-6">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {storeProducts.map((product) => (
-                <ProductCardAdaptive key={product.id} product={product} />
+              {catalogItems.map((item) => (
+                item.isService ? (
+                  <Card key={item.id} className="p-4 hover:shadow-lg transition-shadow border-green-100 flex flex-col">
+                    <Badge className="mb-2 bg-green-600 text-white self-start">Serviço</Badge>
+                    <h4 className="font-bold text-sm mb-1 line-clamp-2">{item.nome}</h4>
+                    <p className="text-xs text-gray-600 mb-3">{item.categoria}</p>
+                    <div className="mt-auto">
+                      {item.precoMinimo && item.precoMaximo ? (
+                        <p className="text-xs font-semibold text-green-700 mb-2">
+                          R$ {item.precoMinimo} - {item.precoMaximo}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-amber-600 mb-2">Sob consulta</p>
+                      )}
+                      <Button 
+                        size="sm" 
+                        className="w-full text-xs bg-green-600 text-white hover:bg-green-700"
+                        onClick={() => handleAddService(item)}
+                      >
+                        Adicionar Serviço
+                      </Button>
+                    </div>
+                  </Card>
+                ) : (
+                  <ProductCardAdaptive key={item.id} product={item} />
+                )
               ))}
             </div>
             
-            {storeProducts.length === 0 && (
+            {catalogItems.length === 0 && (
               <Card className="p-12 text-center">
-                <p className="text-gray-500 font-montserrat">Nenhum produto encontrado</p>
+                <p className="text-gray-500 font-montserrat">Nenhum produto ou serviço cadastrado</p>
               </Card>
             )}
           </TabsContent>
@@ -238,7 +303,7 @@ export function FornecedorDesktop({ store, storeProducts }: FornecedorDesktopPro
           {/* Sobre Tab */}
           <TabsContent value="sobre" className="space-y-6">
             <div className="bg-white rounded-2xl border border-gray-200 p-6">
-              <TypographyH3>Informações do Fornecedor</TypographyH3>
+              <TypographyH3>Informações da Empresa</TypographyH3>
               
               <div className="space-y-4">
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">

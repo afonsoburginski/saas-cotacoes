@@ -4,6 +4,7 @@ import { PageBackground } from "@/components/layout/page-background"
 import { FornecedorAdaptive } from "@/components/fornecedor/fornecedor-adaptive"
 import { useStore } from "@/hooks/use-stores"
 import { useProducts } from "@/hooks/use-products"
+import { useServices } from "@/hooks/use-services"
 import { useParams } from "next/navigation"
 
 export default function FornecedorPage() {
@@ -12,18 +13,20 @@ export default function FornecedorPage() {
   
   const { data: storeData, isLoading: isLoadingStore } = useStore(storeId)
   const { data: productsData, isLoading: isLoadingProducts } = useProducts({ storeId })
+  const { data: servicesData, isLoading: isLoadingServices } = useServices({ storeId })
 
   const store = storeData
   const storeProducts = productsData?.data || []
+  const storeServices = servicesData?.data || []
 
-  if (isLoadingStore || isLoadingProducts) {
+  if (isLoadingStore || isLoadingProducts || isLoadingServices) {
     return (
       <>
         <PageBackground />
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0052FF] mx-auto mb-4"></div>
-            <p className="text-gray-600 font-montserrat">Carregando fornecedor...</p>
+            <p className="text-gray-600 font-montserrat">Carregando...</p>
           </div>
         </div>
       </>
@@ -46,7 +49,11 @@ export default function FornecedorPage() {
   return (
     <>
       <PageBackground />
-      <FornecedorAdaptive store={store} storeProducts={storeProducts} />
+      <FornecedorAdaptive 
+        store={store} 
+        storeProducts={storeProducts}
+        storeServices={storeServices}
+      />
     </>
   )
 }

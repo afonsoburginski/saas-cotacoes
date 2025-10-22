@@ -1,9 +1,10 @@
 "use client";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles, Instagram, MessageCircle } from "lucide-react";
 import { Spotlight } from "@/components/ui/spotlight-new";
-import Link from "next/link";
+import { AuthDialog } from "@/components/auth/auth-dialog";
 
 const socialLinks = [
   { icon: Instagram, href: "https://www.instagram.com/orcanorte?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==", name: "Instagram", color: "hover:bg-pink-500/20" },
@@ -11,7 +12,10 @@ const socialLinks = [
 ];
 
 export function CTASection() {
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
+  
   return (
+    <>
     <section className="py-20 px-6 relative overflow-hidden" style={{ backgroundColor: "rgb(0 82 255 / var(--tw-bg-opacity, 1))" }}>
       {/* Spotlight animation overlay */}
       <Spotlight 
@@ -98,15 +102,14 @@ export function CTASection() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              <Link href="/auth/register">
-                <Button 
-                  size="lg"
-                  className="bg-[#22C55E] text-white hover:bg-[#22C55E]/90 font-semibold px-10 py-6 text-lg rounded-full shadow-xl hover:shadow-2xl transition-all duration-300"
-                >
-                  Ver Planos e Começar
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Button>
-              </Link>
+              <Button 
+                onClick={() => setAuthDialogOpen(true)}
+                size="lg"
+                className="bg-[#22C55E] text-white hover:bg-[#22C55E]/90 font-semibold px-10 py-6 text-lg rounded-full shadow-xl hover:shadow-2xl transition-all duration-300"
+              >
+                Ver Planos e Começar
+                <ArrowRight className="ml-2 w-5 h-5" />
+              </Button>
             </motion.div>
           </div>
           
@@ -123,6 +126,16 @@ export function CTASection() {
               <div className="w-2 h-2 bg-[#22C55E] rounded-full"></div>
               <span className="text-sm">Cancele quando quiser</span>
             </div>
+          </div>
+          
+          {/* Link para consumidores */}
+          <div className="mt-6">
+            <button
+              onClick={() => window.location.href = '/explorar'}
+              className="text-white/60 hover:text-white text-sm font-montserrat underline underline-offset-4 transition-colors"
+            >
+              Já é cliente? Buscar produtos →
+            </button>
           </div>
         </motion.div>
       </div>
@@ -165,5 +178,12 @@ export function CTASection() {
         </div>
       </div>
     </section>
+    
+    <AuthDialog 
+      open={authDialogOpen} 
+      onOpenChange={setAuthDialogOpen}
+      mode="login"
+    />
+    </>
   );
 }

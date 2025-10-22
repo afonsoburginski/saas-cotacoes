@@ -87,20 +87,8 @@ export function ProductCardDesktop({ product }: ProductCardDesktopProps) {
                 </button>
                 <div className="flex items-center gap-0.5">{renderStars(product.rating)}</div>
               </div>
-              <div className="pointer-events-auto flex gap-2">
-                <Button
-                  size="sm"
-                  className="flex-1 h-9 font-semibold shadow-md bg-[#22C55E] hover:bg-[#22C55E]/90 text-white font-montserrat"
-                  onClick={() => generateSmartComparison(product)}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <Sparkles className="h-4 w-4 mr-2" />
-                  )}
-                  Orçar
-                </Button>
+              <div className="pointer-events-auto">
+                {/* Botão Orçar/Comparar removido */}
                 <motion.div
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -108,8 +96,8 @@ export function ProductCardDesktop({ product }: ProductCardDesktopProps) {
                   <Button
                     variant="secondary"
                     size="sm"
-                    className={`h-9 px-3 font-semibold relative overflow-hidden font-montserrat ${
-                      isRecentlyAdded ? "bg-green-500 hover:bg-green-600 text-white" : ""
+                    className={`w-full h-9 font-semibold relative overflow-hidden font-montserrat ${
+                      isRecentlyAdded ? "bg-green-500 hover:bg-green-600 text-white" : "bg-[#0052FF] hover:bg-[#0052FF]/90 text-white"
                     }`}
                     onClick={handleAddToCart}
                     disabled={product.estoque === 0}
@@ -137,7 +125,7 @@ export function ProductCardDesktop({ product }: ProductCardDesktopProps) {
                           className="flex items-center"
                         >
                           <ShoppingCart className="h-4 w-4 mr-2" />
-                          {product.estoque === 0 ? "Indisp." : "Carrinho"}
+                          {product.estoque === 0 ? "Indisponível" : "Carrinho"}
                         </motion.div>
                       )}
                     </AnimatePresence>

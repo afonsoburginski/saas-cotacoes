@@ -21,6 +21,7 @@ import {
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useRole } from "@/hooks/use-role"
+import { useStoreSlug } from "@/hooks/use-store-slug"
 import { useState } from "react"
 
 interface SidebarProps {
@@ -30,6 +31,7 @@ interface SidebarProps {
 export function Sidebar({ className }: SidebarProps) {
   const pathname = usePathname()
   const { role } = useRole()
+  const { data: storeSlug } = useStoreSlug()
   const [collapsed, setCollapsed] = useState(true)
 
   const commonRoutes = [
@@ -38,11 +40,11 @@ export function Sidebar({ className }: SidebarProps) {
       icon: Search,
       href: "/explorar",
     },
-    {
-      label: "Comparar",
-      icon: GitCompare,
-      href: "/comparar",
-    },
+    // {
+    //   label: "Comparar",
+    //   icon: GitCompare,
+    //   href: "/comparar",
+    // },
     {
       label: "Carrinho",
       icon: ShoppingCart,
@@ -57,9 +59,9 @@ export function Sidebar({ className }: SidebarProps) {
 
   const lojaRoutes = [
     {
-      label: "Produtos",
+      label: "Catálogo",
       icon: Package,
-      href: "/loja/produtos",
+      href: storeSlug ? `/loja/${storeSlug}` : "/loja/loading",
     },
     {
       label: "Relatórios da Loja",

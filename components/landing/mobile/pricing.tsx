@@ -2,6 +2,8 @@
 import { Check, Store, Rocket, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AuthDialog } from "@/components/auth/auth-dialog";
+import { useSession } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 const plans = [
@@ -64,6 +66,41 @@ const plans = [
 
 export function PricingMobile() {
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
+  const [selectedPlanForAuth, setSelectedPlanForAuth] = useState<string | null>(null);
+  const { data: session } = useSession();
+  const router = useRouter();
+  
+  const handlePlanClick = (planName: string) => {
+    // Converter nome para ID (sem acentos)
+    const planId = planName
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, ''); // Remove acentos
+    
+    if (session?.user) {
+      createStripeCheckout(planId);
+    } else {
+      setSelectedPlanForAuth(planId);
+      setAuthDialogOpen(true);
+    }
+  };
+  
+  const createStripeCheckout = async (plan: string) => {
+    try {
+      const res = await fetch('/api/stripe/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan })
+      });
+      
+      if (res.ok) {
+        const { url } = await res.json();
+        if (url) window.location.href = url;
+      }
+    } catch (error) {
+      console.error('Erro ao criar checkout:', error);
+    }
+  };
   const [currentSlide, setCurrentSlide] = useState(1); // Começa no Plus (mais popular)
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -129,7 +166,7 @@ export function PricingMobile() {
               </div>
               
               <Button 
-                onClick={() => setAuthDialogOpen(true)}
+                onClick={() => handlePlanClick(plan.name)}
                 className="w-full mb-4 bg-[#0052FF] hover:bg-[#0052FF]/90 text-white border-0 active:scale-95 transition-transform"
               >
                 {plan.buttonText}
@@ -180,8 +217,12 @@ export function PricingMobile() {
 
     <AuthDialog 
       open={authDialogOpen} 
-      onOpenChange={setAuthDialogOpen}
+      onOpenChange={(open) => {
+        setAuthDialogOpen(open);
+        if (!open) setSelectedPlanForAuth(null);
+      }}
       mode="login"
+      selectedPlan={selectedPlanForAuth}
     />
     </>
   );

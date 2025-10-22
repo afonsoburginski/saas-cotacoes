@@ -4,69 +4,18 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { useAuthStore } from "@/stores/auth-store";
+import { useSession } from "@/lib/auth-client";
+import { usePlans } from "@/hooks/use-plans";
 import { useRouter } from "next/navigation";
-import { Check, Store, Rocket, Video, ArrowLeft, CreditCard } from "lucide-react";
+import { Check, Store, Rocket, Video, ArrowLeft, CreditCard, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
-const plans = [
-  {
-    id: 'basico' as const,
-    name: "Básico",
-    price: "R$ 99",
-    period: "/mês",
-    description: "Ideal para pequenas empresas começando",
-    icon: Store,
-    features: [
-      "Perfil profissional no diretório",
-      "Receber cotações ilimitadas",
-      "Cadastro ilimitado de produtos/serviços",
-      "Painel de controle",
-      "Relatórios básicos de desempenho",
-      "Suporte por email 7 dias/semana"
-    ],
-    popular: false,
-    color: "bg-[#0052FF]"
-  },
-  {
-    id: 'plus' as const,
-    name: "Plus",
-    price: "R$ 189,99",
-    period: "/mês",
-    description: "Para empresas crescerem rápido",
-    icon: Rocket,
-    features: [
-      "Tudo do plano Básico",
-      "Divulgação automática nas buscas",
-      "Destaque nos resultados",
-      "Campanhas de marketing mensais",
-      "Design de artes digitais",
-      "Análises de desempenho",
-      "Suporte prioritário"
-    ],
-    popular: true,
-    color: "bg-[#0052FF]"
-  },
-  {
-    id: 'premium' as const,
-    name: "Premium",
-    price: "R$ 249,99",
-    period: "/mês",
-    description: "Vídeos e campanhas avançadas",
-    icon: Video,
-    features: [
-      "Tudo do plano Plus",
-      "2 vídeos promocionais por mês",
-      "Cada vídeo fica 15 dias no ar",
-      "Campanhas de marketing semanais",
-      "Divulgação em múltiplas plataformas",
-      "Suporte prioritário 24/7"
-    ],
-    popular: false,
-    color: "bg-[#0052FF]"
-  }
-];
+const planIcons = {
+  'Básico': Store,
+  'Plus': Rocket,
+  'Premium': Video,
+}
 
 interface CheckoutDesktopProps {
   selectedPlan: 'basico' | 'plus' | 'premium';
@@ -76,9 +25,11 @@ interface CheckoutDesktopProps {
 }
 
 export function CheckoutDesktop({ selectedPlan, setSelectedPlan, isLoading, handleSubscribe }: CheckoutDesktopProps) {
-  const { user } = useAuthStore();
+  const { data: session } = useSession();
+  const { data: plansData, isLoading: isLoadingPlans } = usePlans();
 
-  const selectedPlanData = plans.find(p => p.id === selectedPlan)!;
+  const plans = plansData?.data || [];
+  const selectedPlanData = plans.find(p => p.nome.toLowerCase() === selectedPlan);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white py-12 px-6">
@@ -91,11 +42,11 @@ export function CheckoutDesktop({ selectedPlan, setSelectedPlan, isLoading, hand
           className="text-center mb-12"
         >
           <Link 
-            href="/onboarding" 
+            href="/" 
             className="inline-flex items-center gap-3 mb-6 text-gray-600 hover:text-gray-900 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm font-montserrat">Voltar</span>
+            <span className="text-sm font-montserrat">Voltar para Home</span>
           </Link>
           
           <div className="flex items-center justify-center gap-3 mb-6">
@@ -110,7 +61,7 @@ export function CheckoutDesktop({ selectedPlan, setSelectedPlan, isLoading, hand
             <h1 className="text-4xl font-bold text-gray-900 font-marlin">Orça Norte</h1>
           </div>
           <h2 className="text-2xl font-semibold text-gray-800 mb-2 font-marlin">
-            Escolha seu plano, {user?.name}
+            Escolha seu plano, {session?.user?.name}
           </h2>
           <p className="text-gray-600 text-lg font-montserrat">
             Comece a vender e receber cotações hoje mesmo
@@ -120,10 +71,17 @@ export function CheckoutDesktop({ selectedPlan, setSelectedPlan, isLoading, hand
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Planos */}
           <div className="lg:col-span-3">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl">
-              {plans.map((plan, index) => {
-                const Icon = plan.icon;
-                const isSelected = selectedPlan === plan.id;
+            {isLoadingPlans ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl">
+                {plans.map((plan, index) => {
+                  const Icon = planIcons[plan.nome as keyof typeof planIcons] || Store;
+                  const planId = plan.nome.toLowerCase() as 'basico' | 'plus' | 'premium';
+                  const isSelected = selectedPlan === planId;
+                  const isPopular = plan.nome === 'Plus';
                 
                 return (
                   <motion.div
@@ -132,11 +90,11 @@ export function CheckoutDesktop({ selectedPlan, setSelectedPlan, isLoading, hand
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, delay: index * 0.1 }}
                     className={`relative bg-white rounded-2xl border p-6 transition-all duration-300 cursor-pointer ${
-                      plan.popular ? 'border-[#0052FF]' : 'border-gray-200'
+                      isPopular ? 'border-[#0052FF]' : 'border-gray-200'
                     } ${isSelected ? 'ring-2 ring-[#0052FF] shadow-xl' : 'hover:shadow-lg'}`}
-                    onClick={() => setSelectedPlan(plan.id)}
+                    onClick={() => setSelectedPlan(planId)}
                   >
-                    {plan.popular && (
+                    {isPopular && (
                       <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                         <span className="bg-[#0052FF] text-white px-3 py-1 rounded-full text-xs font-bold font-montserrat">
                           Mais Popular
@@ -147,24 +105,30 @@ export function CheckoutDesktop({ selectedPlan, setSelectedPlan, isLoading, hand
                     {/* Header com ícone, título e preço */}
                     <div className="relative mb-5">
                       <div className="flex items-start gap-3">
-                        <div className={`${plan.color} rounded-xl p-3 w-14 h-14 flex-shrink-0`}>
+                        <div className="bg-[#0052FF] rounded-xl p-3 w-14 h-14 flex-shrink-0">
                           <Icon className="w-full h-full text-white" />
                         </div>
                         <div className="flex-1 pr-20">
-                          <h3 className="text-lg font-bold text-gray-900 mb-0.5 font-marlin leading-tight">{plan.name}</h3>
-                          <p className="text-xs text-gray-600 font-montserrat leading-snug">{plan.description}</p>
+                          <h3 className="text-lg font-bold text-gray-900 mb-0.5 font-marlin leading-tight">{plan.nome}</h3>
+                          <p className="text-xs text-gray-600 font-montserrat leading-snug">
+                            {plan.nome === 'Básico' ? 'Ideal para pequenas empresas começando' :
+                             plan.nome === 'Plus' ? 'Para empresas crescerem rápido' :
+                             'Vídeos e campanhas avançadas'}
+                          </p>
                         </div>
                       </div>
                       <div className="absolute top-0 right-0 text-right">
-                        <span className="text-2xl font-bold text-gray-900 block leading-none">{plan.price}</span>
-                        <span className="text-gray-500 text-xs font-montserrat mt-0.5 block">{plan.period}</span>
+                        <span className="text-2xl font-bold text-gray-900 block leading-none">
+                          R$ {plan.preco.toFixed(2).replace('.', ',')}
+                        </span>
+                        <span className="text-gray-500 text-xs font-montserrat mt-0.5 block">/mês</span>
                       </div>
                     </div>
                     
                     <div className="border-t border-gray-100 pt-5">
                       <p className="text-xs font-semibold text-gray-500 mb-3 font-montserrat">Features Incluídas:</p>
                       <ul className="space-y-2.5">
-                        {plan.features.map((feature, featureIndex) => (
+                        {plan.recursos.map((feature, featureIndex) => (
                           <li key={featureIndex} className="flex items-center gap-2">
                             <div className="w-4 h-4 rounded bg-[#0052FF]/10 flex items-center justify-center flex-shrink-0">
                               <Check className="w-3 h-3 text-[#0052FF]" />
@@ -189,7 +153,8 @@ export function CheckoutDesktop({ selectedPlan, setSelectedPlan, isLoading, hand
                   </motion.div>
                 );
               })}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Resumo do Pedido */}
@@ -207,16 +172,20 @@ export function CheckoutDesktop({ selectedPlan, setSelectedPlan, isLoading, hand
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600 font-montserrat text-sm">Plano selecionado:</span>
-                      <span className="font-medium font-marlin">{selectedPlanData.name}</span>
+                      <span className="font-medium font-marlin">{selectedPlanData?.nome || 'Plus'}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600 font-montserrat text-sm">Valor mensal:</span>
-                      <span className="font-medium font-montserrat">{selectedPlanData.price}</span>
+                      <span className="font-medium font-montserrat">
+                        R$ {(selectedPlanData?.preco || 189.99).toFixed(2).replace('.', ',')}
+                      </span>
                     </div>
                     <div className="border-t pt-3">
                       <div className="flex justify-between items-center text-lg font-bold">
                         <span className="font-marlin">Total:</span>
-                        <span className="text-[#22C55E] font-montserrat">{selectedPlanData.price}/mês</span>
+                        <span className="text-[#22C55E] font-montserrat">
+                          R$ {(selectedPlanData?.preco || 189.99).toFixed(2).replace('.', ',')}/mês
+                        </span>
                       </div>
                     </div>
                   </div>

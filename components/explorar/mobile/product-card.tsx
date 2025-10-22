@@ -88,69 +88,55 @@ export function ProductCardMobile({ product }: ProductCardMobileProps) {
                 </button>
                 <div className="flex items-center gap-0.5">{renderStars(product.rating)}</div>
               </div>
-              <div className="flex gap-1.5">
+              {/* Botão Orçar/Comparar removido */}
+              <motion.div whileTap={{ scale: 0.95 }} className="w-full">
                 <Button
+                  variant="secondary"
                   size="sm"
-                  className="flex-1 h-8 font-semibold shadow-md bg-[#22C55E] hover:bg-[#22C55E]/90 text-white text-xs font-montserrat"
-                  onClick={() => generateSmartComparison(product)}
-                  disabled={isLoading}
+                  className={`w-full h-8 font-semibold relative overflow-hidden text-xs font-montserrat ${
+                    isRecentlyAdded ? "bg-green-500 hover:bg-green-600 text-white" : "bg-[#0052FF] hover:bg-[#0052FF]/90 text-white"
+                  }`}
+                  onClick={handleAddToCart}
+                  disabled={product.estoque === 0}
                 >
-                  {isLoading ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <>
-                      <Sparkles className="h-3 w-3 mr-1" />
-                      Orçar
-                    </>
+                  <AnimatePresence mode="wait">
+                    {isRecentlyAdded ? (
+                      <motion.div
+                        key="added"
+                        initial={{ scale: 0, rotate: -180 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        exit={{ scale: 0, rotate: 180 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                        className="flex items-center"
+                      >
+                        <Check className="h-3 w-3 mr-1" />
+                        Adicionado!
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="add"
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        exit={{ scale: 0 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                        className="flex items-center"
+                      >
+                        <ShoppingCart className="h-3 w-3 mr-1" />
+                        {product.estoque === 0 ? "Indisponível" : "Carrinho"}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  
+                  {isRecentlyAdded && (
+                    <motion.div
+                      initial={{ scale: 0, opacity: 0.5 }}
+                      animate={{ scale: 2, opacity: 0 }}
+                      transition={{ duration: 0.6 }}
+                      className="absolute inset-0 bg-white/30 rounded-sm"
+                    />
                   )}
                 </Button>
-                <motion.div
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className={`h-8 px-2 font-semibold relative overflow-hidden text-xs font-montserrat ${
-                      isRecentlyAdded ? "bg-green-500 hover:bg-green-600 text-white" : "bg-white/90 hover:bg-white text-gray-900"
-                    }`}
-                    onClick={handleAddToCart}
-                    disabled={product.estoque === 0}
-                  >
-                    <AnimatePresence mode="wait">
-                      {isRecentlyAdded ? (
-                        <motion.div
-                          key="added"
-                          initial={{ scale: 0, rotate: -180 }}
-                          animate={{ scale: 1, rotate: 0 }}
-                          exit={{ scale: 0, rotate: 180 }}
-                          transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                        >
-                          <Check className="h-3 w-3" />
-                        </motion.div>
-                      ) : (
-                        <motion.div
-                          key="add"
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          exit={{ scale: 0 }}
-                          transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                        >
-                          <ShoppingCart className="h-3 w-3" />
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                    
-                    {isRecentlyAdded && (
-                      <motion.div
-                        initial={{ scale: 0, opacity: 0.5 }}
-                        animate={{ scale: 2, opacity: 0 }}
-                        transition={{ duration: 0.6 }}
-                        className="absolute inset-0 bg-white/30 rounded-sm"
-                      />
-                    )}
-                  </Button>
-                </motion.div>
-              </div>
+              </motion.div>
             </div>
           </div>
         </div>

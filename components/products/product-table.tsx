@@ -33,6 +33,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { ProductForm, ProductFormData } from "./product-form"
+import { ServiceForm, ServiceFormData } from "./service-form"
 import { useToast } from "@/hooks/use-toast"
 import { Product } from "@/lib/types"
 import { 
@@ -62,9 +63,29 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 
+import { 
+  useProducts, 
+  useCreateProduct, 
+  useUpdateProduct, 
+  useUpdateProducts,
+  useDeleteProduct, 
+  useDeleteProducts 
+} from "@/hooks/use-products"
+import {
+  useServices,
+  useCreateService,
+  useUpdateService,
+  useUpdateServices,
+  useDeleteService,
+  useDeleteServices
+} from "@/hooks/use-services"
+import type { Service } from "@/lib/types"
+
+type CatalogTab = 'products' | 'services' | 'all'
+
 interface ProductTableProps {
-  products: Product[]
-  onUpdate: (products: Product[]) => void
+  storeId: string
+  isLoading?: boolean
 }
 
 interface FilterState {
@@ -75,13 +96,45 @@ interface FilterState {
   preco: string[]
 }
 
-export function ProductTable({ products, onUpdate }: ProductTableProps) {
+export function ProductTable({ storeId, isLoading: isLoadingProp }: ProductTableProps) {
   const { toast } = useToast()
-  const [selectedProducts, setSelectedProducts] = useState<string[]>([])
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-  const [showCreateForm, setShowCreateForm] = useState(false)
-  const [deleteProduct, setDeleteProduct] = useState<Product | null>(null)
+  
+  // Tab State
+  const [activeTab, setActiveTab] = useState<CatalogTab>('products')
+  
+  // React Query - Products
   const [searchTerm, setSearchTerm] = useState("")
+  const { data: productsData, isLoading: isLoadingProducts } = useProducts({ 
+    storeId,
+    includeInactive: true 
+  })
+  const createProduct = useCreateProduct()
+  const updateProduct = useUpdateProduct()
+  const updateProducts = useUpdateProducts()
+  const deleteProduct = useDeleteProduct()
+  const deleteProducts = useDeleteProducts()
+  
+  // React Query - Services
+  const { data: servicesData, isLoading: isLoadingServices } = useServices({
+    storeId,
+    includeInactive: true
+  })
+  const createService = useCreateService()
+  const updateService = useUpdateService()
+  const updateServices = useUpdateServices()
+  const deleteService = useDeleteService()
+  const deleteServices = useDeleteServices()
+  
+  const products = productsData?.data || []
+  const services = servicesData?.data || []
+  const isLoading = isLoadingProp || isLoadingProducts || isLoadingServices
+  
+  // Local State
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([])
+  const [editingProduct, setEditingProduct] = useState<Product | Service | null>(null)
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [deleteProductState, setDeleteProductState] = useState<Product | Service | null>(null)
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false)
   const [filters, setFilters] = useState<FilterState>({
     status: [],
     categoria: [],
@@ -91,30 +144,40 @@ export function ProductTable({ products, onUpdate }: ProductTableProps) {
   })
   const [filterSearch, setFilterSearch] = useState<{[key: string]: string}>({})
 
+  // Combinar dados baseado na tab ativa
+  const currentItems = activeTab === 'products' ? products : 
+                       activeTab === 'services' ? services :
+                       [...products, ...services]
+  
   // Obter opções únicas para filtros
-  const uniqueCategories = [...new Set(products.map(p => p.categoria))]
+  const uniqueCategories = [...new Set(currentItems.map(p => p.categoria))]
   const uniqueStatus = [
-    { value: "ativo", label: "Ativo", count: products.filter(p => p.ativo).length },
-    { value: "inativo", label: "Inativo", count: products.filter(p => !p.ativo).length }
+    { value: "ativo", label: "Ativo", count: currentItems.filter(p => p.ativo).length },
+    { value: "inativo", label: "Inativo", count: currentItems.filter(p => !p.ativo).length }
   ]
   const uniqueDestacado = [
-    { value: "sim", label: "Destacado", count: products.filter(p => p.destacado).length },
-    { value: "nao", label: "Normal", count: products.filter(p => !p.destacado).length }
+    { value: "sim", label: "Destacado", count: currentItems.filter(p => p.destacado).length },
+    { value: "nao", label: "Normal", count: currentItems.filter(p => !p.destacado).length }
   ]
-  const uniqueEstoque = [
+  // Type guards
+  const isProduct = (item: Product | Service): item is Product => 'estoque' in item
+  const isService = (item: Product | Service): item is Service => 'tipoPrecificacao' in item
+
+  // Filtro de estoque apenas para produtos
+  const uniqueEstoque = activeTab !== 'services' ? [
     { value: "baixo", label: "Estoque Baixo", count: products.filter(p => p.estoque < 10).length },
     { value: "normal", label: "Estoque Normal", count: products.filter(p => p.estoque >= 10).length },
     { value: "zerado", label: "Sem Estoque", count: products.filter(p => p.estoque === 0).length }
-  ]
+  ] : []
   const uniquePreco = [
-    { value: "variacao", label: "Variação de Preço", count: products.filter(p => p.temVariacaoPreco).length },
-    { value: "fixo", label: "Preço Fixo", count: products.filter(p => !p.temVariacaoPreco).length }
+    { value: "variacao", label: "Variação de Preço", count: currentItems.filter(p => isProduct(p) ? p.temVariacaoPreco : !!(p as Service).precoMinimo).length },
+    { value: "fixo", label: "Preço Fixo", count: currentItems.filter(p => isProduct(p) ? !p.temVariacaoPreco : !(p as Service).precoMinimo).length }
   ]
 
-  // Filtrar produtos
-  const filteredProducts = products.filter(product => {
+  // Filtrar items
+  const filteredProducts = currentItems.filter(product => {
     const matchesSearch = product.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (isProduct(product) && product.sku?.toLowerCase().includes(searchTerm.toLowerCase())) ||
                          product.categoria.toLowerCase().includes(searchTerm.toLowerCase())
     
     const matchesStatus = filters.status.length === 0 || 
@@ -129,13 +192,20 @@ export function ProductTable({ products, onUpdate }: ProductTableProps) {
                             (filters.destacado.includes("nao") && !product.destacado)
     
     const matchesEstoque = filters.estoque.length === 0 ||
-                           (filters.estoque.includes("baixo") && product.estoque < 10 && product.estoque > 0) ||
-                           (filters.estoque.includes("normal") && product.estoque >= 10) ||
-                           (filters.estoque.includes("zerado") && product.estoque === 0)
+                           (isProduct(product) && (
+                             (filters.estoque.includes("baixo") && product.estoque < 10 && product.estoque > 0) ||
+                             (filters.estoque.includes("normal") && product.estoque >= 10) ||
+                             (filters.estoque.includes("zerado") && product.estoque === 0)
+                           ))
     
     const matchesPreco = filters.preco.length === 0 ||
-                         (filters.preco.includes("variacao") && product.temVariacaoPreco) ||
-                         (filters.preco.includes("fixo") && !product.temVariacaoPreco)
+                         (isProduct(product) ? (
+                           (filters.preco.includes("variacao") && product.temVariacaoPreco) ||
+                           (filters.preco.includes("fixo") && !product.temVariacaoPreco)
+                         ) : (
+                           (filters.preco.includes("variacao") && !!product.precoMinimo) ||
+                           (filters.preco.includes("fixo") && !product.precoMinimo)
+                         ))
     
     return matchesSearch && matchesStatus && matchesCategoria && matchesDestacado && matchesEstoque && matchesPreco
   })
@@ -187,101 +257,216 @@ export function ProductTable({ products, onUpdate }: ProductTableProps) {
   }
 
   const handleToggleStatus = (productId: string) => {
-    const updatedProducts = products.map(p => 
-      p.id === productId ? { ...p, ativo: !p.ativo } : p
-    )
-    onUpdate(updatedProducts)
-    
     const product = products.find(p => p.id === productId)
-    toast({
-      title: product?.ativo ? "Produto desativado!" : "Produto ativado!",
-      description: `O produto foi ${product?.ativo ? "desativado" : "ativado"} com sucesso.`,
-    })
+    if (!product) return
+    
+    updateProduct.mutate(
+      { id: productId, data: { ativo: !product.ativo } },
+      {
+        onSuccess: () => {
+          toast({
+            title: product.ativo ? "Produto desativado!" : "Produto ativado!",
+            description: `O produto foi ${product.ativo ? "desativado" : "ativado"} com sucesso.`,
+          })
+        },
+        onError: () => {
+          toast({
+            title: "Erro!",
+            description: "Não foi possível atualizar o produto.",
+            variant: "destructive",
+          })
+        },
+      }
+    )
   }
 
   const handleToggleFeatured = (productId: string) => {
-    const updatedProducts = products.map(p => 
-      p.id === productId ? { ...p, destacado: !p.destacado } : p
-    )
-    onUpdate(updatedProducts)
-    
     const product = products.find(p => p.id === productId)
-    toast({
-      title: product?.destacado ? "Produto removido dos destaques!" : "Produto destacado!",
-      description: `O produto foi ${product?.destacado ? "removido dos destaques" : "adicionado aos destaques"}.`,
-    })
+    if (!product) return
+    
+    updateProduct.mutate(
+      { id: productId, data: { destacado: !product.destacado } },
+      {
+        onSuccess: () => {
+          toast({
+            title: product.destacado ? "Produto removido dos destaques!" : "Produto destacado!",
+            description: `O produto foi ${product.destacado ? "removido dos destaques" : "adicionado aos destaques"}.`,
+          })
+        },
+        onError: () => {
+          toast({
+            title: "Erro!",
+            description: "Não foi possível atualizar o produto.",
+            variant: "destructive",
+          })
+        },
+      }
+    )
   }
 
-  const handleDuplicate = (product: Product) => {
-    const duplicatedProduct: Product = {
-      ...product,
-      id: `p${Date.now()}`,
-      nome: `${product.nome} (Cópia)`,
-      sku: product.sku ? `${product.sku}-COPY` : undefined,
-      estoque: 0,
+  const handleDuplicate = (item: Product | Service) => {
+    if (isProduct(item)) {
+      const duplicatedProduct = {
+        ...item,
+        nome: `${item.nome} (Cópia)`,
+        sku: item.sku ? `${item.sku}-COPY` : undefined,
+        estoque: 0,
+      }
+      
+      createProduct.mutate(duplicatedProduct, {
+        onSuccess: () => {
+          toast({
+            title: "Produto duplicado!",
+            description: `Uma cópia de "${item.nome}" foi criada.`,
+          })
+        },
+        onError: () => {
+          toast({
+            title: "Erro!",
+            description: "Não foi possível duplicar o produto.",
+            variant: "destructive",
+          })
+        },
+      })
+    } else {
+      const duplicatedService = {
+        ...item,
+        nome: `${item.nome} (Cópia)`,
+      }
+      
+      createService.mutate(duplicatedService, {
+        onSuccess: () => {
+          toast({
+            title: "Serviço duplicado!",
+            description: `Uma cópia de "${item.nome}" foi criada.`,
+          })
+        },
+        onError: () => {
+          toast({
+            title: "Erro!",
+            description: "Não foi possível duplicar o serviço.",
+            variant: "destructive",
+          })
+        },
+      })
     }
-    
-    onUpdate([duplicatedProduct, ...products])
-    toast({
-      title: "Produto duplicado!",
-      description: `Uma cópia de "${product.nome}" foi criada.`,
-    })
   }
 
-  const handleDelete = (product: Product) => {
-    const updatedProducts = products.filter(p => p.id !== product.id)
-    onUpdate(updatedProducts)
-    setDeleteProduct(null)
-    
-    toast({
-      title: "Produto excluído!",
-      description: `O produto "${product.nome}" foi removido.`,
-    })
+  const handleDelete = (item: Product | Service) => {
+    if (isProduct(item)) {
+      deleteProduct.mutate(item.id, {
+        onSuccess: () => {
+          setDeleteProductState(null)
+          toast({
+            title: "Produto excluído!",
+            description: `O produto "${item.nome}" foi removido.`,
+          })
+        },
+        onError: () => {
+          toast({
+            title: "Erro!",
+            description: "Não foi possível excluir o produto.",
+            variant: "destructive",
+          })
+        },
+      })
+    } else {
+      deleteService.mutate(item.id, {
+        onSuccess: () => {
+          setDeleteProductState(null)
+          toast({
+            title: "Serviço excluído!",
+            description: `O serviço "${item.nome}" foi removido.`,
+          })
+        },
+        onError: () => {
+          toast({
+            title: "Erro!",
+            description: "Não foi possível excluir o serviço.",
+            variant: "destructive",
+          })
+        },
+      })
+    }
   }
 
   const handleBulkDelete = () => {
-    const updatedProducts = products.filter(p => !selectedProducts.includes(p.id))
-    onUpdate(updatedProducts)
-    setSelectedProducts([])
+    const count = selectedProducts.length
     
-    toast({
-      title: "Produtos excluídos!",
-      description: `${selectedProducts.length} produtos foram removidos.`,
+    deleteProducts.mutate(selectedProducts, {
+      onSuccess: () => {
+        setSelectedProducts([])
+        toast({
+          title: "Produtos excluídos!",
+          description: `${count} produtos foram removidos.`,
+        })
+      },
+      onError: () => {
+        toast({
+          title: "Erro!",
+          description: "Não foi possível excluir os produtos.",
+          variant: "destructive",
+        })
+      },
     })
   }
 
   const handleBulkToggleStatus = (active: boolean) => {
-    const updatedProducts = products.map(p => 
-      selectedProducts.includes(p.id) ? { ...p, ativo: active } : p
-    )
-    onUpdate(updatedProducts)
-    setSelectedProducts([])
+    const count = selectedProducts.length
     
-    toast({
-      title: `Produtos ${active ? "ativados" : "desativados"}!`,
-      description: `${selectedProducts.length} produtos foram ${active ? "ativados" : "desativados"}.`,
-    })
+    updateProducts.mutate(
+      { ids: selectedProducts, data: { ativo: active } },
+      {
+        onSuccess: () => {
+          setSelectedProducts([])
+          toast({
+            title: `Produtos ${active ? "ativados" : "desativados"}!`,
+            description: `${count} produtos foram ${active ? "ativados" : "desativados"}.`,
+          })
+        },
+        onError: () => {
+          toast({
+            title: "Erro!",
+            description: "Não foi possível atualizar os produtos.",
+            variant: "destructive",
+          })
+        },
+      }
+    )
   }
 
-  const handleFormSubmit = (formData: ProductFormData) => {
-    if (editingProduct) {
+  const handleProductFormSubmit = (formData: ProductFormData) => {
+    if (editingProduct && isProduct(editingProduct)) {
       // Atualizar produto existente
-      const updatedProduct: Product = {
-        ...editingProduct,
+      const productData = {
         ...formData,
         imagemUrl: formData.imagens[0] || editingProduct.imagemUrl,
       }
       
-      const updatedProducts = products.map(p => 
-        p.id === editingProduct.id ? updatedProduct : p
+      updateProduct.mutate(
+        { id: editingProduct.id, data: productData },
+        {
+          onSuccess: () => {
+            setEditingProduct(null)
+            toast({
+              title: "Produto atualizado!",
+              description: "O produto foi atualizado com sucesso.",
+            })
+          },
+          onError: () => {
+            toast({
+              title: "Erro!",
+              description: "Não foi possível atualizar o produto.",
+              variant: "destructive",
+            })
+          },
+        }
       )
-      onUpdate(updatedProducts)
     } else {
       // Criar novo produto
-      const newProduct: Product = {
-        id: `p${Date.now()}`,
-        storeId: "1", // Mock store ID
-        storeNome: "Construmax", // Mock store name
+      const newProduct = {
+        storeId: storeId,
+        storeNome: "Construmax", // TODO: Pegar do usuário logado
         nome: formData.nome,
         categoria: formData.categoria,
         preco: formData.preco,
@@ -296,28 +481,117 @@ export function ProductTable({ products, onUpdate }: ProductTableProps) {
         destacado: formData.destacado,
         peso: formData.peso,
         dimensoes: formData.dimensoes,
+        temVariacaoPreco: formData.temVariacaoPreco,
       }
       
-      onUpdate([newProduct, ...products])
+      createProduct.mutate(newProduct, {
+        onSuccess: () => {
+          setShowCreateForm(false)
+          toast({
+            title: "Produto criado!",
+            description: "O produto foi criado com sucesso.",
+          })
+        },
+        onError: () => {
+          toast({
+            title: "Erro!",
+            description: "Não foi possível criar o produto.",
+            variant: "destructive",
+          })
+        },
+      })
     }
-    
-    setEditingProduct(null)
-    setShowCreateForm(false)
+  }
+
+  const handleServiceFormSubmit = (formData: ServiceFormData) => {
+    if (editingProduct && isService(editingProduct)) {
+      // Atualizar serviço existente
+      updateService.mutate(
+        { id: editingProduct.id, data: formData },
+        {
+          onSuccess: () => {
+            setEditingProduct(null)
+            toast({
+              title: "Serviço atualizado!",
+              description: "O serviço foi atualizado com sucesso.",
+            })
+          },
+          onError: () => {
+            toast({
+              title: "Erro!",
+              description: "Não foi possível atualizar o serviço.",
+              variant: "destructive",
+            })
+          },
+        }
+      )
+    } else {
+      // Criar novo serviço
+      const newService = {
+        storeId: storeId,
+        storeNome: "Construmax", // TODO: Pegar do usuário logado
+        nome: formData.nome,
+        categoria: formData.categoria,
+        preco: formData.preco,
+        precoMinimo: formData.precoMinimo,
+        precoMaximo: formData.precoMaximo,
+        tipoPrecificacao: formData.tipoPrecificacao,
+        rating: 0,
+        ativo: formData.ativo,
+        imagemUrl: "/placeholder.svg",
+        descricao: formData.descricao,
+        destacado: formData.destacado,
+      }
+      
+      createService.mutate(newService, {
+        onSuccess: () => {
+          setShowCreateForm(false)
+          toast({
+            title: "Serviço criado!",
+            description: "O serviço foi criado com sucesso.",
+          })
+        },
+        onError: () => {
+          toast({
+            title: "Erro!",
+            description: "Não foi possível criar o serviço.",
+            variant: "destructive",
+          })
+        },
+      })
+    }
   }
 
   const handleExportCSV = () => {
-    const csvContent = [
-      ["Nome", "SKU", "Categoria", "Preço", "Estoque", "Status", "Destacado"],
-      ...filteredProducts.map(p => [
-        p.nome,
-        p.sku || "",
-        p.categoria,
-        p.preco.toString(),
-        p.estoque.toString(),
-        p.ativo ? "Ativo" : "Inativo",
-        p.destacado ? "Sim" : "Não"
-      ])
-    ].map(row => row.join(",")).join("\n")
+    const headers = activeTab === 'services' 
+      ? ["Nome", "Categoria", "Preço", "Tipo Precificação", "Status", "Destacado"]
+      : ["Nome", "SKU", "Categoria", "Preço", "Estoque", "Status", "Destacado"]
+    
+    const rows = filteredProducts.map(p => {
+      if (isService(p)) {
+        return [
+          p.nome,
+          p.categoria,
+          p.preco.toString(),
+          p.tipoPrecificacao,
+          p.ativo ? "Ativo" : "Inativo",
+          p.destacado ? "Sim" : "Não"
+        ]
+      } else {
+        const prod = p as Product
+        return [
+          prod.nome,
+          prod.sku || "",
+          prod.categoria,
+          prod.preco.toString(),
+          prod.estoque.toString(),
+          prod.ativo ? "Ativo" : "Inativo",
+          prod.destacado ? "Sim" : "Não"
+        ]
+      }
+    })
+    
+    const csvContent = [headers, ...rows].map(row => row.join(",")).join("\n")
     
     const blob = new Blob([csvContent], { type: "text/csv" })
     const url = window.URL.createObjectURL(blob)
@@ -333,6 +607,26 @@ export function ProductTable({ products, onUpdate }: ProductTableProps) {
     })
   }
 
+  // Loading State
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin" />
+          <p className="text-gray-600">Carregando produtos...</p>
+        </div>
+      </div>
+    )
+  }
+
+  const getTabLabel = () => {
+    switch(activeTab) {
+      case 'products': return 'Produtos'
+      case 'services': return 'Serviços'
+      case 'all': return 'Todos'
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* Header com controles */}
@@ -341,7 +635,7 @@ export function ProductTable({ products, onUpdate }: ProductTableProps) {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-              placeholder="Filtrar produtos..."
+              placeholder={activeTab === 'products' ? "Filtrar produtos..." : activeTab === 'services' ? "Filtrar serviços..." : "Filtrar itens..."}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 w-64 h-9 !bg-white !border !border-gray-300 rounded-sm focus-visible:ring-0 focus-visible:ring-offset-0 !shadow-none"
@@ -384,11 +678,11 @@ export function ProductTable({ products, onUpdate }: ProductTableProps) {
                       key={item.value}
                       checked={filters.status.includes(item.value)}
                       onCheckedChange={() => toggleFilter("status", item.value)}
-                      className="group data-[state=checked]:bg-blue-50 data-[state=checked]:text-blue-900"
+                      className="group data-[state=checked]:bg-blue-50 data-[state=checked]:text-blue-900 pl-2"
                     >
                       <div className="flex items-center justify-between w-full">
                         <div className="flex items-center">
-                          <span className="mr-2 inline-flex h-4 w-4 rounded-[4px] border-2 border-gray-400 group-data-[state=checked]:bg-blue-600 group-data-[state=checked]:border-blue-600"></span>
+                          <span className="mr-1.5 inline-flex h-4 w-4 rounded-[4px] border border-gray-400 group-data-[state=checked]:bg-blue-600 group-data-[state=checked]:border-blue-600"></span>
                           <span className="flex items-center gap-2">
                             {item.value === "ativo" ? (
                               <CheckCircle2 className="h-4 w-4 text-green-600" />
@@ -452,11 +746,11 @@ export function ProductTable({ products, onUpdate }: ProductTableProps) {
                         key={categoria}
                         checked={filters.categoria.includes(categoria)}
                         onCheckedChange={() => toggleFilter("categoria", categoria)}
-                        className="group data-[state=checked]:bg-blue-50 data-[state=checked]:text-blue-900"
+                        className="group data-[state=checked]:bg-blue-50 data-[state=checked]:text-blue-900 pl-2"
                       >
                         <div className="flex items-center justify-between w-full">
                           <div className="flex items-center">
-                            <span className="mr-2 inline-flex h-4 w-4 rounded-[4px] border-2 border-gray-400 group-data-[state=checked]:bg-blue-600 group-data-[state=checked]:border-blue-600"></span>
+                            <span className="mr-1.5 inline-flex h-4 w-4 rounded-[4px] border border-gray-400 group-data-[state=checked]:bg-blue-600 group-data-[state=checked]:border-blue-600"></span>
                             <span>{categoria}</span>
                           </div>
                           <Badge variant="outline" className="ml-2 text-xs">
@@ -478,19 +772,20 @@ export function ProductTable({ products, onUpdate }: ProductTableProps) {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Estoque Filter */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="relative h-9 border-2 !border-dotted rounded-sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Estoque
-                  {filters.estoque.length > 0 && (
-                    <Badge variant="secondary" className="ml-2 h-5 w-5 rounded-full p-0 text-xs">
-                      {filters.estoque.length}
-                    </Badge>
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
+            {/* Estoque Filter - Apenas para produtos */}
+            {activeTab !== 'services' && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="relative h-9 border-2 !border-dotted rounded-sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Estoque
+                    {filters.estoque.length > 0 && (
+                      <Badge variant="secondary" className="ml-2 h-5 w-5 rounded-full p-0 text-xs">
+                        {filters.estoque.length}
+                      </Badge>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
               <DropdownMenuContent className="w-64 rounded-sm border border-gray-300 shadow-lg">
                 <div className="relative p-2">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -512,11 +807,11 @@ export function ProductTable({ products, onUpdate }: ProductTableProps) {
                       key={item.value}
                       checked={filters.estoque.includes(item.value)}
                       onCheckedChange={() => toggleFilter("estoque", item.value)}
-                      className="group data-[state=checked]:bg-blue-50 data-[state=checked]:text-blue-900"
+                      className="group data-[state=checked]:bg-blue-50 data-[state=checked]:text-blue-900 pl-2"
                     >
                       <div className="flex items-center justify-between w-full">
                         <div className="flex items-center">
-                          <span className="mr-2 inline-flex h-4 w-4 rounded-[4px] border-2 border-gray-400 group-data-[state=checked]:bg-blue-600 group-data-[state=checked]:border-blue-600"></span>
+                          <span className="mr-1.5 inline-flex h-4 w-4 rounded-[4px] border border-gray-400 group-data-[state=checked]:bg-blue-600 group-data-[state=checked]:border-blue-600"></span>
                           <span>{item.label}</span>
                         </div>
                         <Badge variant="outline" className="ml-2 text-xs">
@@ -535,7 +830,8 @@ export function ProductTable({ products, onUpdate }: ProductTableProps) {
                   </>
                 )}
               </DropdownMenuContent>
-            </DropdownMenu>
+              </DropdownMenu>
+            )}
 
             {/* Preço Filter */}
             <DropdownMenu>
@@ -571,11 +867,11 @@ export function ProductTable({ products, onUpdate }: ProductTableProps) {
                       key={item.value}
                       checked={filters.preco.includes(item.value)}
                       onCheckedChange={() => toggleFilter("preco", item.value)}
-                      className="group data-[state=checked]:bg-blue-50 data-[state=checked]:text-blue-900"
+                      className="group data-[state=checked]:bg-blue-50 data-[state=checked]:text-blue-900 pl-2"
                     >
                       <div className="flex items-center justify-between w-full">
                         <div className="flex items-center">
-                          <span className="mr-2 inline-flex h-4 w-4 rounded-[4px] border-2 border-gray-400 group-data-[state=checked]:bg-blue-600 group-data-[state=checked]:border-blue-600"></span>
+                          <span className="mr-1.5 inline-flex h-4 w-4 rounded-[4px] border border-gray-400 group-data-[state=checked]:bg-blue-600 group-data-[state=checked]:border-blue-600"></span>
                           <span className="flex items-center gap-2">
                             <DollarSign className="h-4 w-4 text-amber-600" />
                             {item.label}
@@ -632,13 +928,65 @@ export function ProductTable({ products, onUpdate }: ProductTableProps) {
               <Button
                 variant="destructive"
                 size="sm"
-                onClick={handleBulkDelete}
+                onClick={() => setShowBulkDeleteDialog(true)}
               >
                 Excluir
               </Button>
             </div>
           )}
           
+          {/* Dropdown de Tipo (Produtos/Serviços/Todos) */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 min-w-[140px] justify-between">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  <span>{getTabLabel()}</span>
+                  <Badge variant="secondary" className="ml-1 h-5 w-auto px-1.5 text-xs">
+                    {activeTab === 'products' ? products.length : 
+                     activeTab === 'services' ? services.length :
+                     products.length + services.length}
+                  </Badge>
+                </div>
+                <ChevronDown className="h-4 w-4 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Tipo de Catálogo</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={() => setActiveTab('products')}
+                className={activeTab === 'products' ? 'bg-blue-50' : ''}
+              >
+                <Package className="h-4 w-4 mr-2" />
+                <span className="flex-1">Produtos</span>
+                <Badge variant="outline" className="ml-2 text-xs">
+                  {products.length}
+                </Badge>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => setActiveTab('services')}
+                className={activeTab === 'services' ? 'bg-blue-50' : ''}
+              >
+                <Package className="h-4 w-4 mr-2" />
+                <span className="flex-1">Serviços</span>
+                <Badge variant="outline" className="ml-2 text-xs">
+                  {services.length}
+                </Badge>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => setActiveTab('all')}
+                className={activeTab === 'all' ? 'bg-blue-50' : ''}
+              >
+                <Package className="h-4 w-4 mr-2" />
+                <span className="flex-1">Todos</span>
+                <Badge variant="outline" className="ml-2 text-xs">
+                  {products.length + services.length}
+                </Badge>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Button variant="outline" size="sm" onClick={handleExportCSV}>
             <Download className="h-4 w-4 mr-2" />
             Exportar CSV
@@ -646,7 +994,7 @@ export function ProductTable({ products, onUpdate }: ProductTableProps) {
           
           <Button onClick={() => setShowCreateForm(true)}>
             <Package className="h-4 w-4 mr-2" />
-            Novo Produto
+            {activeTab === 'products' ? 'Novo Produto' : activeTab === 'services' ? 'Novo Serviço' : 'Novo Item'}
           </Button>
         </div>
       </div>
@@ -661,13 +1009,13 @@ export function ProductTable({ products, onUpdate }: ProductTableProps) {
                   <Checkbox
                     checked={selectedProducts.length === filteredProducts.length && filteredProducts.length > 0}
                     onCheckedChange={handleSelectAll}
-                    className="border-2 border-gray-400 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                    className="border border-gray-400 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                   />
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Produto</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Unidade</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">{activeTab === 'services' ? 'Serviço' : 'Produto'}</th>
+                {activeTab !== 'services' && <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Unidade</th>}
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Preço</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Estoque</th>
+                {activeTab !== 'services' && <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Estoque</th>}
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Ações</th>
               </tr>
             </thead>
@@ -680,7 +1028,7 @@ export function ProductTable({ products, onUpdate }: ProductTableProps) {
                         <Checkbox
                           checked={selectedProducts.includes(product.id)}
                           onCheckedChange={(checked) => handleSelectProduct(product.id, checked as boolean)}
-                          className="border-2 border-gray-400 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                          className="border border-gray-400 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                         />
                       </td>
                       <td className="px-4 py-3">
@@ -719,23 +1067,23 @@ export function ProductTable({ products, onUpdate }: ProductTableProps) {
                                 )}
                                 
                                 {/* Badge de Variação de Preço */}
-                                {product.temVariacaoPreco && (
+                                {(isProduct(product) && product.temVariacaoPreco) || (isService(product) && product.precoMinimo) ? (
                                   <Badge variant="outline" className="text-xs border-amber-200 text-amber-700">
                                     <DollarSign className="h-3 w-3 mr-1" />
                                     Consulta
                                   </Badge>
-                                )}
+                                ) : null}
                                 
-                                {/* Badge de Estoque Baixo */}
-                                {product.estoque < 10 && product.estoque > 0 && (
+                                {/* Badge de Estoque Baixo - Apenas produtos */}
+                                {isProduct(product) && product.estoque < 10 && product.estoque > 0 && (
                                   <Badge variant="outline" className="text-xs border-orange-200 text-orange-700">
                                     <AlertTriangle className="h-3 w-3 mr-1" />
                                     Baixo
                                   </Badge>
                                 )}
                                 
-                                {/* Badge de Sem Estoque */}
-                                {product.estoque === 0 && (
+                                {/* Badge de Sem Estoque - Apenas produtos */}
+                                {isProduct(product) && product.estoque === 0 && (
                                   <Badge variant="outline" className="text-xs border-red-200 text-red-700">
                                     <AlertTriangle className="h-3 w-3 mr-1" />
                                     Zerado
@@ -743,7 +1091,7 @@ export function ProductTable({ products, onUpdate }: ProductTableProps) {
                                 )}
                               </div>
                             </div>
-                            {product.sku && (
+                            {isProduct(product) && product.sku && (
                               <div className="text-xs text-gray-500 mt-1">
                                 SKU: {product.sku}
                               </div>
@@ -751,21 +1099,39 @@ export function ProductTable({ products, onUpdate }: ProductTableProps) {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {product.unidadeMedida || "Unidade (un)"}
-                      </td>
+                      {activeTab !== 'services' && (
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          {'unidadeMedida' in product ? product.unidadeMedida || "Unidade (un)" : "-"}
+                        </td>
+                      )}
                       <td className="px-4 py-3 text-sm font-medium">
-                        {product.temVariacaoPreco ? (
-                          <span className="text-amber-600 font-medium">Sob consulta</span>
+                        {'temVariacaoPreco' in product ? (
+                          product.temVariacaoPreco ? (
+                            <span className="text-amber-600 font-medium">Sob consulta</span>
+                          ) : (
+                            `R$ ${product.preco.toFixed(2)}`
+                          )
                         ) : (
-                          `R$ ${product.preco.toFixed(2)}`
+                          (product as Service).precoMinimo && (product as Service).precoMaximo ? (
+                            <div>
+                              <span className="text-gray-900">R$ {(product as Service).precoMinimo} - R$ {(product as Service).precoMaximo}</span>
+                              <span className="text-xs text-gray-500 block">/{(product as Service).tipoPrecificacao}</span>
+                            </div>
+                          ) : (
+                            <div>
+                              <span className="text-gray-900">R$ {product.preco.toFixed(2)}</span>
+                              <span className="text-xs text-gray-500 block">/{(product as Service).tipoPrecificacao}</span>
+                            </div>
+                          )
                         )}
                       </td>
-                      <td className="px-4 py-3 text-sm">
-                        <span className={product.estoque > 0 ? "text-gray-900" : "text-red-600"}>
-                          {product.estoque} unidades
-                        </span>
-                      </td>
+                      {activeTab !== 'services' && (
+                        <td className="px-4 py-3 text-sm">
+                          <span className={'estoque' in product && product.estoque > 0 ? "text-gray-900" : "text-red-600"}>
+                            {'estoque' in product ? `${product.estoque} unidades` : "-"}
+                          </span>
+                        </td>
+                      )}
                       <td className="px-4 py-3">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -811,7 +1177,7 @@ export function ProductTable({ products, onUpdate }: ProductTableProps) {
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
-                              onClick={() => setDeleteProduct(product)}
+                              onClick={() => setDeleteProductState(product)}
                               className="text-red-600"
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
@@ -861,7 +1227,7 @@ export function ProductTable({ products, onUpdate }: ProductTableProps) {
                     </ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem 
-                      onClick={() => setDeleteProduct(product)}
+                      onClick={() => setDeleteProductState(product)}
                       className="text-red-600"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
@@ -897,37 +1263,86 @@ export function ProductTable({ products, onUpdate }: ProductTableProps) {
         </div>
       )}
 
-      {/* Forms */}
-      <ProductForm
-        product={editingProduct || undefined}
-        isOpen={!!editingProduct}
-        onClose={() => setEditingProduct(null)}
-        onSubmit={handleFormSubmit}
-      />
+      {/* Forms - Produtos */}
+      {editingProduct && isProduct(editingProduct) && (
+        <ProductForm
+          product={editingProduct}
+          isOpen={!!editingProduct}
+          onClose={() => setEditingProduct(null)}
+          onSubmit={handleProductFormSubmit}
+        />
+      )}
 
-      <ProductForm
-        isOpen={showCreateForm}
-        onClose={() => setShowCreateForm(false)}
-        onSubmit={handleFormSubmit}
-      />
+      {showCreateForm && activeTab === 'products' && (
+        <ProductForm
+          isOpen={showCreateForm}
+          onClose={() => setShowCreateForm(false)}
+          onSubmit={handleProductFormSubmit}
+        />
+      )}
+      
+      {/* Forms - Serviços */}
+      {editingProduct && isService(editingProduct) && (
+        <ServiceForm
+          service={editingProduct}
+          isOpen={!!editingProduct}
+          onClose={() => setEditingProduct(null)}
+          onSubmit={handleServiceFormSubmit}
+        />
+      )}
 
-      {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteProduct} onOpenChange={() => setDeleteProduct(null)}>
+      {showCreateForm && activeTab === 'services' && (
+        <ServiceForm
+          isOpen={showCreateForm}
+          onClose={() => setShowCreateForm(false)}
+          onSubmit={handleServiceFormSubmit}
+        />
+      )}
+
+      {/* Delete Confirmation - Single Product */}
+      <AlertDialog open={!!deleteProductState} onOpenChange={() => setDeleteProductState(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Produto</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir o produto "{deleteProduct?.nome}"? 
+              Tem certeza que deseja excluir o produto "{deleteProductState?.nome}"? 
               Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deleteProduct && handleDelete(deleteProduct)}
+              onClick={() => deleteProductState && handleDelete(deleteProductState)}
               className="bg-red-600 hover:bg-red-700"
+              disabled={deleteProduct.isPending}
             >
-              Excluir
+              {deleteProduct.isPending ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirmation - Bulk */}
+      <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Produtos</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir {selectedProducts.length} produto{selectedProducts.length > 1 ? 's' : ''}? 
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                handleBulkDelete()
+                setShowBulkDeleteDialog(false)
+              }}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteProducts.isPending}
+            >
+              {deleteProducts.isPending ? "Excluindo..." : `Excluir ${selectedProducts.length} produto${selectedProducts.length > 1 ? 's' : ''}`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

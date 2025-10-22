@@ -1,5 +1,7 @@
 "use client"
 
+import { useStoreSlug } from "@/hooks/use-store-slug"
+
 import {
   Search,
   GitCompare,
@@ -23,6 +25,7 @@ import { useState, useEffect } from "react"
 export function BottomTabs() {
   const pathname = usePathname()
   const { role } = useRole()
+  const { data: storeSlug } = useStoreSlug()
   const recentlyAdded = useCartStore((state) => state.recentlyAdded)
   const getCartItemsCount = useCartStore((state) => state.getCartItemsCount)
   const [isClient, setIsClient] = useState(false)
@@ -37,11 +40,11 @@ export function BottomTabs() {
       icon: Search,
       href: "/explorar",
     },
-    {
-      label: "Comparar",
-      icon: GitCompare,
-      href: "/comparar",
-    },
+    // {
+    //   label: "Comparar",
+    //   icon: GitCompare,
+    //   href: "/comparar",
+    // },
     {
       label: "Carrinho",
       icon: ShoppingCart,
@@ -56,9 +59,9 @@ export function BottomTabs() {
 
   const lojaRoutes = [
     {
-      label: "Produtos",
+      label: "Catálogo",
       icon: Package,
-      href: "/loja/produtos",
+      href: storeSlug ? `/loja/${storeSlug}` : "/loja/loading",
     },
     {
       label: "Relatórios",

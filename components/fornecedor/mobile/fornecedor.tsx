@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import { useCartStore } from "@/stores/cart-store"
+import { useToast } from "@/hooks/use-toast"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -33,21 +35,72 @@ import Link from "next/link"
 interface FornecedorMobileProps {
   store: any
   storeProducts: any[]
+  storeServices: any[]
 }
 
-export function FornecedorMobile({ store, storeProducts }: FornecedorMobileProps) {
+export function FornecedorMobile({ store, storeProducts, storeServices }: FornecedorMobileProps) {
   const [activeTab, setActiveTab] = useState("produtos")
   const [searchTerm, setSearchTerm] = useState("")
+  const addToCart = useCartStore((state) => state.addToCart)
+  const { toast } = useToast()
+  
+  const handleShare = async () => {
+    const url = `${window.location.origin}/fornecedor/${store.id}`
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: store.nome,
+          text: `Confira ${store.nome} no Orça Norte!`,
+          url: url,
+        })
+      } catch (error) {
+        // User cancelou
+      }
+    } else {
+      navigator.clipboard.writeText(url)
+      toast({
+        title: "Link copiado!",
+        description: "O link do perfil foi copiado.",
+      })
+    }
+  }
+  
+  const handleWhatsApp = () => {
+    const profileUrl = `${window.location.origin}/fornecedor/${store.id}`
+    const message = `Olá! Vi seu perfil no Orça Norte e gostaria de fazer um orçamento.\n\n${profileUrl}`
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
+    window.open(whatsappUrl, '_blank')
+  }
+  
+  // Combinar produtos e serviços
+  const catalogItems = [
+    ...storeProducts,
+    ...storeServices.map((s: any) => ({ ...s, isService: true }))
+  ]
+  
+  const handleAddService = (service: any) => {
+    const serviceAsProduct = {
+      ...service,
+      preco: service.precoMinimo || 0,
+      estoque: 999,
+    }
+    addToCart(serviceAsProduct as any)
+    toast({
+      title: "Serviço adicionado!",
+      description: `${service.nome} foi adicionado ao orçamento.`,
+    })
+  }
   
   // Debounce search
   const debouncedSearch = useDebounce(searchTerm)
   
-  // Filter products by search
+  // Filter catalog items (products + services) by search
   const filteredProducts = useMemo(() => {
     return debouncedSearch 
-      ? storeProducts.filter(p => p.nome.toLowerCase().includes(debouncedSearch.toLowerCase()))
-      : storeProducts
-  }, [storeProducts, debouncedSearch])
+      ? catalogItems.filter(item => item.nome.toLowerCase().includes(debouncedSearch.toLowerCase()))
+      : catalogItems
+  }, [catalogItems, debouncedSearch])
     
   // Group products by category
   const productsByCategory = filteredProducts.reduce((acc: any, product: any) => {
@@ -80,7 +133,7 @@ export function FornecedorMobile({ store, storeProducts }: FornecedorMobileProps
       id: "3",
       userName: "Pedro Costa",
       rating: 5,
-      comment: "Melhor fornecedor da região. Produtos sempre em estoque.",
+      comment: "Melhor empresa da região. Produtos sempre em estoque.",
       date: "2024-01-08",
       verified: false
     }
@@ -120,14 +173,13 @@ export function FornecedorMobile({ store, storeProducts }: FornecedorMobileProps
               </Button>
             </Link>
             <div className="flex gap-2">
-              <Button variant="ghost" size="sm" className="rounded-full bg-black/30 backdrop-blur-sm text-white hover:bg-black/40 h-10 w-10 p-0">
-                <Heart className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="sm" className="rounded-full bg-black/30 backdrop-blur-sm text-white hover:bg-black/40 h-10 w-10 p-0">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="rounded-full bg-black/30 backdrop-blur-sm text-white hover:bg-black/40 h-10 w-10 p-0"
+                onClick={handleShare}
+              >
                 <Share2 className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="sm" className="rounded-full bg-black/30 backdrop-blur-sm text-white hover:bg-black/40 h-10 w-10 p-0">
-                <MoreHorizontal className="h-5 w-5" />
               </Button>
             </div>
           </div>
@@ -169,35 +221,15 @@ export function FornecedorMobile({ store, storeProducts }: FornecedorMobileProps
             <TypographyMuted>São Paulo, SP • 2.5 km de distância</TypographyMuted>
           </div>
           
-          {/* Action Buttons - Facebook Style */}
-          <div className="flex gap-2 mb-4">
-            <Button className="bg-[#1877F2] hover:bg-[#166FE5] text-white rounded-lg flex-1 font-semibold">
+          {/* Action Button - WhatsApp */}
+          <div className="mb-4">
+            <Button 
+              className="bg-green-600 hover:bg-green-700 text-white rounded-lg w-full font-semibold"
+              onClick={handleWhatsApp}
+            >
               <MessageCircle className="h-4 w-4 mr-2" />
-              Mensagem
+              WhatsApp
             </Button>
-            <Button variant="outline" className="rounded-lg border-gray-300 font-semibold">
-              <Phone className="h-4 w-4 mr-2" />
-              Ligar
-            </Button>
-            <Button variant="outline" className="rounded-lg border-gray-300 px-3">
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
-          
-          {/* Stats Cards - Facebook Style */}
-          <div className="grid grid-cols-3 gap-2">
-            <div className="bg-gray-50 rounded-lg p-3 text-center">
-              <TypographyH4 className="text-lg mb-0">150+</TypographyH4>
-              <TypographyMuted className="text-xs">Produtos</TypographyMuted>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-3 text-center">
-              <TypographyH4 className="text-lg mb-0">98%</TypographyH4>
-              <TypographyMuted className="text-xs">Taxa de resposta</TypographyMuted>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-3 text-center">
-              <TypographyH4 className="text-lg mb-0">24h</TypographyH4>
-              <TypographyMuted className="text-xs">Tempo médio</TypographyMuted>
-            </div>
           </div>
         </div>
       </div>
@@ -211,7 +243,7 @@ export function FornecedorMobile({ store, storeProducts }: FornecedorMobileProps
                 value="produtos" 
                 className="relative px-4 py-3 text-sm text-gray-600 bg-transparent border-0 rounded-none shadow-none data-[state=active]:bg-transparent data-[state=active]:text-[#1877F2] data-[state=active]:shadow-none data-[state=active]:font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-transparent data-[state=active]:after:bg-[#1877F2]"
               >
-                Produtos
+                Catálogo ({catalogItems.length})
               </TabsTrigger>
               <TabsTrigger 
                 value="avaliacoes"
@@ -236,7 +268,7 @@ export function FornecedorMobile({ store, storeProducts }: FornecedorMobileProps
                 <div className="relative">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-600 z-10" />
                   <Input
-                    placeholder="Buscar produtos..."
+                    placeholder="Buscar no catálogo..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-12 pr-4 h-11 !bg-gray-50 border-0 rounded-2xl text-base placeholder:text-gray-400 focus:!bg-white focus:ring-2 focus:ring-blue-500 font-medium font-montserrat"
@@ -271,9 +303,31 @@ export function FornecedorMobile({ store, storeProducts }: FornecedorMobileProps
                         {/* Horizontal Scrollable Row */}
                         <div className="overflow-x-auto scrollbar-hide">
                           <div className="flex gap-3 px-4 pb-2">
-                            {produtos.map((product: any) => (
-                              <div key={product.id} className="flex-none w-[45vw]">
-                                <ProductCardAdaptive product={product} alwaysShowButtons={true} />
+                            {produtos.map((item: any) => (
+                              <div key={item.id} className="flex-none w-[45vw]">
+                                {item.isService ? (
+                                  <Card className="p-3 hover:shadow-lg transition-shadow border-green-100">
+                                    <Badge className="mb-2 bg-green-600 text-white text-[10px]">Serviço</Badge>
+                                    <h4 className="font-bold text-xs mb-1 line-clamp-2">{item.nome}</h4>
+                                    <p className="text-[10px] text-gray-600 mb-2">{item.categoria}</p>
+                                    {item.precoMinimo && item.precoMaximo ? (
+                                      <p className="text-[10px] font-semibold text-green-700 mb-2">
+                                        R$ {item.precoMinimo} - {item.precoMaximo}
+                                      </p>
+                                    ) : (
+                                      <p className="text-[10px] text-amber-600 mb-2">Sob consulta</p>
+                                    )}
+                                    <Button 
+                                      size="sm" 
+                                      className="w-full text-[10px] h-7 bg-green-600 text-white"
+                                      onClick={() => handleAddService(item)}
+                                    >
+                                      Adicionar Serviço
+                                    </Button>
+                                  </Card>
+                                ) : (
+                                  <ProductCardAdaptive product={item} alwaysShowButtons={true} />
+                                )}
                               </div>
                             ))}
                           </div>
@@ -338,7 +392,7 @@ export function FornecedorMobile({ store, storeProducts }: FornecedorMobileProps
           <TabsContent value="sobre" className="mt-0">
             <div className="bg-gray-50 min-h-screen">
               <div className="px-4 py-4">
-                <TypographyH4 className="mb-4">Informações do Fornecedor</TypographyH4>
+                <TypographyH4 className="mb-4">Informações da Empresa</TypographyH4>
                 
                 {/* Contact Info */}
                 <div className="bg-white rounded-lg p-4 mb-4 shadow-sm">

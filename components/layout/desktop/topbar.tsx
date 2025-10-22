@@ -10,15 +10,33 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Settings, LogOut, UserCircle } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Settings, LogOut, UserCircle, ShoppingCart } from "lucide-react"
 import { useEffect, useState } from "react"
-import { useAuthStore } from "@/stores/auth-store"
+import { useSession, signOut } from "@/lib/auth-client"
+import { useRouter } from "next/navigation"
+import { useCartStore } from "@/stores/cart-store"
 import Image from "next/image"
 
 export function TopbarDesktop() {
   const [isScrolled, setIsScrolled] = useState(false)
-  const { user, logout, updateUser } = useAuthStore()
-  const displayInitials = ((user?.name || "Afonso").trim().split(/\s+/).map((n) => n.charAt(0)).slice(0, 2).join("") || "AF").toUpperCase()
+  const { data: session } = useSession()
+  const router = useRouter()
+  const getCartItemsCount = useCartStore((state) => state.getCartItemsCount)
+  const [isClient, setIsClient] = useState(false)
+  
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+  
+  const cartCount = isClient ? getCartItemsCount() : 0
+  const user = session?.user
+  const displayInitials = ((user?.name || "U").trim().split(/\s+/).map((n) => n.charAt(0)).slice(0, 2).join("") || "U").toUpperCase()
+  
+  const handleLogout = async () => {
+    await signOut()
+    router.push('/')
+  }
 
   useEffect(() => {
     const handleScroll = () => {
@@ -28,14 +46,6 @@ export function TopbarDesktop() {
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
-
-  // Ensure display name defaults to "Afonso" when missing or placeholder
-  useEffect(() => {
-    const placeholderRegex = /usu[aá]rio|teste/i
-    if (!user?.name || placeholderRegex.test(user.name)) {
-      updateUser({ name: "Afonso" })
-    }
-  }, [user, updateUser])
 
   return (
     <header className="sticky top-2 z-50 transition-all">
@@ -86,9 +96,8 @@ export function TopbarDesktop() {
             >
               <DropdownMenuLabel className="p-3">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-semibold text-gray-900">{user?.name || 'Afonso'}</p>
+                  <p className="text-sm font-semibold text-gray-900">{user?.name}</p>
                   <p className="text-xs text-gray-500">{user?.email}</p>
-                  <p className="text-xs text-gray-400 capitalize">{user?.role}</p>
                 </div>
               </DropdownMenuLabel>
 
@@ -97,6 +106,21 @@ export function TopbarDesktop() {
               <DropdownMenuItem className="p-3 cursor-pointer hover:bg-gray-50">
                 <UserCircle className="mr-3 h-4 w-4 text-gray-500" />
                 <span>Meu Perfil</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem 
+                className="p-3 cursor-pointer hover:bg-gray-50"
+                onClick={() => router.push('/carrinho')}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center">
+                    <ShoppingCart className="mr-3 h-4 w-4 text-gray-500" />
+                    <span>Meu Carrinho</span>
+                  </div>
+                  {cartCount > 0 && (
+                    <Badge className="ml-2 bg-green-600 text-white">{cartCount}</Badge>
+                  )}
+                </div>
               </DropdownMenuItem>
 
               <DropdownMenuItem className="p-3 cursor-pointer hover:bg-gray-50">
@@ -108,7 +132,7 @@ export function TopbarDesktop() {
 
               <DropdownMenuItem 
                 className="p-3 cursor-pointer hover:bg-red-50 text-red-600"
-                onClick={logout}
+                onClick={handleLogout}
               >
                 <LogOut className="mr-3 h-4 w-4" />
                 <span>Sair da Conta</span>

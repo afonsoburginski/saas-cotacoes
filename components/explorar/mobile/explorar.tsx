@@ -314,10 +314,10 @@ const ExplorarMobile = memo(function ExplorarMobile({
                 {filteredStores.map((store) => {
                     const storeProducts = shuffleArray(
                       filteredProducts.filter(p => p.storeId === store.id)
-                    ).slice(0, 6) // show a few products like a preview
+                    ).slice(0, 6)
 
                     return (
-                      <div key={store.id} className="">
+                      <div key={`store-${store.id}`} className="">
                         {/* Supplier Row (no card) */}
                         <div 
                           className="px-4 py-3 active:opacity-70 transition-opacity cursor-pointer bg-gray-50"

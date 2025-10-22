@@ -1,19 +1,48 @@
 import { NextResponse } from 'next/server'
-import { mockStores } from '@/lib/mock-data'
+import { db } from '@/drizzle'
+import { stores } from '@/drizzle/schema'
+import { eq } from 'drizzle-orm'
 
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const store = mockStores.find(s => s.id === params.id)
-  
-  if (!store) {
+  try {
+    const [store] = await db
+      .select()
+      .from(stores)
+      .where(eq(stores.id, parseInt(params.id)))
+    
+    if (!store) {
+      return NextResponse.json(
+        { error: 'Store not found' },
+        { status: 404 }
+      )
+    }
+    
+    const formatted = {
+      id: store.id.toString(),
+      nome: store.nome,
+      email: store.email,
+      telefone: store.telefone,
+      cnpj: store.cnpj,
+      endereco: store.endereco,
+      status: store.status,
+      priorityScore: store.priorityScore,
+      plano: store.plano,
+      createdAt: store.createdAt?.toISOString().split('T')[0],
+      shippingPolicy: store.shippingPolicy,
+      address: store.address,
+      rating: store.rating ? parseFloat(store.rating as string) : 0,
+    }
+    
+    return NextResponse.json({ data: formatted })
+  } catch (error) {
+    console.error('Error fetching store:', error)
     return NextResponse.json(
-      { error: 'Store not found' },
-      { status: 404 }
+      { error: 'Failed to fetch store' },
+      { status: 500 }
     )
   }
-  
-  return NextResponse.json({ data: store })
 }
 

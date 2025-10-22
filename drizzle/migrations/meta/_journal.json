@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1760961700300,
+      "tag": "0000_previous_maginty",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1760961937689,
+      "tag": "0001_futuristic_nebula",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1760962251017,
+      "tag": "0002_puzzling_thunderbolt_ross",
+      "breakpoints": true
+    }
+  ]
+}

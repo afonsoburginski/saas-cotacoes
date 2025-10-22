@@ -1,5 +1,7 @@
 "use client"
 
+import { useStoreSlug } from "@/hooks/use-store-slug"
+
 import {
   Sidebar,
   SidebarContent,
@@ -33,6 +35,7 @@ import { useRole } from "@/hooks/use-role"
 export function AppSidebar() {
   const pathname = usePathname()
   const { role } = useRole()
+  const { data: storeSlug } = useStoreSlug()
 
   const commonRoutes = [
     {
@@ -40,11 +43,11 @@ export function AppSidebar() {
       icon: Search,
       href: "/explorar",
     },
-    {
-      label: "Comparar",
-      icon: GitCompare,
-      href: "/comparar",
-    },
+    // {
+    //   label: "Comparar",
+    //   icon: GitCompare,
+    //   href: "/comparar",
+    // },
     {
       label: "Carrinho",
       icon: ShoppingCart,
@@ -59,9 +62,9 @@ export function AppSidebar() {
 
   const lojaRoutes = [
     {
-      label: "Produtos",
+      label: "Catálogo",
       icon: Package,
-      href: "/loja/produtos",
+      href: storeSlug ? `/loja/${storeSlug}` : "/loja/loading",
     },
     {
       label: "Relatórios da Loja",
