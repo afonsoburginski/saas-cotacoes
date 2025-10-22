@@ -16,6 +16,7 @@ export type Store = {
   cnpj: string
   endereco?: string
   status: "active" | "suspended" | "pending" | "rejected"
+  businessType?: "comercio" | "servico"
   priorityScore: number
   plano: "Basic" | "Pro" | "Premium"
   createdAt: string

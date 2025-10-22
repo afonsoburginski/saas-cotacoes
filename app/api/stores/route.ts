@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/drizzle'
-import { stores } from '@/drizzle/schema'
+import { stores, user } from '@/drizzle/schema'
 import { eq, desc } from 'drizzle-orm'
 
 export const dynamic = 'force-dynamic'
@@ -10,7 +10,14 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
     
-    let query = db.select().from(stores)
+    // JOIN com user para pegar businessType
+    let query = db
+      .select({
+        store: stores,
+        businessType: user.businessType,
+      })
+      .from(stores)
+      .leftJoin(user, eq(stores.userId, user.id))
     
     if (status) {
       query = query.where(eq(stores.status, status)) as any
@@ -18,7 +25,7 @@ export async function GET(request: Request) {
     
     const result = await query.orderBy(desc(stores.priorityScore))
     
-    const formatted = result.map(s => ({
+    const formatted = result.map(({ store: s, businessType }) => ({
       id: s.id.toString(),
       nome: s.nome,
       email: s.email,
@@ -28,6 +35,7 @@ export async function GET(request: Request) {
       status: s.status,
       priorityScore: s.priorityScore,
       plano: s.plano,
+      businessType: businessType || 'comercio', // Default para comercio
       createdAt: s.createdAt?.toISOString().split('T')[0],
       shippingPolicy: s.shippingPolicy,
       address: s.address,

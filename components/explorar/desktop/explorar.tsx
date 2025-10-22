@@ -121,23 +121,42 @@ const ExplorarDesktop = memo(function ExplorarDesktop({
     }
   }, [setFilters, setActiveTab, setSupplierSearch])
 
-  // Filtrar fornecedores baseado na busca e randomizar
-  const filteredStores = useMemo(() => {
+  // Filtrar FORNECEDORES (comercio) baseado na busca
+  const filteredFornecedores = useMemo(() => {
     let filtered
     if (!supplierSearch) {
-      filtered = stores.filter(s => s.status === "active")
+      filtered = stores.filter(s => s.status === "active" && s.businessType === "comercio")
     } else {
       const searchLower = supplierSearch.toLowerCase()
       filtered = stores.filter(s => 
         s.status === "active" && 
+        s.businessType === "comercio" &&
         (s.nome.toLowerCase().includes(searchLower) || 
          s.cidade?.toLowerCase().includes(searchLower))
       )
     }
-    
-    // Shuffle stores for variety on each load
     return shuffleArray(filtered)
   }, [stores, supplierSearch, shuffleSeed])
+
+  // Filtrar PRESTADORES (servico) baseado na busca
+  const filteredPrestadores = useMemo(() => {
+    let filtered
+    if (!supplierSearch) {
+      filtered = stores.filter(s => s.status === "active" && s.businessType === "servico")
+    } else {
+      const searchLower = supplierSearch.toLowerCase()
+      filtered = stores.filter(s => 
+        s.status === "active" && 
+        s.businessType === "servico" &&
+        (s.nome.toLowerCase().includes(searchLower) || 
+         s.cidade?.toLowerCase().includes(searchLower))
+      )
+    }
+    return shuffleArray(filtered)
+  }, [stores, supplierSearch, shuffleSeed])
+
+  // Total combinado para exibir
+  const totalStores = filteredFornecedores.length + filteredPrestadores.length
 
   // Agrupar produtos por categoria para rows no desktop com shuffle
   const productsByCategory = useMemo(() => {
@@ -408,23 +427,32 @@ const ExplorarDesktop = memo(function ExplorarDesktop({
           </TabsContent>
 
           <TabsContent value="lojas" className="space-y-4">
-            <div className="space-y-4">
+            <div className="space-y-8">
+              {/* Header com total */}
               <div className="flex items-center justify-between">
-                <TypographyH3>Fornecedores Disponíveis</TypographyH3>
-                <Badge variant="outline">{filteredStores.length} fornecedores</Badge>
+                <TypographyH3>Marketplace</TypographyH3>
+                <Badge variant="outline">{totalStores} empresas</Badge>
               </div>
               
-              {filteredStores.length === 0 ? (
+              {totalStores === 0 ? (
                 <div className="text-center py-16 bg-white rounded-xl border border-gray-200">
                   <div className="w-16 h-16 mx-auto mb-4 bg-gray-50 rounded-full flex items-center justify-center">
                     <Search className="h-8 w-8 text-gray-400" />
                   </div>
-                  <TypographyH3 className="mb-2">Nenhum fornecedor encontrado</TypographyH3>
+                  <TypographyH3 className="mb-2">Nenhuma empresa encontrada</TypographyH3>
                   <TypographyP className="text-gray-600 mb-6 text-sm">Tente buscar por outro termo</TypographyP>
                 </div>
               ) : (
-                <div className="space-y-8">
-                {filteredStores.map((store) => {
+                <>
+                  {/* SEÇÃO 1: FORNECEDORES (comercio) */}
+                  {filteredFornecedores.length > 0 && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <TypographyH4>Fornecedores</TypographyH4>
+                        <Badge variant="outline">{filteredFornecedores.length}</Badge>
+                      </div>
+                      <div className="space-y-8">
+                        {filteredFornecedores.map((store) => {
                     const storeProducts = shuffleArray(
                       filteredProducts.filter(p => p.storeId === store.id)
                     ).slice(0, 6) // Preview de 6 produtos
@@ -478,7 +506,76 @@ const ExplorarDesktop = memo(function ExplorarDesktop({
                       </div>
                     )
                   })}
-                </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* SEÇÃO 2: PRESTADORES DE SERVIÇOS (servico) */}
+                  {filteredPrestadores.length > 0 && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <TypographyH4>Prestadores de Serviços</TypographyH4>
+                        <Badge variant="outline">{filteredPrestadores.length}</Badge>
+                      </div>
+                      <div className="space-y-8">
+                        {filteredPrestadores.map((store) => {
+                    const storeProducts = shuffleArray(
+                      filteredProducts.filter(p => p.storeId === store.id)
+                    ).slice(0, 6)
+
+                    return (
+                      <div key={`store-${store.id}`} className="space-y-4">
+                        {/* Supplier Info */}
+                        <div 
+                          className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+                          onClick={() => router.push(`/fornecedor/${store.id}`)}
+                        >
+                          <Avatar className="h-14 w-14 rounded-full border-2 border-white shadow-sm">
+                            <AvatarFallback className="bg-[#0052FF] text-white font-semibold text-lg">
+                              @{store.nome.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <TypographyH4 className="truncate font-montserrat">@{store.nome}</TypographyH4>
+                            </div>
+                            
+                            <div className="flex items-center gap-4 text-sm text-gray-600">
+                              <div className="flex items-center gap-1">
+                                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                                <TypographySmall className="font-medium font-montserrat">4.8</TypographySmall>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <MapPin className="h-4 w-4" />
+                                <TypographySmall className="font-montserrat">2.5 km</TypographySmall>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Separator */}
+                        <div className="border-t border-gray-200 w-full" />
+
+                        {/* Products Preview - Horizontal Scroll */}
+                        {storeProducts.length > 0 && (
+                          <HorizontalScrollContainer>
+                            <div className="flex gap-4 pb-2">
+                              {storeProducts.map((product) => (
+                                <div key={product.id} className="flex-none w-[220px]">
+                                  <ProductCardAdaptive product={product} alwaysShowButtons={false} />
+                                </div>
+                              ))}
+                            </div>
+                          </HorizontalScrollContainer>
+                        )}
+                      </div>
+                    )
+                  })}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </TabsContent>
