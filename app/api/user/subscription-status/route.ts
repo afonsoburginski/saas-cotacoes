@@ -7,6 +7,8 @@ import { headers } from 'next/headers'
 import { getUserActiveSubscription } from '@/lib/stripe-helpers'
 import { stripe } from '@/lib/stripe'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     const session = await auth.api.getSession({

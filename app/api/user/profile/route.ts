@@ -4,6 +4,8 @@ import { db } from "@/drizzle"
 import { user } from "@/drizzle/schema"
 import { eq } from "drizzle-orm"
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     const session = await auth.api.getSession({ headers: request.headers })
