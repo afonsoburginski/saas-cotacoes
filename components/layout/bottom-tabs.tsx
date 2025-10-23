@@ -26,6 +26,7 @@ export function BottomTabs() {
   const pathname = usePathname()
   const { role } = useRole()
   const { data: storeSlug } = useStoreSlug()
+  const slug = storeSlug?.slug
   const recentlyAdded = useCartStore((state) => state.recentlyAdded)
   const getCartItemsCount = useCartStore((state) => state.getCartItemsCount)
   const [isClient, setIsClient] = useState(false)
@@ -61,7 +62,7 @@ export function BottomTabs() {
     {
       label: "Catálogo",
       icon: Package,
-      href: storeSlug ? `/loja/${storeSlug}` : "/loja/loading",
+      href: slug ? `/loja/${slug}` : "/loja/loading",
     },
     {
       label: "Relatórios",

@@ -36,6 +36,7 @@ export function AppSidebar() {
   const pathname = usePathname()
   const { role } = useRole()
   const { data: storeSlug } = useStoreSlug()
+  const slug = storeSlug?.slug
 
   const commonRoutes = [
     {
@@ -64,7 +65,7 @@ export function AppSidebar() {
     {
       label: "Catálogo",
       icon: Package,
-      href: storeSlug ? `/loja/${storeSlug}` : "/loja/loading",
+      href: slug ? `/loja/${slug}` : "/loja/loading",
     },
     {
       label: "Relatórios da Loja",

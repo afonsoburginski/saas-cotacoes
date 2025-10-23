@@ -26,12 +26,14 @@ export function LojaSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
   const { data: pendingCount = 0 } = usePendingOrdersCount()
   const markAsSeen = useMarkOrdersAsSeen()
   
+  const slug = storeSlug?.slug
+  
   const navItems = [
     {
       title: "Dashboard",
-      url: storeSlug ? `/loja/${storeSlug}` : "/loja/loading",
+      url: slug ? `/loja/${slug}` : "/loja/loading",
       icon: BarChart3,
-      isActive: pathname === `/loja/${storeSlug}`,
+      isActive: pathname === `/loja/${slug}`,
       badge: pendingCount > 0 ? pendingCount : undefined,
       onClick: () => {
         if (pendingCount > 0) {
@@ -41,15 +43,15 @@ export function LojaSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
     },
     {
       title: "Catálogo",
-      url: storeSlug ? `/loja/${storeSlug}/catalogo` : "/loja/loading",
+      url: slug ? `/loja/${slug}/catalogo` : "/loja/loading",
       icon: Package,
-      isActive: pathname === `/loja/${storeSlug}/catalogo`,
+      isActive: pathname === `/loja/${slug}/catalogo`,
     },
     {
       title: "Assinatura",
-      url: storeSlug ? `/loja/${storeSlug}/assinatura` : "/loja/loading",
+      url: slug ? `/loja/${slug}/assinatura` : "/loja/loading",
       icon: CreditCard,
-      isActive: pathname === `/loja/${storeSlug}/assinatura`,
+      isActive: pathname === `/loja/${slug}/assinatura`,
     },
   ]
 

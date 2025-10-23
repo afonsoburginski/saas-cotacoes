@@ -32,6 +32,7 @@ export function Sidebar({ className }: SidebarProps) {
   const pathname = usePathname()
   const { role } = useRole()
   const { data: storeSlug } = useStoreSlug()
+  const slug = storeSlug?.slug
   const [collapsed, setCollapsed] = useState(true)
 
   const commonRoutes = [
@@ -61,7 +62,7 @@ export function Sidebar({ className }: SidebarProps) {
     {
       label: "Catálogo",
       icon: Package,
-      href: storeSlug ? `/loja/${storeSlug}` : "/loja/loading",
+      href: slug ? `/loja/${slug}` : "/loja/loading",
     },
     {
       label: "Relatórios da Loja",

@@ -1,72 +1,56 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { betterFetch } from '@better-fetch/fetch'
+import type { Session } from 'better-auth/types'
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // 1. Definição de rotas com diferentes níveis de acesso
-  const fullyPublicPaths = ['/', '/explorar', '/categoria', '/fornecedor', '/subscription/expired']
-  const authApiPaths = ['/api/auth', '/api/webhooks']
-  const storeExceptions = ['/loja/assinatura', '/checkout']
+  // 1. Rotas totalmente públicas (não requerem autenticação)
+  const publicPaths = [
+    '/',
+    '/explorar',
+    '/categoria',
+    '/fornecedor',
+    '/comparar',
+    '/subscription/expired',
+  ]
+  
+  const publicApiPaths = ['/api/auth', '/api/webhooks', '/api/storage']
 
-  // 2. Rotas totalmente públicas que não requerem sessão
-  if (fullyPublicPaths.some(p => pathname.startsWith(p)) || authApiPaths.some(p => pathname.startsWith(p))) {
+  // Permitir rotas públicas
+  if (
+    publicPaths.some(p => pathname === p || pathname.startsWith(`${p}/`)) ||
+    publicApiPaths.some(p => pathname.startsWith(p))
+  ) {
     return NextResponse.next()
   }
 
-  // 3. Verificar sessão para todas as outras rotas via API
-  // Delegamos para uma API Route para evitar importar better-auth no Edge Runtime
-  const checkAuthUrl = new URL('/api/auth/check-session', request.url)
-  const authResponse = await fetch(checkAuthUrl, {
-    headers: { cookie: request.headers.get('cookie') || '' },
-  })
+  // 2. Verificar sessão usando Better Auth diretamente
+  try {
+    const { data: session } = await betterFetch<Session>(
+      '/api/auth/get-session',
+      {
+        baseURL: request.nextUrl.origin,
+        headers: {
+          cookie: request.headers.get('cookie') || '',
+        },
+      }
+    )
 
-  if (!authResponse.ok) {
-    return NextResponse.redirect(new URL('/', request.url))
-  }
-
-  const { user } = await authResponse.json()
-
-  if (!user) {
-    return NextResponse.redirect(new URL('/', request.url))
-  }
-
-  // 4. Proteção de rotas de Admin
-  if (pathname.startsWith('/admin') && user.role !== 'admin') {
-    return NextResponse.redirect(new URL('/', request.url))
-  }
-
-  // 5. Proteção de rotas da Loja (requer assinatura)
-  if (pathname.startsWith('/loja')) {
-    // Permitir acesso a páginas de gerenciamento de assinatura
-    if (storeExceptions.some(p => pathname.startsWith(p))) {
-      return NextResponse.next()
-    }
-
-    // Apenas fornecedores podem acessar
-    if (!['fornecedor', 'loja'].includes(user.role || '')) {
+    // Se não tem sessão, redireciona para home
+    if (!session) {
       return NextResponse.redirect(new URL('/', request.url))
     }
 
-    // Delegar verificação de assinatura para uma API Route para manter o middleware leve
-    const checkSubUrl = new URL('/api/auth/check-sub', request.url)
-    const response = await fetch(checkSubUrl, {
-      headers: { cookie: request.headers.get('cookie') || '' },
-    })
-
-    // Se a verificação falhar (API fora do ar ou erro), bloqueia por segurança
-    if (!response.ok) {
-      return NextResponse.redirect(new URL('/subscription/expired', request.url))
-    }
-
-    const { isActive } = await response.json()
-    if (!isActive) {
-      return NextResponse.redirect(new URL('/subscription/expired', request.url))
-    }
+    // Sessão válida - permite continuar
+    // As verificações de role e assinatura serão feitas nos layouts específicos
+    return NextResponse.next()
+    
+  } catch (error) {
+    console.error('Middleware auth error:', error)
+    return NextResponse.redirect(new URL('/', request.url))
   }
-  
-  // 6. Se todas as verificações passaram, permitir acesso
-  return NextResponse.next()
 }
 
 export const config = {

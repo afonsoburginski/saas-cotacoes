@@ -5,17 +5,30 @@ import { useSession } from "@/lib/auth-client"
 import { useRouter, useSearchParams } from "next/navigation"
 import { CheckoutAdaptive } from "@/components/checkout"
 import { useToast } from "@/hooks/use-toast"
+import { useStoreSlug } from "@/hooks/use-store-slug"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 function CheckoutContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { data: session, isPending } = useSession()
   const { toast } = useToast()
+  const { data: storeSlug } = useStoreSlug()
   
   // Pegar plano da URL se vier da landing page
   const planFromUrl = searchParams?.get('plan') as 'basico' | 'plus' | 'premium' | null
   const [selectedPlan, setSelectedPlan] = useState<'basico' | 'plus' | 'premium'>('plus')
   const [isLoading, setIsLoading] = useState(false)
+  const [showExistingSubDialog, setShowExistingSubDialog] = useState(false)
   
   // Atualizar plano se vier da URL
   useEffect(() => {
@@ -61,6 +74,13 @@ function CheckoutContent() {
         body: JSON.stringify({ plan: normalizedPlan })
       })
       
+      // Detectar se já tem assinatura ativa (409 Conflict)
+      if (res.status === 409) {
+        setShowExistingSubDialog(true)
+        setIsLoading(false)
+        return
+      }
+      
       if (!res.ok) {
         const error = await res.json()
         throw new Error(error.error || 'Failed to create checkout session')
@@ -84,12 +104,48 @@ function CheckoutContent() {
   }
 
   return (
-    <CheckoutAdaptive 
-      selectedPlan={selectedPlan}
-      setSelectedPlan={setSelectedPlan}
-      isLoading={isLoading}
-      handleSubscribe={handleSubscribe}
-    />
+    <>
+      <CheckoutAdaptive 
+        selectedPlan={selectedPlan}
+        setSelectedPlan={setSelectedPlan}
+        isLoading={isLoading}
+        handleSubscribe={handleSubscribe}
+      />
+
+      {/* Dialog para quando já tem assinatura ativa */}
+      <AlertDialog open={showExistingSubDialog} onOpenChange={setShowExistingSubDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Você já tem um plano ativo! 🎉</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                Sua conta já possui uma assinatura ativa no Orça Norte.
+              </p>
+              <p>
+                Para alterar seu plano atual, acesse a página de{" "}
+                <span className="font-semibold text-[#0052FF]">Gerenciamento de Assinatura</span>.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Fechar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-[#0052FF] hover:bg-[#0052FF]/90"
+              onClick={() => {
+                const slug = storeSlug?.slug
+                if (slug) {
+                  router.push(`/loja/${slug}/assinatura`)
+                } else {
+                  router.push('/loja/loading')
+                }
+              }}
+            >
+              Ir para Assinatura
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }
 

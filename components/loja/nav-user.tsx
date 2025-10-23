@@ -31,6 +31,7 @@ export function NavUser() {
   
   const user = session?.user
   const displayInitials = ((user?.name || "U").trim().split(/\s+/).map((n) => n.charAt(0)).slice(0, 2).join("") || "U").toUpperCase()
+  const slug = storeSlug?.slug
   
   const handleLogout = async () => {
     await signOut()
@@ -79,7 +80,7 @@ export function NavUser() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer" onClick={() => router.push(storeSlug ? `/loja/${storeSlug}/perfil` : '/loja/loading')}>
+            <DropdownMenuItem className="cursor-pointer" onClick={() => router.push(slug ? `/loja/${slug}/perfil` : '/loja/loading')}>
               <UserIcon className="mr-2 h-4 w-4" />
               Perfil
             </DropdownMenuItem>

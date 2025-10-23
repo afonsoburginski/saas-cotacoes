@@ -29,6 +29,7 @@ export function LandingTopbar() {
   const userRole = (user as any)?.role
   const isFornecedor = userRole === 'fornecedor' || userRole === 'loja'
   const displayInitials = ((user?.name || "U").trim().split(/\s+/).map((n) => n.charAt(0)).slice(0, 2).join("") || "U").toUpperCase()
+  const slug = storeSlug?.slug
   
   const handleLogout = async () => {
     await signOut()
@@ -89,8 +90,8 @@ export function LandingTopbar() {
               <Button
                 onClick={() => {
                   if (isLoadingSlug) return
-                  if (storeSlug) {
-                    router.push(`/loja/${storeSlug}`)
+                  if (slug) {
+                    router.push(`/loja/${slug}`)
                   } else {
                     router.push('/checkout')
                   }
