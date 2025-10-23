@@ -5,6 +5,17 @@ import { AuthDialog } from "@/components/auth/auth-dialog";
 import { useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useStoreSlug } from "@/hooks/use-store-slug";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const plans = [
   {
@@ -67,7 +78,9 @@ const plans = [
 export function PricingMobile() {
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [selectedPlanForAuth, setSelectedPlanForAuth] = useState<string | null>(null);
+  const [showExistingSubDialog, setShowExistingSubDialog] = useState(false);
   const { data: session } = useSession();
+  const { data: storeSlug } = useStoreSlug();
   const router = useRouter();
   
   const handlePlanClick = (planName: string) => {
@@ -92,6 +105,12 @@ export function PricingMobile() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan })
       });
+      
+      // Detectar se já tem assinatura ativa (409 Conflict)
+      if (res.status === 409) {
+        setShowExistingSubDialog(true);
+        return;
+      }
       
       if (res.ok) {
         const { url } = await res.json();
@@ -224,6 +243,40 @@ export function PricingMobile() {
       mode="login"
       selectedPlan={selectedPlanForAuth}
     />
+
+    {/* Dialog para quando já tem assinatura ativa */}
+    <AlertDialog open={showExistingSubDialog} onOpenChange={setShowExistingSubDialog}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Você já tem um plano ativo! 🎉</AlertDialogTitle>
+          <AlertDialogDescription className="space-y-3">
+            <p>
+              Sua conta já possui uma assinatura ativa no Orça Norte.
+            </p>
+            <p>
+              Para alterar seu plano atual, acesse a página de{" "}
+              <span className="font-semibold text-[#0052FF]">Gerenciamento de Assinatura</span>.
+            </p>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Fechar</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-[#0052FF] hover:bg-[#0052FF]/90"
+            onClick={() => {
+              const slug = storeSlug?.slug;
+              if (slug) {
+                router.push(`/loja/${slug}/assinatura`);
+              } else {
+                router.push('/loja/loading');
+              }
+            }}
+          >
+            Ir para Assinatura
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }

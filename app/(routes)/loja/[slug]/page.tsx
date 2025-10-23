@@ -39,7 +39,11 @@ export default function DashboardPage({ params }: DashboardPageProps) {
   const pendingOrders = orders.filter(o => o.status === 'pendente').length
   const respondedOrders = orders.filter(o => o.status === 'respondida').length
   const completedOrders = orders.filter(o => o.status === 'concluida').length
-  const totalValue = orders.reduce((sum, o) => sum + o.total, 0)
+  const totalValue = orders.reduce((sum, o) => {
+    // Converter o valor para número (pode vir como string do banco)
+    const orderValue = typeof o.total === 'string' ? parseFloat(o.total) : o.total
+    return sum + (isNaN(orderValue) ? 0 : orderValue)
+  }, 0)
 
   return (
     <>
@@ -97,7 +101,7 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                         {new Intl.NumberFormat("pt-BR", {
                           style: "currency",
                           currency: "BRL",
-                        }).format(totalValue)}
+                        }).format(totalValue || 0)}
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {completedOrders} concluídos
