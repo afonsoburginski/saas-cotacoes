@@ -6,6 +6,11 @@ import type { Session } from 'better-auth/types'
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
+  // Permitir sitemap.xml e robots.txt sem autenticação
+  if (pathname.includes('/sitemap.xml') || pathname.includes('/robots.txt')) {
+    return NextResponse.next()
+  }
+
   // 1. Rotas totalmente públicas (não requerem autenticação)
   const publicPaths = [
     '/',
@@ -61,9 +66,11 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - sitemap.xml
+     * - robots.txt
      * Isso previne que o middleware rode em assets desnecessários.
      */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
   ],
 }
 
