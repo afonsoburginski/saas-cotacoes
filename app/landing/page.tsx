@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Orça Norte - Plataforma de Cotações de Materiais de Construção",
     description: "Descubra a plataforma que conecta consumidores e fornecedores de materiais de construção.",
-    url: "https://orca-norte.vercel.app/landing",
+    url: "https://orcanorte.com.br/landing",
   },
 }
 

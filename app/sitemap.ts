@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
  
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://orca-norte.vercel.app' // Atualize com seu domínio
+  const baseUrl = 'https://orcanorte.com.br'
   
   return [
     {

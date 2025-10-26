@@ -7,7 +7,7 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: ['/api/', '/admin/', '/loja/', '/checkout/', '/subscription/'],
     },
-    sitemap: 'https://orca-norte.vercel.app/sitemap.xml',
+    sitemap: 'https://orcanorte.com.br/sitemap.xml',
   }
 }
 

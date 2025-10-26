@@ -4,8 +4,8 @@ export function StructuredData() {
     "@type": "Organization",
     "name": "Orça Norte",
     "description": "Plataforma B2B para cotação de materiais de construção e serviços",
-    "url": "https://orca-norte.vercel.app",
-    "logo": "https://orca-norte.vercel.app/logo.png",
+    "url": "https://orcanorte.com.br",
+    "logo": "https://orcanorte.com.br/logo.png",
     "sameAs": [
       // Adicione aqui suas redes sociais
     ],
@@ -19,10 +19,10 @@ export function StructuredData() {
     "@context": "https://schema.org",
     "@type": "WebSite",
     "name": "Orça Norte",
-    "url": "https://orca-norte.vercel.app",
+    "url": "https://orcanorte.com.br",
     "potentialAction": {
       "@type": "SearchAction",
-      "target": "https://orca-norte.vercel.app/explorar?search={search_term_string}",
+      "target": "https://orcanorte.com.br/explorar?search={search_term_string}",
       "query-input": "required name=search_term_string"
     }
   }

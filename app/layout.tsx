@@ -68,14 +68,14 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL('https://orca-norte.vercel.app'),
+  metadataBase: new URL('https://orcanorte.com.br'),
   alternates: {
     canonical: '/',
   },
   openGraph: {
     type: 'website',
     locale: 'pt_BR',
-    url: 'https://orca-norte.vercel.app',
+    url: 'https://orcanorte.com.br',
     title: 'Orça Norte - Cotações de Materiais de Construção',
     description: 'Plataforma B2B para cotação de materiais de construção. Compare preços e encontre fornecedores de forma rápida e inteligente.',
     siteName: 'Orça Norte',
