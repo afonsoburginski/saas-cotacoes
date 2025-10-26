@@ -6,18 +6,9 @@ Plataforma para cotações de materiais de construção, conectando consumidores
 
 ---
 
-## ✅ Por que Vercel?
+## 🚀 Deploy
 
-**Cloudflare Pages não suporta Next.js com SSR completo!**
-
-- ❌ Cloudflare exige Edge Runtime em tudo
-- ❌ Não suporta Node.js completo
-- ❌ APIs complexas não funcionam
-- ✅ Vercel é feito para Next.js
-- ✅ Zero configuração
-- ✅ Deploy automático
-
-**Continue usando Vercel!**
+**Vercel** - Deploy automático via Git
 
 ---
 
@@ -30,8 +21,8 @@ npm run dev
 # Build
 npm run build
 
-# Testar com Docker
-npm run docker:up
+# Docker local
+docker-compose up
 ```
 
 ---
@@ -48,26 +39,18 @@ drizzle/                # Database schema
 
 ---
 
-## ⚙️ Deploy
+## ⚙️ Variáveis de Ambiente
 
-**Vercel (Recomendado):**
-- Conecte GitHub
-- Deploy automático
-- SSL gratuito
-
-**Alternativas:**
-- Render
-- Railway
-- Fly.io
+Configure as variáveis necessárias no `.env`
 
 ---
 
 ## ✅ Status
 
-- ✅ Site funcionando na Vercel
+- ✅ Site funcionando
 - ✅ SEO configurado
-- ✅ API pública funcionando
-- ✅ Deploy automático via Git
+- ✅ API pública
+- ✅ Deploy automático
 
 ---
 
@@ -83,4 +66,4 @@ drizzle/                # Database schema
 
 ---
 
-**Tudo funcionando na Vercel! 🎉**
+**Tudo funcionando! 🎉**
