@@ -1,0 +1,35 @@
+node_modules
+.next
+.git
+.gitignore
+README.md
+.env.local
+.env.development
+.env.test
+.env.production
+.env
+npm-debug.log
+yarn-error.log
+.DS_Store
+*.pem
+.env.*.local
+
+# Testing
+coverage
+.nyc_output
+
+# Misc
+.idea
+.vscode
+*.swp
+*.swo
+*.log
+.DS_Store
+
+# Turborepo
+.turbo
+
+# Build output
+dist
+build
+

@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone', // Necessário para Docker
   eslint: {
     ignoreDuringBuilds: true,
   },
