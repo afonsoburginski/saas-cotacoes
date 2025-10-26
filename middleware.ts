@@ -22,7 +22,16 @@ export async function middleware(request: NextRequest) {
     '/subscription/expired',
   ]
   
-  const publicApiPaths = ['/api/auth', '/api/webhooks', '/api/storage']
+  const publicApiPaths = [
+    '/api/auth', 
+    '/api/webhooks', 
+    '/api/storage',
+    '/api/products',
+    '/api/services',
+    '/api/stores',
+    '/api/categories',
+    '/api/service-providers'
+  ]
 
   // Permitir rotas públicas
   if (

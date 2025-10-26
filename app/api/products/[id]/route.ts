@@ -1,37 +1,17 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/drizzle'
-import { products, stores } from '@/drizzle/schema'
-import { eq, sql } from 'drizzle-orm'
+import { products } from '@/drizzle/schema'
+import { eq } from 'drizzle-orm'
 
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
+    const { id } = params
+    
     const [product] = await db
-      .select({
-        id: products.id,
-        storeId: products.storeId,
-        storeNome: stores.nome,
-        nome: products.nome,
-        categoria: products.categoria,
-        preco: products.preco,
-        precoPromocional: products.precoPromocional,
-        estoque: products.estoque,
-        unidadeMedida: products.unidadeMedida,
-        rating: products.rating,
-        imagemUrl: products.imagemUrl,
-        ativo: products.ativo,
-        destacado: products.destacado,
-        sku: products.sku,
-        descricao: products.descricao,
-        temVariacaoPreco: products.temVariacaoPreco,
-        peso: products.peso,
-        dimensoes: products.dimensoes,
-      })
+      .select()
       .from(products)
-      .leftJoin(stores, eq(products.storeId, stores.id))
-      .where(eq(products.id, parseInt(params.id)))
+      .where(eq(products.id, parseInt(id)))
+      .limit(1)
     
     if (!product) {
       return NextResponse.json(
@@ -40,18 +20,12 @@ export async function GET(
       )
     }
     
-    const formatted = {
-      ...product,
-      id: product.id.toString(),
-      storeId: product.storeId.toString(),
-      preco: parseFloat(product.preco as string),
-      precoPromocional: product.precoPromocional ? parseFloat(product.precoPromocional as string) : undefined,
-      rating: parseFloat(product.rating as string || '0'),
-      peso: product.peso ? parseFloat(product.peso as string) : undefined,
-      dimensoes: product.dimensoes as any,
-    }
-    
-    return NextResponse.json({ data: formatted })
+    return NextResponse.json({
+      data: {
+        ...product,
+        id: product.id.toString(),
+      }
+    })
   } catch (error) {
     console.error('Error fetching product:', error)
     return NextResponse.json(
@@ -61,44 +35,34 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
+    const { id } = params
     const body = await request.json()
     
-    const updateData: any = {
-      updatedAt: sql`now()`,
-    }
-    
-    if (body.nome !== undefined) updateData.nome = body.nome
-    if (body.categoria !== undefined) updateData.categoria = body.categoria
-    if (body.preco !== undefined) updateData.preco = body.preco.toString()
-    if (body.estoque !== undefined) updateData.estoque = body.estoque
-    if (body.ativo !== undefined) updateData.ativo = body.ativo
-    if (body.destacado !== undefined) updateData.destacado = body.destacado
-    if (body.sku !== undefined) updateData.sku = body.sku
-    if (body.descricao !== undefined) updateData.descricao = body.descricao
-    if (body.temVariacaoPreco !== undefined) updateData.temVariacaoPreco = body.temVariacaoPreco
-    if (body.unidadeMedida !== undefined) updateData.unidadeMedida = body.unidadeMedida
-    if (body.imagemUrl !== undefined) updateData.imagemUrl = body.imagemUrl
-    
-    const [updated] = await db
+    const [updatedProduct] = await db
       .update(products)
-      .set(updateData)
-      .where(eq(products.id, parseInt(params.id)))
+      .set({
+        nome: body.nome,
+        categoria: body.categoria,
+        preco: body.preco?.toString(),
+        precoPromocional: body.precoPromocional?.toString(),
+        estoque: body.estoque,
+        unidadeMedida: body.unidadeMedida,
+        imagemUrl: body.imagemUrl,
+        ativo: body.ativo,
+        destacado: body.destacado,
+        sku: body.sku,
+        descricao: body.descricao,
+        temVariacaoPreco: body.temVariacaoPreco,
+        peso: body.peso?.toString(),
+        dimensoes: body.dimensoes,
+      })
+      .where(eq(products.id, parseInt(id)))
       .returning()
     
-    if (!updated) {
-      return NextResponse.json(
-        { error: 'Product not found' },
-        { status: 404 }
-      )
-    }
-    
     return NextResponse.json({
-      data: { ...updated, id: updated.id.toString() },
+      data: { ...updatedProduct, id: updatedProduct.id.toString() },
       message: 'Product updated successfully'
     })
   } catch (error) {
@@ -110,17 +74,16 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
-    const [deleted] = await db
+    const { id } = params
+    
+    const [deletedProduct] = await db
       .delete(products)
-      .where(eq(products.id, parseInt(params.id)))
+      .where(eq(products.id, parseInt(id)))
       .returning()
     
-    if (!deleted) {
+    if (!deletedProduct) {
       return NextResponse.json(
         { error: 'Product not found' },
         { status: 404 }
@@ -128,7 +91,7 @@ export async function DELETE(
     }
     
     return NextResponse.json({
-      data: { ...deleted, id: deleted.id.toString() },
+      data: { ...deletedProduct, id: deletedProduct.id.toString() },
       message: 'Product deleted successfully'
     })
   } catch (error) {
@@ -139,5 +102,3 @@ export async function DELETE(
     )
   }
 }
-
-

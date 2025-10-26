@@ -45,7 +45,7 @@ export function useProducts(params?: UseProductsParams) {
       return res.json() as Promise<ProductsResponse>
     },
     staleTime: 1000 * 60 * 5, // 5 minutos de cache
-    enabled: !!params?.storeId, // Apenas executa a query se storeId estiver definido
+    // Removido enabled para permitir busca pública sem storeId
   })
 }
 
