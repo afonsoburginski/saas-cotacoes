@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { memo, useMemo } from "react"
 import { Package, CreditCard, BarChart3 } from "lucide-react"
 import { useStoreSlug } from "@/hooks/use-store-slug"
 import { usePendingOrdersCount, useMarkOrdersAsSeen } from "@/hooks/use-pending-quotes"
@@ -17,9 +18,10 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import Image from "next/image"
+import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-export function LojaSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export const LojaSidebar = memo(function LojaSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { data: storeSlug } = useStoreSlug()
   const { open } = useSidebar()
   const pathname = usePathname()
@@ -28,7 +30,8 @@ export function LojaSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
   
   const slug = storeSlug?.slug
   
-  const navItems = [
+  // 🚀 Memoizar navItems para evitar recriação
+  const navItems = useMemo(() => [
     {
       title: "Dashboard",
       url: slug ? `/loja/${slug}` : "/loja/loading",
@@ -53,7 +56,7 @@ export function LojaSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
       icon: CreditCard,
       isActive: pathname === `/loja/${slug}/assinatura`,
     },
-  ]
+  ], [slug, pathname, pendingCount, markAsSeen])
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -64,14 +67,14 @@ export function LojaSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <a href="/explorar" className="flex items-center gap-2">
+              <Link href="/explorar" className="flex items-center gap-2">
                 <div className={`relative ${open ? 'w-8 h-8' : 'w-10 h-10'}`}>
                   <Image src="https://vasfrygscudozjihcgfm.supabase.co/storage/v1/object/public/images/logo.png" alt="Orça Norte" fill priority sizes="40px" className="object-contain" />
                 </div>
                 {open && (
                   <span className="text-base font-bold text-gray-900">Orça Norte</span>
                 )}
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -84,5 +87,5 @@ export function LojaSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
       </SidebarFooter>
     </Sidebar>
   )
-}
+})
 

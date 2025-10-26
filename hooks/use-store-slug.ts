@@ -5,6 +5,8 @@ interface StoreData {
   slug: string | null
   storeName: string | null
   id: number | null
+  logo: string | null
+  coverImage: string | null
 }
 
 export function useStoreSlug() {
@@ -20,10 +22,14 @@ export function useStoreSlug() {
         slug: data.slug,
         storeName: data.store?.nome,
         id: data.storeId,
+        logo: data.store?.logo,
+        coverImage: data.store?.coverImage,
       }
     },
     enabled: !!session?.user,
     staleTime: Infinity,
+    refetchOnWindowFocus: false, // 🚀 Não recarregar ao focar janela
+    refetchOnMount: false, // 🚀 Não recarregar ao montar se já tem cache
   })
 }
 

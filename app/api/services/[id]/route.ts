@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/drizzle'
-import { services } from '@/drizzle/schema'
+import { services, orderItems } from '@/drizzle/schema'
 import { eq } from 'drizzle-orm'
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
@@ -73,10 +73,22 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
     const { id } = params
+    const serviceId = parseInt(id)
     
+    // 🚀 CASCADE DELETE: Deletar order_items relacionados primeiro
+    try {
+      await db
+        .delete(orderItems)
+        .where(eq(orderItems.serviceId, serviceId))
+      console.log(`✅ Deletados order_items relacionados ao serviço ${serviceId}`)
+    } catch (orderItemsError) {
+      console.log(`⚠️ Nenhum order_item relacionado ao serviço ${serviceId} ou já foi deletado`)
+    }
+    
+    // Agora pode deletar o serviço
     const [deletedService] = await db
       .delete(services)
-      .where(eq(services.id, parseInt(id)))
+      .where(eq(services.id, serviceId))
       .returning()
     
     if (!deletedService) {

@@ -45,7 +45,8 @@ export function useServices(params?: UseServicesParams) {
       return res.json() as Promise<ServicesResponse>
     },
     staleTime: 1000 * 60 * 5, // 5 minutos de cache
-    // Removido enabled para permitir busca pública sem storeId
+    gcTime: 1000 * 60 * 10, // 10 minutos no cache
+    refetchOnWindowFocus: false, // Não recarregar ao focar janela
   })
 }
 
@@ -76,6 +77,36 @@ export function useCreateService() {
       if (!res.ok) throw new Error("Failed to create service")
       return res.json()
     },
+    // 🚀 UI OTIMISTA: Adiciona imediatamente
+    onMutate: async (newService) => {
+      await queryClient.cancelQueries({ queryKey: ["services"] })
+      
+      const previousData = queryClient.getQueryData<ServicesResponse>(["services"])
+      
+      const tempService: Service = {
+        ...newService as Service,
+        id: Date.now(),
+      } as Service
+      
+      queryClient.setQueriesData<ServicesResponse>(
+        { queryKey: ["services"] },
+        (old) => {
+          if (!old) return { data: [tempService], total: 1 }
+          return {
+            ...old,
+            data: [tempService, ...old.data],
+            total: old.total + 1
+          }
+        }
+      )
+      
+      return { previousData, tempService }
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(["services"], context.previousData)
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["services"] })
     },
@@ -96,6 +127,34 @@ export function useUpdateService() {
       if (!res.ok) throw new Error("Failed to update service")
       return res.json()
     },
+    // 🚀 UI OTIMISTA: Atualiza imediatamente
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries({ queryKey: ["services"] })
+      
+      const previousData = queryClient.getQueryData<ServicesResponse>(["services"])
+      
+      queryClient.setQueriesData<ServicesResponse>(
+        { queryKey: ["services"] },
+        (old) => {
+          if (!old) return old
+          return {
+            ...old,
+            data: old.data.map(service => 
+              service.id.toString() === id 
+                ? { ...service, ...data }
+                : service
+            )
+          }
+        }
+      )
+      
+      return { previousData }
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(["services"], context.previousData)
+      }
+    },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["services"] })
       queryClient.invalidateQueries({ queryKey: ["service", variables.id] })
@@ -115,7 +174,31 @@ export function useDeleteService() {
       if (!res.ok) throw new Error("Failed to delete service")
       return res.json()
     },
-    onSuccess: () => {
+    // 🚀 UI OTIMISTA: Remove imediatamente
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ["services"] })
+      
+      const previousData = queryClient.getQueryData<ServicesResponse>(["services"])
+      
+      queryClient.setQueriesData<ServicesResponse>(
+        { queryKey: ["services"] },
+        (old) => {
+          if (!old) return old
+          return {
+            ...old,
+            data: old.data.filter(service => service.id.toString() !== id)
+          }
+        }
+      )
+      
+      return { previousData }
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(["services"], context.previousData)
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["services"] })
     },
   })

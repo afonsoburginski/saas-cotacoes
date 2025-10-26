@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Settings, LogOut, Store } from "lucide-react"
 import Image from "next/image"
+import Link from "next/link"
 
 export function LandingTopbar() {
   const [isScrolled, setIsScrolled] = useState(false)
@@ -74,12 +75,13 @@ export function LandingTopbar() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
-            <Button
-              onClick={() => window.location.href = '/explorar'}
-              className="bg-blue-600 text-white hover:text-gray-900 hover:bg-gray-100 transition-all duration-200 px-3 sm:px-4 text-sm sm:text-base h-9 sm:h-10"
-            >
-              Buscar Produtos
-            </Button>
+            <Link href="/explorar">
+              <Button
+                className="bg-blue-600 text-white hover:text-gray-900 hover:bg-gray-100 transition-all duration-200 px-3 sm:px-4 text-sm sm:text-base h-9 sm:h-10"
+              >
+                Buscar Produtos
+              </Button>
+            </Link>
             
             {!user ? (
               <Button
@@ -108,12 +110,13 @@ export function LandingTopbar() {
                 <span className="text-sm sm:text-base">Entrar</span>
               </Button>
             ) : (
+            <Link href="/explorar">
               <Button
-                onClick={() => router.push('/explorar')}
                 className="bg-[#22C55E] text-white hover:bg-[#22C55E]/90 transition-all duration-200 px-4 sm:px-6 text-sm sm:text-base h-9 sm:h-10"
               >
                 Ir para Explorar
               </Button>
+            </Link>
             )}
           </div>
         </div>

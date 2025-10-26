@@ -50,6 +50,11 @@ export const metadata: Metadata = {
     template: "%s | Orça Norte"
   },
   description: "Plataforma B2B para cotação de materiais de construção. Compare preços, encontre fornecedores e faça cotações de forma rápida e inteligente.",
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/logo.png',
+  },
   keywords: [
     "cotações materiais de construção",
     "materiais de construção",
@@ -109,6 +114,8 @@ export const metadata: Metadata = {
 
 export const viewport = {
   themeColor: "#0052FF",
+  width: 'device-width',
+  initialScale: 1,
 }
 
 export default function RootLayout({
@@ -119,6 +126,9 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning className="light">
       <head>
+        <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+        <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+        <link rel="apple-touch-icon" href="/logo.png" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="google-site-verification" content="nI7OGFhCcEFWopffrBBKS83LML1SOkq_2aiO176XCBA" />
       </head>

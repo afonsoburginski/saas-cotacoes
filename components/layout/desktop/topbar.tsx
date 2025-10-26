@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Settings, LogOut, UserCircle, ShoppingCart } from "lucide-react"
+import { Settings, LogOut, UserCircle, ShoppingCart, FileText } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useSession, signOut } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
@@ -130,20 +130,31 @@ export function TopbarDesktop() {
               {/* Carrinho só para consumidores */}
               {(user as any)?.role === 'consumidor' || (user as any)?.role === 'usuario' ? (
                 <>
-                  <DropdownMenuItem 
-                    className="p-3 cursor-pointer hover:bg-gray-50"
-                    onClick={() => router.push('/carrinho')}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center">
-                        <ShoppingCart className="mr-3 h-4 w-4 text-gray-500" />
-                        <span>Meu Carrinho</span>
+                  <Link href="/carrinho">
+                    <DropdownMenuItem 
+                      className="p-3 cursor-pointer hover:bg-gray-50"
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center">
+                          <ShoppingCart className="mr-3 h-4 w-4 text-gray-500" />
+                          <span>Meu Carrinho</span>
+                        </div>
+                        {cartCount > 0 && (
+                          <Badge className="ml-2 bg-green-600 text-white">{cartCount}</Badge>
+                        )}
                       </div>
-                      {cartCount > 0 && (
-                        <Badge className="ml-2 bg-green-600 text-white">{cartCount}</Badge>
-                      )}
-                    </div>
-                  </DropdownMenuItem>
+                    </DropdownMenuItem>
+                  </Link>
+                  <Link href="/listas">
+                    <DropdownMenuItem 
+                      className="p-3 cursor-pointer hover:bg-gray-50"
+                    >
+                      <div className="flex items-center">
+                        <FileText className="mr-3 h-4 w-4 text-gray-500" />
+                        <span>Minhas Listas</span>
+                      </div>
+                    </DropdownMenuItem>
+                  </Link>
                   <DropdownMenuSeparator />
                 </>
               ) : null}

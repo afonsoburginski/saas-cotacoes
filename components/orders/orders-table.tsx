@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useState } from "react"
-import { useOrders, Order, useUpdateOrderStatus } from "@/hooks/use-orders"
+import { useOrders, Order, useUpdateOrderStatus, useDeleteOrder, useDeleteOrders } from "@/hooks/use-orders"
 import { useStoreSlug } from "@/hooks/use-store-slug"
 import {
   Table,
@@ -70,6 +70,8 @@ export function OrdersTable({ isLoading }: OrdersTableProps) {
   const { data: orders = [] } = useOrders()
   const { toast } = useToast()
   const updateStatusMutation = useUpdateOrderStatus()
+  const deleteOrder = useDeleteOrder()
+  const deleteOrders = useDeleteOrders()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
@@ -183,16 +185,57 @@ ${order.storeName || 'Nossa Loja'}`
     }
   }
 
-  // Bulk delete
+  // 🚀 Bulk delete com UI otimista
   const handleBulkDelete = () => {
-    // TODO: Implementar API de bulk delete
-    console.log('Deletar orçamentos:', selectedOrders)
-    toast({
-      title: "Função em desenvolvimento",
-      description: `${selectedOrders.length} pedido(s) selecionado(s).`,
+    if (selectedOrders.length === 0) {
+      toast({
+        title: "Nenhum pedido selecionado",
+        description: "Selecione ao menos um pedido para excluir.",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    deleteOrders.mutate(selectedOrders, {
+      onSuccess: () => {
+        setSelectedOrders([])
+        setShowBulkDeleteDialog(false)
+        toast({
+          title: "Pedidos excluídos!",
+          description: `${selectedOrders.length} pedido${selectedOrders.length > 1 ? 's' : ''} ${selectedOrders.length > 1 ? 'foram' : 'foi'} removido${selectedOrders.length > 1 ? 's' : ''}.`,
+        })
+      },
+      onError: () => {
+        toast({
+          title: "Erro!",
+          description: "Não foi possível excluir os pedidos.",
+          variant: "destructive",
+        })
+      },
     })
-    setSelectedOrders([])
-    setShowBulkDeleteDialog(false)
+  }
+
+  // 🚀 Delete individual com UI otimista
+  const handleSingleDelete = () => {
+    if (!selectedOrder) return
+    
+    deleteOrder.mutate(selectedOrder.id, {
+      onSuccess: () => {
+        setShowDeleteDialog(false)
+        setSelectedOrder(null)
+        toast({
+          title: "Pedido excluído!",
+          description: `O pedido #${selectedOrder.id} foi removido.`,
+        })
+      },
+      onError: () => {
+        toast({
+          title: "Erro!",
+          description: "Não foi possível excluir o pedido.",
+          variant: "destructive",
+        })
+      },
+    })
   }
 
   // Loading State
@@ -517,18 +560,11 @@ ${order.storeName || 'Nossa Loja'}`
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
-                // TODO: Implementar exclusão
-                toast({
-                  title: "Pedido excluído",
-                  description: "O pedido foi removido com sucesso.",
-                })
-                setShowDeleteDialog(false)
-                setSelectedOrder(null)
-              }}
+              onClick={handleSingleDelete}
               className="bg-red-600 hover:bg-red-700"
+              disabled={deleteOrder.isPending}
             >
-              Excluir
+              {deleteOrder.isPending ? "Excluindo..." : "Excluir"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -549,8 +585,9 @@ ${order.storeName || 'Nossa Loja'}`
             <AlertDialogAction
               onClick={handleBulkDelete}
               className="bg-red-600 hover:bg-red-700"
+              disabled={deleteOrders.isPending}
             >
-              Excluir {selectedOrders.length} pedido{selectedOrders.length > 1 ? 's' : ''}
+              {deleteOrders.isPending ? "Excluindo..." : `Excluir ${selectedOrders.length} pedido${selectedOrders.length > 1 ? 's' : ''}`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

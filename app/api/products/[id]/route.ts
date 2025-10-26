@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/drizzle'
-import { products } from '@/drizzle/schema'
+import { products, orderItems } from '@/drizzle/schema'
 import { eq } from 'drizzle-orm'
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
@@ -77,10 +77,22 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
     const { id } = params
+    const productId = parseInt(id)
     
+    // 🚀 CASCADE DELETE: Deletar order_items relacionados primeiro
+    try {
+      await db
+        .delete(orderItems)
+        .where(eq(orderItems.productId, productId))
+      console.log(`✅ Deletados order_items relacionados ao produto ${productId}`)
+    } catch (orderItemsError) {
+      console.log(`⚠️ Nenhum order_item relacionado ao produto ${productId} ou já foi deletado`)
+    }
+    
+    // Agora pode deletar o produto
     const [deletedProduct] = await db
       .delete(products)
-      .where(eq(products.id, parseInt(id)))
+      .where(eq(products.id, productId))
       .returning()
     
     if (!deletedProduct) {

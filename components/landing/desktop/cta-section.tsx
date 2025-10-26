@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles, Instagram, MessageCircle } from "lucide-react";
 import { Spotlight } from "@/components/ui/spotlight-new";
 import { AuthDialog } from "@/components/auth/auth-dialog";
+import Link from "next/link";
 
 const socialLinks = [
   { icon: Instagram, href: "https://www.instagram.com/orcanorte?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==", name: "Instagram", color: "hover:bg-pink-500/20" },
@@ -130,12 +131,12 @@ export function CTASection() {
           
           {/* Link para consumidores */}
           <div className="mt-6">
-            <button
-              onClick={() => window.location.href = '/explorar'}
+            <Link
+              href="/explorar"
               className="text-white/60 hover:text-white text-sm font-montserrat underline underline-offset-4 transition-colors"
             >
               Já é cliente? Buscar produtos →
-            </button>
+            </Link>
           </div>
         </motion.div>
       </div>

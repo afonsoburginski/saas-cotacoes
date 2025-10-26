@@ -1,4 +1,6 @@
+import React, { useCallback } from "react"
 import { type LucideIcon } from "lucide-react"
+import Link from "next/link"
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -8,9 +10,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Badge } from "@/components/ui/badge"
 
-export function NavMain({
-  items,
-}: {
+interface NavMainProps {
   items: {
     title: string
     url: string
@@ -19,7 +19,18 @@ export function NavMain({
     badge?: number
     onClick?: () => void
   }[]
-}) {
+}
+
+export const NavMain = React.memo(function NavMain({ items }: NavMainProps) {
+  // 🚀 Memoizar handlers para cada item
+  const handleClick = useCallback((onClick?: () => void) => {
+    return (e: React.MouseEvent<HTMLAnchorElement>) => {
+      if (onClick) {
+        onClick()
+      }
+    }
+  }, [])
+
   return (
     <SidebarGroup>
       <SidebarGroupContent>
@@ -27,16 +38,9 @@ export function NavMain({
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton asChild isActive={item.isActive} tooltip={item.title}>
-                <a 
+                <Link 
                   href={item.url}
-                  onClick={(e) => {
-                    if (item.onClick) {
-                      e.preventDefault()
-                      item.onClick()
-                      // Navigate after onClick
-                      window.location.href = item.url
-                    }
-                  }}
+                  onClick={handleClick(item.onClick)}
                 >
                   {item.icon && <item.icon />}
                   <span>{item.title}</span>
@@ -48,7 +52,7 @@ export function NavMain({
                       {item.badge > 99 ? '99+' : item.badge}
                     </Badge>
                   )}
-                </a>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
@@ -56,5 +60,4 @@ export function NavMain({
       </SidebarGroupContent>
     </SidebarGroup>
   )
-}
-
+})
