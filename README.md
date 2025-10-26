@@ -6,19 +6,18 @@ Plataforma para cotações de materiais de construção, conectando consumidores
 
 ---
 
-## 🚀 Deploy
+## ✅ Por que Vercel?
 
-### Cloudflare Pages (Recomendado)
+**Cloudflare Pages não suporta Next.js com SSR completo!**
 
-1. Acesse: https://dash.cloudflare.com
-2. Workers & Pages → Pages → Criar aplicação
-3. Conecte GitHub
-4. Configurações:
-   - Framework: Next.js
-   - Build: `npm run build`
-   - Output: `.next`
-5. Adicione variáveis de `env.txt`
-6. Deploy!
+- ❌ Cloudflare exige Edge Runtime em tudo
+- ❌ Não suporta Node.js completo
+- ❌ APIs complexas não funcionam
+- ✅ Vercel é feito para Next.js
+- ✅ Zero configuração
+- ✅ Deploy automático
+
+**Continue usando Vercel!**
 
 ---
 
@@ -33,9 +32,6 @@ npm run build
 
 # Testar com Docker
 npm run docker:up
-
-# Deploy Cloudflare
-npm run cf:deploy
 ```
 
 ---
@@ -52,34 +48,26 @@ drizzle/                # Database schema
 
 ---
 
-## ⚙️ Variáveis de Ambiente
+## ⚙️ Deploy
 
-Copie `env.txt` para `.env` (já feito)
+**Vercel (Recomendado):**
+- Conecte GitHub
+- Deploy automático
+- SSL gratuito
 
----
-
-## 🐳 Docker
-
-```bash
-# Build
-docker build -t orcanorte .
-
-# Run
-docker run -p 3000:3000 --env-file .env orcanorte
-
-# Compose
-docker-compose up
-```
+**Alternativas:**
+- Render
+- Railway
+- Fly.io
 
 ---
 
 ## ✅ Status
 
-- ✅ Site funcionando
+- ✅ Site funcionando na Vercel
 - ✅ SEO configurado
-- ✅ Deploy automático
-- ✅ API pública
-- ✅ Exclusão de produtos/serviços funcionando
+- ✅ API pública funcionando
+- ✅ Deploy automático via Git
 
 ---
 
@@ -90,10 +78,9 @@ docker-compose up
 - PostgreSQL (Supabase)
 - Drizzle ORM
 - Tailwind CSS
-- Shadcn/ui
 - Stripe
 - Better Auth
 
 ---
 
-**Tudo funcionando! 🎉**
+**Tudo funcionando na Vercel! 🎉**
