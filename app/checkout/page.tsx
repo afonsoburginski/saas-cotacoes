@@ -40,7 +40,7 @@ function CheckoutContent() {
   // Redirecionar se não estiver logado
   useEffect(() => {
     if (!isPending && !session?.user) {
-      router.push('/')
+      router.push('/explorar')
     }
   }, [session, isPending, router])
   

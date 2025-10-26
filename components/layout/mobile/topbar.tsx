@@ -1,6 +1,7 @@
 "use client"
 
 import Image from "next/image"
+import Link from "next/link"
 
 export function TopbarMobile() {
   return (
@@ -16,7 +17,7 @@ export function TopbarMobile() {
         }}
       />
       <div className="py-3 flex items-center justify-center relative z-10">
-        <div className="flex items-center gap-2">
+        <Link href="/explorar" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
           <div className="w-8 h-8 relative overflow-hidden flex-shrink-0">
             <Image
               src="https://vasfrygscudozjihcgfm.supabase.co/storage/v1/object/public/images/logo-white.png"
@@ -30,7 +31,7 @@ export function TopbarMobile() {
           <span className="font-bold text-lg text-white font-montserrat leading-none">
             Orça Norte
           </span>
-        </div>
+        </Link>
       </div>
     </header>
   )

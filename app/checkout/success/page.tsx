@@ -18,7 +18,7 @@ export default function CheckoutSuccessPage() {
         if (data.slug) {
           router.push(`/loja/${data.slug}`)
         } else {
-          router.push('/') // Fallback
+          router.push('/explorar') // Fallback
         }
       }
     }

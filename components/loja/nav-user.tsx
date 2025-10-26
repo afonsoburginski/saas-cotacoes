@@ -35,7 +35,7 @@ export function NavUser() {
   
   const handleLogout = async () => {
     await signOut()
-    router.push('/')
+    router.push('/explorar')
   }
 
   return (

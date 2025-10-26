@@ -42,11 +42,11 @@ export function CheckoutDesktop({ selectedPlan, setSelectedPlan, isLoading, hand
           className="text-center mb-12"
         >
           <Link 
-            href="/" 
+            href="/explorar" 
             className="inline-flex items-center gap-3 mb-6 text-gray-600 hover:text-gray-900 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm font-montserrat">Voltar para Home</span>
+            <span className="text-sm font-montserrat">Voltar para Explorar</span>
           </Link>
           
           <div className="flex items-center justify-center gap-3 mb-6">

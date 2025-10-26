@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation"
 import { useCartStore } from "@/stores/cart-store"
 import { AuthDialog } from "@/components/auth/auth-dialog"
 import Image from "next/image"
+import Link from "next/link"
 
 export function TopbarDesktop() {
   const [isScrolled, setIsScrolled] = useState(false)
@@ -45,8 +46,8 @@ export function TopbarDesktop() {
     const isPublicPage = publicPaths.some(path => currentPath.startsWith(path))
     
     if (!isPublicPage) {
-      // Páginas de empresa/admin - redireciona pra home
-      router.push('/')
+      // Páginas de empresa/admin - redireciona pra explorar
+      router.push('/explorar')
     }
     // Senão, permanece na página atual
   }
@@ -72,7 +73,7 @@ export function TopbarDesktop() {
             }
           `}
         >
-        <div className="flex items-center gap-3">
+        <Link href="/explorar" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
           <div className="w-8 h-8 relative overflow-hidden">
             <Image
               src="https://vasfrygscudozjihcgfm.supabase.co/storage/v1/object/public/images/logo.png"
@@ -88,7 +89,7 @@ export function TopbarDesktop() {
           }`}>
             Orça Norte
           </span>
-        </div>
+        </Link>
 
         <div className="flex items-center gap-4">
           {!user ? (

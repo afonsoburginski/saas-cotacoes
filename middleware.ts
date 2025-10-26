@@ -9,6 +9,7 @@ export async function middleware(request: NextRequest) {
   // 1. Rotas totalmente públicas (não requerem autenticação)
   const publicPaths = [
     '/',
+    '/landing',
     '/explorar',
     '/categoria',
     '/fornecedor',
@@ -38,9 +39,9 @@ export async function middleware(request: NextRequest) {
       }
     )
 
-    // Se não tem sessão, redireciona para home
+    // Se não tem sessão, redireciona para explorar
     if (!session) {
-      return NextResponse.redirect(new URL('/', request.url))
+      return NextResponse.redirect(new URL('/explorar', request.url))
     }
 
     // Sessão válida - permite continuar
@@ -49,7 +50,7 @@ export async function middleware(request: NextRequest) {
     
   } catch (error) {
     console.error('Middleware auth error:', error)
-    return NextResponse.redirect(new URL('/', request.url))
+    return NextResponse.redirect(new URL('/explorar', request.url))
   }
 }
 

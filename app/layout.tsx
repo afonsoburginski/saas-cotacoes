@@ -11,6 +11,7 @@ import { Providers } from "@/lib/providers"
 import { QueryProvider } from "@/providers/query-provider"
 import { SessionProvider } from "@/components/auth/session-provider"
 import { Suspense } from "react"
+import { StructuredData } from "@/components/seo/structured-data"
 
 import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
@@ -44,9 +45,66 @@ const marlinSoft = localFont({
 })
 
 export const metadata: Metadata = {
-  title: "Orça Norte - Cotações de Materiais de Construção",
-  description: "Plataforma B2B para cotação de materiais de construção e serviços",
-  generator: "v0.app",
+  title: {
+    default: "Orça Norte - Cotações de Materiais de Construção",
+    template: "%s | Orça Norte"
+  },
+  description: "Plataforma B2B para cotação de materiais de construção. Compare preços, encontre fornecedores e faça cotações de forma rápida e inteligente.",
+  keywords: [
+    "cotações materiais de construção",
+    "materiais de construção",
+    "cotação B2B",
+    "fornecedores construção",
+    "comparação de preços construção",
+    "insumos construção",
+    "cotações Manaus",
+    "materiais de construção Amazonas"
+  ],
+  authors: [{ name: "Orça Norte" }],
+  creator: "Orça Norte",
+  publisher: "Orça Norte",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  metadataBase: new URL('https://orca-norte.vercel.app'),
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'pt_BR',
+    url: 'https://orca-norte.vercel.app',
+    title: 'Orça Norte - Cotações de Materiais de Construção',
+    description: 'Plataforma B2B para cotação de materiais de construção. Compare preços e encontre fornecedores de forma rápida e inteligente.',
+    siteName: 'Orça Norte',
+    images: [
+      {
+        url: '/logo.png',
+        width: 1200,
+        height: 630,
+        alt: 'Orça Norte - Cotações de Materiais de Construção',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Orça Norte - Cotações de Materiais de Construção',
+    description: 'Plataforma B2B para cotação de materiais de construção. Compare preços e encontre fornecedores.',
+    images: ['/logo.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
 }
 
 export const viewport = {
@@ -66,6 +124,7 @@ export default function RootLayout({
       <body
         className={`min-h-screen bg-background font-sans antialiased ${GeistSans.variable} ${GeistMono.variable} ${inter.variable} ${montserrat.variable} ${marlinSoft.variable}`}
       >
+        <StructuredData />
         <SessionProvider>
           <QueryProvider>
             <ThemeProvider

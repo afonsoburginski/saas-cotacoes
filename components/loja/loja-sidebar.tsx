@@ -64,7 +64,7 @@ export function LojaSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <a href="/" className="flex items-center gap-2">
+              <a href="/explorar" className="flex items-center gap-2">
                 <div className={`relative ${open ? 'w-8 h-8' : 'w-10 h-10'}`}>
                   <Image src="https://vasfrygscudozjihcgfm.supabase.co/storage/v1/object/public/images/logo.png" alt="Orça Norte" fill priority sizes="40px" className="object-contain" />
                 </div>

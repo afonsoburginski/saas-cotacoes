@@ -50,11 +50,11 @@ export function CheckoutMobile({ selectedPlan, setSelectedPlan, isLoading, handl
         className="text-center mb-6 px-4 pt-4"
       >
         <Link 
-          href="/" 
+          href="/explorar" 
           className="inline-flex items-center gap-2 mb-4 text-gray-600 hover:text-gray-900 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm font-montserrat">Voltar para Home</span>
+          <span className="text-sm font-montserrat">Voltar para Explorar</span>
         </Link>
         
         <div className="flex items-center justify-center gap-2 mb-4">
