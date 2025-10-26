@@ -1,0 +1,17 @@
+nome,categoria,preco,precoPromocional,estoque,unidadeMedida,sku,descricao,imagemUrl,ativo,destacado,temVariacaoPreco,peso,dimensoes
+Cimento CP-II 50kg,Cimento,32.90,29.90,150,Saco (sc),CIM-CP2-50KG,Cimento Portland CP II-E 50kg para alvenaria estrutural e acabamento,/mock/cimento.jpg,true,true,false,50,
+Tijolo 6 furos,Tijolos,0.85,,5000,Unidade (un),TIJ-6F-CER,Tijolo cerâmico 6 furos para vedação 9x14x19cm,,true,false,false,2.5,
+Areia Média m³,Areia,120.00,,50,Metro Cúbico (m³),ARE-MED-M3,Areia média lavada para reboco e assentamento,,true,true,false,,"{""comprimento"":1,""largura"":1,""altura"":1}"
+Brita 1 m³,Brita,95.00,85.00,80,Metro Cúbico (m³),BRI-1-M3,Brita graduada nº1 para concreto e drenagem,,true,false,false,,"{""comprimento"":1,""largura"":1,""altura"":1}"
+Cal Hidratada 20kg,Cimento,18.50,,200,Saco (sc),CAL-HID-20KG,Cal hidratada CH-I para argamassas e pinturas,,true,false,false,20,
+Telha Cerâmica,Telhas,2.50,2.20,3000,Unidade (un),TEL-CER-COL,Telha cerâmica colonial natural,/mock/telha.jpg,true,false,false,2.8,
+Vergalhão 10mm 12m,Ferro,45.00,,100,Barra (barra),VER-10MM-12M,Vergalhão de aço CA-50 10mm x 12m para estruturas,,true,true,false,7.4,"{""comprimento"":12,""largura"":0,""altura"":0}"
+Tinta Acrílica Branca 18L,Tintas,185.00,165.00,30,Lata (lata),TIN-ACR-BR-18L,Tinta acrílica lavável branca premium 18 litros,/mock/tinta.jpg,true,true,false,18,
+Argamassa AC-II 20kg,Cimento,25.00,,120,Saco (sc),ARG-AC2-20KG,Argamassa colante AC-II para assentamento de revestimentos,,true,false,false,20,
+Porta de Madeira 80cm,Madeira,450.00,,15,Unidade (un),POR-MAD-80CM,Porta de madeira maciça 80x210cm com marco e dobradiças,/mock/porta.jpg,true,false,true,,
+Piso Cerâmico 60x60,Cerâmica,35.50,32.90,500,Metro Quadrado (m²),PIS-CER-60X60,Piso cerâmico esmaltado acetinado 60x60cm classe A,/mock/piso.jpg,true,true,false,,"{""comprimento"":0.6,""largura"":0.6,""altura"":0}"
+Fio Elétrico 2.5mm 100m,Elétrica,89.00,,45,Metro (m),FIO-ELE-2.5MM,Fio elétrico flexível 2.5mm² 750V rolo 100m,,true,false,false,,"{""comprimento"":100,""largura"":0,""altura"":0}"
+Torneira Metálica,Hidráulica,65.00,59.90,80,Unidade (un),TOR-MET-BAH,Torneira metálica cromada para banheiro 1/2 polegada,,true,false,false,0.8,
+Areia Fina m³,Areia,,,60,Metro Cúbico (m³),ARE-FIN-M3,Areia fina lavada para reboco fino e acabamento,,true,false,true,,"{""comprimento"":1,""largura"":1,""altura"":1}"
+Prego 18x30 1kg,Ferro,12.50,,200,Quilograma (kg),PRE-18X30-1KG,Prego polido 18x30 embalagem 1kg,,true,false,false,1,
+

@@ -75,9 +75,11 @@ export function TopbarDesktop() {
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 relative overflow-hidden">
             <Image
-              src="/logo.png"
+              src="https://vasfrygscudozjihcgfm.supabase.co/storage/v1/object/public/images/logo.png"
               alt="Orça Norte"
               fill
+              priority
+              sizes="32px"
               className="object-contain"
             />
           </div>

@@ -59,6 +59,7 @@ import {
   MessageSquare,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { Checkbox } from "@/components/ui/checkbox"
 import Image from "next/image"
 
 interface OrdersTableProps {
@@ -72,7 +73,9 @@ export function OrdersTable({ isLoading }: OrdersTableProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [selectedOrders, setSelectedOrders] = useState<number[]>([])
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false)
 
   // Debug logs
   console.log('📊 OrdersTable - orders recebidos:', orders.length)
@@ -146,6 +149,23 @@ ${order.storeName || 'Nossa Loja'}`
     window.open(whatsappUrl, '_blank')
   }
 
+  // Funções de seleção
+  const handleSelectOrder = (orderId: number, checked: boolean) => {
+    if (checked) {
+      setSelectedOrders(prev => [...prev, orderId])
+    } else {
+      setSelectedOrders(prev => prev.filter(id => id !== orderId))
+    }
+  }
+
+  const handleSelectAll = (checked: boolean | 'indeterminate') => {
+    if (checked === true) {
+      setSelectedOrders(filteredOrders.map(o => o.id))
+    } else {
+      setSelectedOrders([])
+    }
+  }
+
   // Função para atualizar status
   const handleStatusUpdate = async (orderId: number, newStatus: string) => {
     try {
@@ -161,6 +181,18 @@ ${order.storeName || 'Nossa Loja'}`
         variant: "destructive"
       })
     }
+  }
+
+  // Bulk delete
+  const handleBulkDelete = () => {
+    // TODO: Implementar API de bulk delete
+    console.log('Deletar orçamentos:', selectedOrders)
+    toast({
+      title: "Função em desenvolvimento",
+      description: `${selectedOrders.length} pedido(s) selecionado(s).`,
+    })
+    setSelectedOrders([])
+    setShowBulkDeleteDialog(false)
   }
 
   // Loading State
@@ -211,9 +243,26 @@ ${order.storeName || 'Nossa Loja'}`
           </DropdownMenu>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">
-            {filteredOrders.length} pedido(s)
-          </span>
+          {selectedOrders.length > 0 && (
+            <>
+              <span className="text-sm font-medium text-blue-600">
+                {selectedOrders.length} selecionado(s)
+              </span>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setShowBulkDeleteDialog(true)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Excluir
+              </Button>
+            </>
+          )}
+          {selectedOrders.length === 0 && (
+            <span className="text-sm text-gray-600">
+              {filteredOrders.length} pedido(s)
+            </span>
+          )}
         </div>
       </div>
 
@@ -224,10 +273,10 @@ ${order.storeName || 'Nossa Loja'}`
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12">
-                  <input 
-                    type="checkbox" 
-                    className="rounded" 
-                    onClick={(e) => e.stopPropagation()}
+                  <Checkbox
+                    checked={selectedOrders.length === filteredOrders.length && filteredOrders.length > 0}
+                    onCheckedChange={handleSelectAll}
+                    className="border border-gray-400 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                   />
                 </TableHead>
                 <TableHead>Cliente</TableHead>
@@ -245,10 +294,11 @@ ${order.storeName || 'Nossa Loja'}`
                   <ContextMenuTrigger asChild>
                     <TableRow className="hover:bg-gray-50 select-none">
                   <TableCell>
-                    <input 
-                      type="checkbox" 
-                      className="rounded" 
+                    <Checkbox
+                      checked={selectedOrders.includes(order.id)}
+                      onCheckedChange={(checked) => handleSelectOrder(order.id, checked as boolean)}
                       onClick={(e) => e.stopPropagation()}
+                      className="border border-gray-400 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                     />
                   </TableCell>
                   <TableCell>
@@ -455,7 +505,7 @@ ${order.storeName || 'Nossa Loja'}`
         onClose={() => setSelectedOrder(null)} 
       />
 
-      {/* Dialog de Exclusão */}
+      {/* Dialog de Exclusão - Individual */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -479,6 +529,28 @@ ${order.storeName || 'Nossa Loja'}`
               className="bg-red-600 hover:bg-red-700"
             >
               Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog de Exclusão - Múltiplos */}
+      <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Pedidos</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir {selectedOrders.length} pedido{selectedOrders.length > 1 ? 's' : ''}? 
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Excluir {selectedOrders.length} pedido{selectedOrders.length > 1 ? 's' : ''}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

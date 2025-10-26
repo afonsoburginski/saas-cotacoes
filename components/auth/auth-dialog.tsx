@@ -64,9 +64,11 @@ export function AuthDialog({ open, onOpenChange, mode = 'login', selectedPlan }:
           <div className="flex items-center justify-center">
             <div className="w-16 h-16 relative">
               <Image
-                src="/logo.png"
+                src="https://vasfrygscudozjihcgfm.supabase.co/storage/v1/object/public/images/logo.png"
                 alt="Orça Norte"
                 fill
+                priority
+                sizes="64px"
                 className="object-contain"
               />
             </div>

@@ -60,9 +60,11 @@ export function CheckoutMobile({ selectedPlan, setSelectedPlan, isLoading, handl
         <div className="flex items-center justify-center gap-2 mb-4">
           <div className="w-10 h-10 relative">
             <Image
-              src="/logo.png"
+              src="https://vasfrygscudozjihcgfm.supabase.co/storage/v1/object/public/images/logo.png"
               alt="Orça Norte"
               fill
+              priority
+              sizes="40px"
               className="object-contain"
             />
           </div>

@@ -52,9 +52,11 @@ export function CheckoutDesktop({ selectedPlan, setSelectedPlan, isLoading, hand
           <div className="flex items-center justify-center gap-3 mb-6">
             <div className="w-12 h-12 relative">
               <Image
-                src="/logo.png"
+                src="https://vasfrygscudozjihcgfm.supabase.co/storage/v1/object/public/images/logo.png"
                 alt="Orça Norte"
                 fill
+                priority
+                sizes="48px"
                 className="object-contain"
               />
             </div>

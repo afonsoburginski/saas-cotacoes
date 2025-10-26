@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { ProductForm, ProductFormData } from "./product-form"
 import { ServiceForm, ServiceFormData } from "./service-form"
+import { ImportCSVDialog } from "./import-csv-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { Product } from "@/lib/types"
 import { 
@@ -58,7 +59,8 @@ import {
   TrendingUp,
   TrendingDown,
   CheckCircle2,
-  XCircle
+  XCircle,
+  FileSpreadsheet
 } from "lucide-react"
 import Image from "next/image"
 
@@ -68,7 +70,8 @@ import {
   useUpdateProduct, 
   useUpdateProducts,
   useDeleteProduct, 
-  useDeleteProducts 
+  useDeleteProducts,
+  useBulkCreateProducts
 } from "@/hooks/use-products"
 import {
   useServices,
@@ -115,6 +118,7 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
   const updateProducts = useUpdateProducts()
   const deleteProduct = useDeleteProduct()
   const deleteProducts = useDeleteProducts()
+  const bulkCreateProducts = useBulkCreateProducts()
   
   // React Query - Services
   const { data: servicesData, isLoading: isLoadingServices } = useServices({
@@ -132,11 +136,12 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
   const isLoading = isLoadingProp || isLoadingProducts || isLoadingServices
   
   // Local State
-  const [selectedProducts, setSelectedProducts] = useState<string[]>([])
+  const [selectedProducts, setSelectedProducts] = useState<number[]>([])
   const [editingProduct, setEditingProduct] = useState<Product | Service | null>(null)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [deleteProductState, setDeleteProductState] = useState<Product | Service | null>(null)
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false)
+  const [showImportDialog, setShowImportDialog] = useState(false)
   const [filters, setFilters] = useState<FilterState>({
     status: [],
     categoria: [],
@@ -210,7 +215,7 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
     return matchesSearch && matchesStatus && matchesCategoria && matchesDestacado && matchesEstoque && matchesPreco
   })
 
-  const handleSelectProduct = (productId: string, checked: boolean) => {
+  const handleSelectProduct = (productId: number, checked: boolean) => {
     if (checked) {
       setSelectedProducts(prev => [...prev, productId])
     } else {
@@ -218,9 +223,9 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
     }
   }
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedProducts(filteredProducts.map(p => p.id))
+  const handleSelectAll = (checked: boolean | 'indeterminate') => {
+    if (checked === true) {
+      setSelectedProducts(filteredProducts.map(p => Number(p.id)))
     } else {
       setSelectedProducts([])
     }
@@ -256,12 +261,12 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
     return Object.values(filters).reduce((total, filterArray) => total + filterArray.length, 0)
   }
 
-  const handleToggleStatus = (productId: string) => {
-    const product = products.find(p => p.id === productId)
+  const handleToggleStatus = (productId: number | string) => {
+    const product = products.find(p => String(p.id) === String(productId))
     if (!product) return
     
     updateProduct.mutate(
-      { id: productId, data: { ativo: !product.ativo } },
+      { id: String(productId), data: { ativo: !product.ativo } },
       {
         onSuccess: () => {
           toast({
@@ -280,12 +285,12 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
     )
   }
 
-  const handleToggleFeatured = (productId: string) => {
-    const product = products.find(p => p.id === productId)
+  const handleToggleFeatured = (productId: number | string) => {
+    const product = products.find(p => String(p.id) === String(productId))
     if (!product) return
     
     updateProduct.mutate(
-      { id: productId, data: { destacado: !product.destacado } },
+      { id: String(productId), data: { destacado: !product.destacado } },
       {
         onSuccess: () => {
           toast({
@@ -393,9 +398,19 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
   const handleBulkDelete = () => {
     const count = selectedProducts.length
     
-    deleteProducts.mutate(selectedProducts, {
+    if (count === 0) {
+      toast({
+        title: "Nenhum item selecionado",
+        description: "Selecione ao menos um produto para excluir.",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    deleteProducts.mutate(selectedProducts.map(id => String(id)), {
       onSuccess: () => {
         setSelectedProducts([])
+        setShowBulkDeleteDialog(false)
         toast({
           title: "Produtos excluídos!",
           description: `${count} produtos foram removidos.`,
@@ -414,8 +429,17 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
   const handleBulkToggleStatus = (active: boolean) => {
     const count = selectedProducts.length
     
+    if (count === 0) {
+      toast({
+        title: "Nenhum item selecionado",
+        description: "Selecione ao menos um produto para continuar.",
+        variant: "destructive",
+      })
+      return
+    }
+    
     updateProducts.mutate(
-      { ids: selectedProducts, data: { ativo: active } },
+      { ids: selectedProducts.map(id => String(id)), data: { ativo: active } },
       {
         onSuccess: () => {
           setSelectedProducts([])
@@ -943,6 +967,13 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
             </DropdownMenuContent>
           </DropdownMenu>
 
+          {activeTab === 'produtos' && (
+            <Button variant="outline" onClick={() => setShowImportDialog(true)}>
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Importar CSV
+            </Button>
+          )}
+          
           <Button onClick={() => setShowCreateForm(true)}>
             <Package className="h-4 w-4 mr-2" />
             {activeTab === 'produtos' ? 'Novo Produto' : 'Novo Serviço'}
@@ -977,8 +1008,8 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
                     <tr className="hover:bg-gray-50">
                       <td className="px-4 py-3">
                         <Checkbox
-                          checked={selectedProducts.includes(product.id)}
-                          onCheckedChange={(checked) => handleSelectProduct(product.id, checked as boolean)}
+                          checked={selectedProducts.includes(Number(product.id))}
+                          onCheckedChange={(checked) => handleSelectProduct(Number(product.id), checked as boolean)}
                           className="border border-gray-400 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                         />
                       </td>
@@ -1300,6 +1331,57 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Import CSV Dialog */}
+      <ImportCSVDialog
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        onImport={(importedProducts) => {
+          // Converter dados do CSV para formato de produto
+          const productsToCreate = importedProducts.map(csvRow => ({
+            storeId: Number(storeId),
+            nome: csvRow.nome || '',
+            categoria: csvRow.categoria || '',
+            preco: parseFloat(csvRow.preco) || 0,
+            precoPromocional: csvRow.precoPromocional ? parseFloat(csvRow.precoPromocional) : undefined,
+            estoque: parseInt(csvRow.estoque) || 0,
+            unidadeMedida: csvRow.unidadeMedida || 'Unidade (un)',
+            sku: csvRow.sku || '',
+            descricao: csvRow.descricao || '',
+            imagemUrl: csvRow.imagemUrl || undefined,
+            ativo: csvRow.ativo === 'true' || csvRow.ativo === '1' || csvRow.ativo === true,
+            destacado: csvRow.destacado === 'true' || csvRow.destacado === '1' || csvRow.destacado === true,
+            temVariacaoPreco: csvRow.temVariacaoPreco === 'true' || csvRow.temVariacaoPreco === '1' || csvRow.temVariacaoPreco === true,
+            peso: csvRow.peso ? parseFloat(csvRow.peso) : undefined,
+            dimensoes: csvRow.dimensoes ? (typeof csvRow.dimensoes === 'string' ? JSON.parse(csvRow.dimensoes) : csvRow.dimensoes) : undefined,
+            rating: 0,
+          }))
+
+          // Corrigir o tipo de storeId para string conforme esperado em Partial<Product>
+          const productsToCreateFixed = productsToCreate.map(prod => ({
+            ...prod,
+            storeId: String(prod.storeId),
+          }))
+
+          // Executar importação em lote
+          bulkCreateProducts.mutate(productsToCreateFixed, {
+            onSuccess: (results) => {
+              toast({
+                title: "Produtos importados!",
+                description: `${results.length} produto(s) adicionados ao catálogo com sucesso.`,
+              })
+              setShowImportDialog(false)
+            },
+            onError: (error) => {
+              toast({
+                title: "Erro na importação",
+                description: error instanceof Error ? error.message : "Não foi possível importar os produtos.",
+                variant: "destructive",
+              })
+            },
+          })
+        }}
+      />
     </div>
   )
 }

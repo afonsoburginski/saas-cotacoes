@@ -16,6 +16,7 @@ const nextConfig = {
       { protocol: 'https', hostname: 'picsum.photos' },
       { protocol: 'https', hostname: 'noratutor.xyz' },
       { protocol: 'https', hostname: 'framerusercontent.com' },
+      { protocol: 'https', hostname: 'vasfrygscudozjihcgfm.supabase.co' },
     ],
   },
   async headers() {

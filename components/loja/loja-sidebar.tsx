@@ -66,7 +66,7 @@ export function LojaSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
             >
               <a href="/" className="flex items-center gap-2">
                 <div className={`relative ${open ? 'w-8 h-8' : 'w-10 h-10'}`}>
-                  <Image src="/logo.png" alt="Orça Norte" fill className="object-contain" />
+                  <Image src="https://vasfrygscudozjihcgfm.supabase.co/storage/v1/object/public/images/logo.png" alt="Orça Norte" fill priority sizes="40px" className="object-contain" />
                 </div>
                 {open && (
                   <span className="text-base font-bold text-gray-900">Orça Norte</span>

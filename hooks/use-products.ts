@@ -170,3 +170,29 @@ export function useUpdateProducts() {
   })
 }
 
+// Mutation para criar múltiplos produtos (bulk import)
+export function useBulkCreateProducts() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async (products: Partial<Product>[]) => {
+      const results = await Promise.all(
+        products.map(product => 
+          fetch("/api/products", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(product),
+          }).then(res => {
+            if (!res.ok) throw new Error(`Failed to create product ${product.nome}`)
+            return res.json()
+          })
+        )
+      )
+      return results
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] })
+    },
+  })
+}
+

@@ -60,9 +60,11 @@ export function LandingTopbar() {
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="w-7 h-7 sm:w-8 sm:h-8 relative overflow-hidden">
               <Image
-                src="/logo.png"
+                src="https://vasfrygscudozjihcgfm.supabase.co/storage/v1/object/public/images/logo.png"
                 alt="Orça Norte"
                 fill
+                priority
+                sizes="32px"
                 className="object-contain"
               />
             </div>

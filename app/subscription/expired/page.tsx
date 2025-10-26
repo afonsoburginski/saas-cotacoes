@@ -23,7 +23,7 @@ export default function SubscriptionExpiredPage() {
           {/* Logo */}
           <div className="flex justify-center mb-6">
             <div className="w-16 h-16 relative">
-              <Image src="/logo.png" alt="Orça Norte" fill className="object-contain" />
+              <Image src="https://vasfrygscudozjihcgfm.supabase.co/storage/v1/object/public/images/logo.png" alt="Orça Norte" fill priority sizes="64px" className="object-contain" />
             </div>
           </div>
 

@@ -19,9 +19,11 @@ export function TopbarMobile() {
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 relative overflow-hidden flex-shrink-0">
             <Image
-              src="/logo-white.png"
+              src="https://vasfrygscudozjihcgfm.supabase.co/storage/v1/object/public/images/logo-white.png"
               alt="Orça Norte"
               fill
+              priority
+              sizes="32px"
               className="object-contain"
             />
           </div>
