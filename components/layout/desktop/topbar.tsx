@@ -46,8 +46,8 @@ export function TopbarDesktop() {
     const isPublicPage = publicPaths.some(path => currentPath.startsWith(path))
     
     if (!isPublicPage) {
-      // Páginas de empresa/admin - redireciona pra explorar
-      router.push('/explorar')
+      // Páginas de empresa/admin - redireciona pra home
+      router.push('/')
     }
     // Senão, permanece na página atual
   }

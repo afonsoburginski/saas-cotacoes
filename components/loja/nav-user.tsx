@@ -47,7 +47,7 @@ export const NavUser = memo(function NavUser() {
   // 🚀 Memoizar callbacks para evitar recriação
   const handleLogout = useCallback(async () => {
     await signOut()
-    router.push('/explorar')
+    router.push('/')
   }, [router])
   
   const handleProfileClick = useCallback(() => {

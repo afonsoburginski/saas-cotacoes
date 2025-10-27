@@ -23,10 +23,10 @@ export async function GET(request: Request) {
       .where(eq(userTable.id, session.user.id))
     
     // Redirecionar de volta para explorar
-    return NextResponse.redirect(new URL('/explorar', request.url))
+    return NextResponse.redirect(new URL('/explorar?from_callback=consumer', request.url))
   } catch (error) {
     console.error('Error in auth callback:', error)
-    return NextResponse.redirect(new URL('/explorar', request.url))
+    return NextResponse.redirect(new URL('/?error=auth_callback_failed', request.url))
   }
 }
 

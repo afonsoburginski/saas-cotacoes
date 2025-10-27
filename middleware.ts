@@ -33,6 +33,17 @@ export async function middleware(request: NextRequest) {
     '/api/service-providers'
   ]
 
+  // Permitir rotas públicas específicas de checkout e loja
+  const checkoutPublicPaths = [
+    '/checkout/stripe-success',
+    '/checkout/success',
+    '/checkout/external'
+  ]
+  
+  if (checkoutPublicPaths.includes(pathname) || pathname === '/loja/loading') {
+    return NextResponse.next()
+  }
+
   // Permitir rotas públicas
   if (
     publicPaths.some(p => pathname === p || pathname.startsWith(`${p}/`)) ||
@@ -63,9 +74,9 @@ export async function middleware(request: NextRequest) {
       }
     )
 
-    // Se não tem sessão, redireciona para explorar
+    // Se não tem sessão, redireciona para home
     if (!session) {
-      return NextResponse.redirect(new URL('/explorar', request.url))
+      return NextResponse.redirect(new URL('/', request.url))
     }
 
     // Sessão válida - permite continuar
@@ -74,7 +85,7 @@ export async function middleware(request: NextRequest) {
     
   } catch (error) {
     console.error('Middleware auth error:', error)
-    return NextResponse.redirect(new URL('/explorar', request.url))
+    return NextResponse.redirect(new URL('/', request.url))
   }
 }
 
