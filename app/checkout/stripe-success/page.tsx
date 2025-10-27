@@ -30,6 +30,25 @@ export default function StripeSuccessPage() {
       return
     }
 
+    // Sincronizar dados do Stripe imediatamente
+    const syncStripeData = async () => {
+      try {
+        console.log('🔄 Sincronizando dados do Stripe...')
+        const res = await fetch('/api/webhooks/stripe-sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: session_id })
+        })
+        
+        const data = await res.json()
+        console.log('📦 Dados sincronizados:', data)
+      } catch (error) {
+        console.error('❌ Erro ao sincronizar:', error)
+      }
+    }
+    
+    syncStripeData()
+
     // Aguardar 2 segundos e mostrar sucesso
     const timer = setTimeout(() => {
       setLoading(false)
