@@ -15,9 +15,8 @@ export default function StripeSuccessPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-  const [readyForStore, setReadyForStore] = useState(false)
+  const [storeReady, setStoreReady] = useState(false)
   const [authDialogOpen, setAuthDialogOpen] = useState(false)
-  const [buttonText, setButtonText] = useState('Tudo Pronto! 🎉')
 
   useEffect(() => {
     const session_id = searchParams.get('session_id')
@@ -42,6 +41,11 @@ export default function StripeSuccessPage() {
         
         const data = await res.json()
         console.log('📦 Dados sincronizados:', data)
+        
+        if (data.success && data.store) {
+          console.log('✅ Loja criada com sucesso:', data.store.slug)
+          setStoreReady(true)
+        }
       } catch (error) {
         console.error('❌ Erro ao sincronizar:', error)
       }
@@ -73,30 +77,14 @@ export default function StripeSuccessPage() {
     }
   }, [session, authDialogOpen])
 
-  // Quando usuário fizer login, mostrar "Tudo Pronto!" depois "Ir para Minha Loja"
   useEffect(() => {
     if (session?.user && success) {
       console.log('✅ Usuário logado após pagamento!')
       console.log('📧 Email:', session.user.email)
       console.log('🆔 ID:', session.user.id)
-      console.log('🎯 Estado: readyForStore =', readyForStore)
-      
-      // Mostrar "Tudo Pronto!" primeiro
-      if (!readyForStore) {
-        console.log('🎉 Mudando botão para "Tudo Pronto! 🎉"')
-        setButtonText('Tudo Pronto! 🎉')
-        
-        // Aguardar 2 segundos e mudar para "Ir para Minha Loja"
-        const timer = setTimeout(() => {
-          console.log('🏪 Mudando botão para "Ir para Minha Loja"')
-          setButtonText('Ir para Minha Loja')
-          setReadyForStore(true)
-        }, 2000)
-        
-        return () => clearTimeout(timer)
-      }
+      console.log('🎯 Estado: storeReady =', storeReady)
     }
-  }, [session, success, readyForStore])
+  }, [session, success, storeReady])
 
   const handleFinalizarCadastro = () => {
     console.log('🔑 Abrindo dialog de cadastro/login...')
@@ -181,59 +169,37 @@ export default function StripeSuccessPage() {
             </p>
             
             {/* Botão muda conforme o estado */}
-            <AnimatePresence mode="wait">
-              {!session?.user && (
-                <motion.div
-                  key="finalizar"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                >
-                  <Button 
-                    onClick={handleFinalizarCadastro}
-                    size="lg"
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    Finalizar Cadastro
-                  </Button>
-                </motion.div>
-              )}
-              
-              {session?.user && !readyForStore && (
-                <motion.div
-                  key="pronto"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                >
-                  <Button 
-                    disabled
-                    size="lg"
-                    className="bg-green-100 text-green-700 border-2 border-green-400 cursor-wait"
-                  >
-                    {buttonText}
-                  </Button>
-                </motion.div>
-              )}
-              
-              {readyForStore && session?.user && (
-                <motion.div
-                  key="loja"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                >
-                  <Button 
-                    onClick={handleGoToStore}
-                    size="lg"
-                    className="bg-[#22C55E] hover:bg-[#22C55E]/90 text-white"
-                  >
-                    <Store className="mr-2 h-5 w-5" />
-                    Ir para Minha Loja
-                  </Button>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {!session?.user && (
+              <Button 
+                onClick={handleFinalizarCadastro}
+                size="lg"
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Finalizar Cadastro
+              </Button>
+            )}
+            
+            {session?.user && !storeReady && (
+              <Button 
+                disabled
+                size="lg"
+                className="bg-blue-100 text-blue-700 border-2 border-blue-400 cursor-wait"
+              >
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Preparando sua loja...
+              </Button>
+            )}
+            
+            {session?.user && storeReady && (
+              <Button 
+                onClick={handleGoToStore}
+                size="lg"
+                className="bg-[#22C55E] hover:bg-[#22C55E]/90 text-white"
+              >
+                <Store className="mr-2 h-5 w-5" />
+                Ir para Minha Loja
+              </Button>
+            )}
           </motion.div>
         </div>
 
