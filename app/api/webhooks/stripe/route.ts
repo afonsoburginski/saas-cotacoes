@@ -84,15 +84,29 @@ export async function POST(request: Request) {
         console.log('📦 Processing checkout for:', userId || 'new user via payment link', 'plan:', plan)
         
         // Pegar custom fields do Stripe
-        const businessName = session.custom_fields?.find(f => f.key === 'business_name')?.text?.value
-        const businessType = session.custom_fields?.find(f => f.key === 'business_type')?.dropdown?.value || 'comercio' // Default comercio
+        console.log('🔍 Custom fields do Stripe:', JSON.stringify(session.custom_fields, null, 2))
+        console.log('🔍 Customer details:', JSON.stringify(session.customer_details, null, 2))
+        console.log('🔍 Metadata:', JSON.stringify(session.metadata, null, 2))
+        
+        const businessName = session.custom_fields?.find(f => f.key === 'business_name')?.text?.value || 'Minha Loja'
+        const businessTypeRaw = session.custom_fields?.find(f => f.key === 'business_type')?.dropdown?.value
+        const businessType = (businessTypeRaw as 'comercio' | 'servico') || 'comercio' // Default comercio para payment links
         const phone = session.customer_details?.phone
         const address = session.customer_details?.address
+        
+        console.log('📦 Dados extraídos:')
+        console.log('  - businessName:', businessName)
+        console.log('  - businessType:', businessType)
+        console.log('  - phone:', phone)
+        console.log('  - address:', address)
+        console.log('  - email:', email)
         
         // Formatar endereço completo
         const fullAddress = address ? 
           `${address.line1}${address.line2 ? ', ' + address.line2 : ''}, ${address.city} - ${address.state}, ${address.postal_code}` : 
           undefined
+        
+        console.log('  - fullAddress:', fullAddress)
         
         let updatedUser
         
@@ -110,7 +124,7 @@ export async function POST(request: Request) {
             // Criar novo usuário
             const newUserId = `usr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
             
-            const [newUser] = await db.insert(user).values({
+            const newUserData = {
               id: newUserId,
               email: email,
               name: session.customer_details?.name || 'Usuário',
@@ -118,20 +132,24 @@ export async function POST(request: Request) {
               role: 'fornecedor',
               plan: plan,
               businessName: businessName,
-              businessType: 'comercio', // Default para payment links
+              businessType: businessType,
               phone: phone,
               address: fullAddress,
               stripeCustomerId: stripeCustomerId,
-            }).returning()
+            }
+            
+            console.log('📝 Criando usuário com dados:', JSON.stringify(newUserData, null, 2))
+            
+            const [newUser] = await db.insert(user).values(newUserData).returning()
             
             updatedUser = newUser
-            console.log('✅ Novo usuário criado:', updatedUser.id)
+            console.log('✅ Novo usuário criado:', updatedUser.id, updatedUser.email)
           } else {
             // Usuário já existe, atualizar
             const [updatedUserData] = await db.update(user).set({
               plan: plan,
               businessName: businessName || undefined,
-              businessType: 'comercio',
+              businessType: businessType, // Usar variável dinâmica
               phone: phone || undefined,
               address: fullAddress,
               role: 'fornecedor',
@@ -204,21 +222,25 @@ export async function POST(request: Request) {
           console.log('✅ Store reativada:', reactivated.nome, '- Status:', reactivated.status, '- Plano:', reactivated.plano)
         } else {
           // PRIMEIRA VEZ: Criar nova store
-          const [newStore] = await db.insert(stores).values({
+          const newStoreData = {
             userId: currentUserId,
             slug: slug,
-            nome: businessName || `${updatedUser.name || 'Empresa'}`,
-            email: session.customer_details?.email || undefined,
-            telefone: phone || undefined,
-            endereco: fullAddress,
-            descricao: `${businessType === 'comercio' ? 'Comércio' : 'Prestador de serviço'} - ${businessName || 'Nova empresa'}`,
+            nome: businessName || updatedUser.businessName || `${updatedUser.name || 'Empresa'}`,
+            email: session.customer_details?.email || email || updatedUser.email || undefined,
+            telefone: phone || updatedUser.phone || undefined,
+            endereco: fullAddress || updatedUser.address || undefined,
+            descricao: `${businessType === 'comercio' ? 'Comércio' : 'Prestador de serviço'} - ${businessName || updatedUser.businessName || 'Nova empresa'}`,
             status: 'approved',
             plano: plan,
             priorityScore: PLAN_DETAILS[plan].priority,
             rating: '0',
-          }).returning()
+          }
           
-          console.log('🏪 Store created:', newStore.id, newStore.nome)
+          console.log('📝 Criando loja com dados:', JSON.stringify(newStoreData, null, 2))
+          
+          const [newStore] = await db.insert(stores).values(newStoreData).returning()
+          
+          console.log('🏪 Loja criada com sucesso:', newStore.id, newStore.nome, newStore.slug)
         }
         
         console.log('✅ Checkout completo para user:', currentUserId)
