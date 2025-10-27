@@ -97,7 +97,7 @@ export function LandingTopbar() {
                   if (slug) {
                     router.push(`/loja/${slug}`)
                   } else {
-                    router.push('/checkout')
+                    router.push('/loja/loading')
                   }
                 }}
                 className="bg-[#22C55E] text-white hover:bg-[#22C55E]/90 transition-all duration-200 h-9 sm:h-10 gap-2 px-4 sm:px-6"

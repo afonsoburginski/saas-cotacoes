@@ -23,25 +23,29 @@ export default function LoadingStorePage() {
 
       // Tentar buscar a loja várias vezes
       let attempts = 0
-      const maxAttempts = 10
+      const maxAttempts = 15 // Aumentado para dar mais tempo
       
       const fetchStore = async () => {
         try {
           const res = await fetch('/api/user/store')
           const data = await res.json()
           
+          console.log('🔍 Tentativa de buscar loja:', attempts + 1, 'Status:', res.status, 'Data:', data)
+          
           if (res.ok && data.slug) {
+            console.log('✅ Loja encontrada! Slug:', data.slug)
             setStatus('Loja encontrada! Redirecionando...')
-            router.push(`/loja/${data.slug}/catalogo`)
+            router.push(`/loja/${data.slug}`)
             return
           }
           
           attempts++
           if (attempts < maxAttempts) {
-            setStatus(`Aguardando loja... (${attempts}/${maxAttempts})`)
+            setStatus(`Aguardando confirmação do pagamento... (${attempts}/${maxAttempts})`)
             setTimeout(fetchStore, 3000)
           } else {
-            setStatus('Loja não encontrada. Você precisa completar o pagamento primeiro.')
+            console.log('❌ Loja não encontrada após', maxAttempts, 'tentativas')
+            setStatus('Loja ainda não disponível. Tente novamente em alguns segundos.')
             setTimeout(() => {
               router.push('/')
             }, 3000)

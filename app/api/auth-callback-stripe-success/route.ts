@@ -66,7 +66,7 @@ export async function GET(request: Request) {
           
           if (store?.slug) {
             console.log('🏪 Redirecionando para loja:', store.slug)
-            return NextResponse.redirect(new URL(`/loja/${store.slug}/catalogo`, request.url))
+            return NextResponse.redirect(new URL(`/loja/${store.slug}`, request.url))
           } else {
             console.log('⚠️ Tem subscription mas não tem store - ir para /loja/loading')
             return NextResponse.redirect(new URL('/loja/loading', request.url))
