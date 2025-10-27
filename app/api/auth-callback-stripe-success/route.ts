@@ -29,63 +29,23 @@ export async function GET(request: Request) {
       .where(eq(userTable.id, session.user.id))
       .limit(1)
     
-    console.log('👤 User role:', userData?.role, 'Customer ID:', userData?.stripeCustomerId)
+    console.log('👤 User role:', userData?.role)
     
     // Garantir role de fornecedor
     if (userData?.role !== 'fornecedor' && userData?.role !== 'loja') {
       console.log('🔄 Atualizando role para fornecedor')
       await db.update(userTable)
-        .set({ role: 'fornecedor', updatedAt: new Date() })
+        .set({ role: 'fornecedor' })
         .where(eq(userTable.id, session.user.id))
     }
     
-    // Verificar se tem subscription ativa e buscar loja
-    if (userData?.stripeCustomerId) {
-      try {
-        const result: any = await db.execute(sql`
-          SELECT COUNT(*) as count
-          FROM stripe_subscriptions
-          WHERE customer = ${userData.stripeCustomerId}
-          AND attrs->>'status' = 'active'
-        `)
-        
-        const hasActive = parseInt(result[0]?.count || '0') > 0
-        console.log('💳 Subscription ativa?', hasActive)
-        
-        if (hasActive) {
-          console.log('✅ SUBSCRIPTION ATIVA! Buscando loja...')
-          
-          // Buscar slug da loja
-          const [store] = await db
-            .select()
-            .from(stores)
-            .where(eq(stores.userId, session.user.id))
-            .limit(1)
-          
-          console.log('🏪 Loja encontrada:', store?.slug || 'nenhuma')
-          
-          if (store?.slug) {
-            console.log('🏪 Redirecionando para loja:', store.slug)
-            return NextResponse.redirect(new URL(`/loja/${store.slug}`, request.url))
-          } else {
-            console.log('⚠️ Tem subscription mas não tem store - ir para /loja/loading')
-            return NextResponse.redirect(new URL('/loja/loading', request.url))
-          }
-        } else {
-          console.log('⚠️ Sem subscription ativa - redirecionando para /loja/loading')
-          return NextResponse.redirect(new URL('/loja/loading', request.url))
-        }
-      } catch (error) {
-        console.error('❌ Erro ao verificar subscription:', error)
-        return NextResponse.redirect(new URL('/loja/loading', request.url))
-      }
-    } else {
-      console.log('⚠️ Sem customer ID - aguardando webhook processar')
-      // Aguardar webhook processar - ir para /loja/loading que vai tentar buscar a loja
-      return NextResponse.redirect(new URL('/loja/loading', request.url))
-    }
+    // O login aconteceu no dialog, não precisa redirecionar!
+    // A página de sucesso já vai detectar a sessão e mostrar o botão "Ir para Minha Loja"
+    console.log('✅ Login confirmado, usuário permanece na página')
+    return new Response(null, { status: 200 })
+    
   } catch (error) {
     console.error('Error in auth callback:', error)
-    return NextResponse.redirect(new URL('/', request.url))
+    return new Response(null, { status: 500 })
   }
 }
