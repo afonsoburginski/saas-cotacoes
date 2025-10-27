@@ -69,7 +69,8 @@ export function AuthDialog({
         callbackURL,
       })
       
-      onOpenChange(false)
+      // NÃO fechar o dialog aqui - vai ser fechado automaticamente quando a sessão atualizar
+      // onOpenChange(false)  // Removido!
     } catch (error) {
       console.error('Erro na autenticação:', error)
       setIsGoogleLoading(false)
