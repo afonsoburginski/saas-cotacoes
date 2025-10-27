@@ -75,6 +75,7 @@ export default function StripeSuccessPage() {
       setLoading(false)
       setSuccess(true)
       console.log('✅ Pagamento confirmado!')
+      console.log('🎯 Estado: storeReady =', storeReady)
       
       // Abrir dialog automaticamente se usuário não estiver logado
       if (!session?.user) {
@@ -197,14 +198,19 @@ export default function StripeSuccessPage() {
             )}
             
             {session?.user && !storeReady && (
-              <Button 
-                disabled
-                size="lg"
-                className="bg-blue-100 text-blue-700 border-2 border-blue-400 cursor-wait"
-              >
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Preparando sua loja...
-              </Button>
+              <div>
+                <Button 
+                  disabled
+                  size="lg"
+                  className="bg-blue-100 text-blue-700 border-2 border-blue-400 cursor-wait"
+                >
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Configurando loja...
+                </Button>
+                <p className="text-xs text-gray-500 mt-2">
+                  Aguarde enquanto preparamos sua loja
+                </p>
+              </div>
             )}
             
             {session?.user && storeReady && (

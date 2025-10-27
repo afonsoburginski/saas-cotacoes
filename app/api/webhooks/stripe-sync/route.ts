@@ -31,13 +31,7 @@ export async function POST(request: Request) {
       expand: ['subscription', 'customer']
     })
 
-    console.log('📦 Session data:', JSON.stringify({
-      id: session.id,
-      customer: session.customer,
-      email: session.customer_details?.email,
-      metadata: session.metadata,
-      custom_fields: session.custom_fields
-    }, null, 2))
+    console.log('📦 Session completa:', JSON.stringify(session, null, 2))
 
     const email = session.customer_details?.email
     if (!email) {
@@ -63,7 +57,8 @@ export async function POST(request: Request) {
         const priceId = subscription.items.data[0]?.price.id
         console.log('📦 Price ID from subscription:', priceId)
         
-        if (priceId === 'price_1SMZvvLW9AlKdS77OQ4Swn6g') plan = 'basico'
+        // IDs CORRETOS dos preços
+        if (priceId === 'price_1SMZvvLW9AlKdS77OQ4Swn6g' || priceId === 'price_1SMZTiLW9AlKdS779UEZAmm0') plan = 'basico'
         else if (priceId === 'price_1SMZxbLW9AlKdS77gf63b0Un') plan = 'plus'
         else if (priceId === 'price_1SMZy0LW9AlKdS771F9gwCPw') plan = 'premium'
         
@@ -79,19 +74,20 @@ export async function POST(request: Request) {
       console.log('🔍 Plan from metadata:', plan)
     }
 
+    // HARDCODE FALLBACK: Se não conseguiu detectar plano, usar "basico" como padrão
     if (!plan) {
-      console.error('❌ Não foi possível detectar o plano')
-      return NextResponse.json({ error: 'Could not detect plan', details: 'No subscription or metadata found' }, { status: 400 })
+      console.warn('⚠️ Não foi possível detectar o plano, usando "basico" como padrão')
+      plan = 'basico'
     }
 
-    // Pegar custom fields
-    const businessName = session.custom_fields?.find(f => f.key === 'business_name')?.text?.value || 'Minha Loja'
-    const businessTypeRaw = session.custom_fields?.find(f => f.key === 'business_type')?.dropdown?.value
-    const businessType = (businessTypeRaw as 'comercio' | 'servico') || 'comercio'
+    // Pegar informações coletadas (custom fields estava vazio!)
+    const businessName = session.collected_information?.business_name || session.customer_details?.business_name || 'Minha Loja'
+    const businessType = 'comercio' // Default para payment links (não vem em collected_information)
     const phone = session.customer_details?.phone
     const address = session.customer_details?.address
+    // Formatar endereço limpo (line2 estava duplicado)
     const fullAddress = address ? 
-      `${address.line1}${address.line2 ? ', ' + address.line2 : ''}, ${address.city} - ${address.state}, ${address.postal_code}` : 
+      `${address.line1 || ''}, ${address.city || ''} - ${address.state || ''}, ${address.postal_code || ''}`.trim().replace(/,\s*$/, '') : 
       undefined
 
     console.log('📦 Extracted data:', {
