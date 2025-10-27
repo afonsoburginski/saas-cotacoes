@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Loader2, CheckCircle2, Store } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -31,7 +31,7 @@ export default function StripeSuccessPage() {
     }
 
     // Aguardar 2 segundos e mostrar sucesso
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       setLoading(false)
       setSuccess(true)
       console.log('✅ Pagamento confirmado!')
@@ -42,7 +42,17 @@ export default function StripeSuccessPage() {
         setAuthDialogOpen(true)
       }
     }, 2000)
+    
+    return () => clearTimeout(timer)
   }, [searchParams, router, session])
+
+  // Fechar dialog quando usuário fizer login
+  useEffect(() => {
+    if (session?.user && authDialogOpen) {
+      console.log('✅ Usuário logado, fechando dialog')
+      setAuthDialogOpen(false)
+    }
+  }, [session, authDialogOpen])
 
   // Quando usuário fizer login, mostrar "Tudo Pronto!" depois "Ir para Minha Loja"
   useEffect(() => {
@@ -78,6 +88,19 @@ export default function StripeSuccessPage() {
     console.log('🏪 Redirecionando para loja...')
     router.push('/loja/loading')
   }
+
+  const dialogCopy = useMemo(() => ({
+    title: 'Finalize seu cadastro',
+    description: (
+      <>
+        Você já garantiu a sua assinatura.
+        <br />
+        Entre com o Google para acessar sua nova loja no Orça Norte.
+      </>
+    ),
+    googleButtonLabel: 'Finalizar com Google',
+    googleLoadingLabel: 'Conectando...'
+  }), [])
 
   if (loading) {
     return (
@@ -194,35 +217,23 @@ export default function StripeSuccessPage() {
             </AnimatePresence>
           </motion.div>
         </div>
+
+        {/* Auth Dialog */}
+        <AuthDialog
+          open={authDialogOpen}
+          onOpenChange={(open) => {
+            console.log('🔄 Dialog mudou para:', open)
+            setAuthDialogOpen(open)
+          }}
+          mode="register"
+          title={dialogCopy.title}
+          description={dialogCopy.description}
+          googleButtonLabel={dialogCopy.googleButtonLabel}
+          googleLoadingLabel={dialogCopy.googleLoadingLabel}
+        />
       </div>
     )
   }
 
-  console.log('🔍 Estado atual:', { 
-    loading, 
-    success, 
-    authDialogOpen, 
-    session: session?.user ? 'logado' : 'não logado',
-    buttonText,
-    readyForStore
-  })
-
-  console.log('🎨 Renderizando dialog com open={}:', authDialogOpen)
-
-  return (
-    <>
-      {/* Auth Dialog */}
-      {console.log('🎭 AuthDialog sendo renderizado com open={}:', authDialogOpen)}
-      <AuthDialog 
-        open={authDialogOpen} 
-        onOpenChange={(open) => {
-          console.log('🔄 Dialog mudou para:', open)
-          setAuthDialogOpen(open)
-        }}
-        mode="register"
-      />
-      {console.log('✅ AuthDialog renderizado')}
-    </>
-  )
+  return null
 }
-
