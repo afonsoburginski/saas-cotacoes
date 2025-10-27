@@ -12,19 +12,24 @@ const PLAN_DETAILS = {
 } as const;
 
 export async function POST(request: Request) {
+  console.log('🔔 WEBHOOK CHAMADO!')
   const body = await request.text()
-  const signature = request.headers.get('stripe-signature')!
+  const signature = request.headers.get('stripe-signature')
+  
+  console.log('📥 Signature recebida:', signature ? 'SIM' : 'NÃO')
+  console.log('📦 Body length:', body.length)
   
   let event: Stripe.Event
   
   try {
     event = stripe.webhooks.constructEvent(
       body,
-      signature,
+      signature!,
       process.env.STRIPE_WEBHOOK_SECRET!
     )
+    console.log('✅ Evento validado:', event.type, event.id)
   } catch (error) {
-    console.error('Webhook signature verification failed:', error)
+    console.error('❌ Webhook signature verification failed:', error)
     return NextResponse.json(
       { error: 'Invalid signature' },
       { status: 400 }
