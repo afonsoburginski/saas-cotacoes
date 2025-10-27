@@ -11,15 +11,28 @@ export default function CheckoutSuccessPage() {
       // Salvar flag de pagamento confirmado
       localStorage.setItem('payment_confirmed', 'true')
       
+      // Aguardar webhook processar
+      await new Promise(resolve => setTimeout(resolve, 3000))
+      
       // Buscar slug da loja
       const res = await fetch('/api/user/store')
       if (res.ok) {
         const data = await res.json()
         if (data.slug) {
-          router.push(`/loja/${data.slug}`)
+          router.push(`/loja/${data.slug}/catalogo`)
         } else {
-          router.push('/explorar') // Fallback
+          // Tentar novamente após mais tempo
+          await new Promise(resolve => setTimeout(resolve, 2000))
+          const res2 = await fetch('/api/user/store')
+          const data2 = await res2.json()
+          if (data2.slug) {
+            router.push(`/loja/${data2.slug}/catalogo`)
+          } else {
+            router.push('/loja/loading')
+          }
         }
+      } else {
+        router.push('/loja/loading')
       }
     }
     

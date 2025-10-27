@@ -53,7 +53,7 @@ export default function StripeSuccessPage() {
         <div className="text-center max-w-md">
           <p className="text-red-600 mb-4">{error}</p>
           <button 
-            onClick={() => router.push('/explorar')}
+            onClick={() => router.push('/')}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Voltar para Início

@@ -66,8 +66,8 @@ export default function ExternalCheckoutPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <p className="text-red-600 mb-4">{error}</p>
-          <button 
-            onClick={() => router.push('/explorar')}
+            <button 
+            onClick={() => router.push('/')}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg"
           >
             Voltar para Início
