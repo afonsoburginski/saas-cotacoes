@@ -16,7 +16,6 @@ export default function StripeSuccessPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [readyForStore, setReadyForStore] = useState(false)
-  const [customerEmail, setCustomerEmail] = useState<string | null>(null)
   const [authDialogOpen, setAuthDialogOpen] = useState(false)
   const [buttonText, setButtonText] = useState('Tudo Pronto! 🎉')
 
@@ -31,50 +30,36 @@ export default function StripeSuccessPage() {
       return
     }
 
-    // Buscar dados da sessão do Stripe
-    const fetchSessionData = async () => {
-      try {
-        const res = await fetch(`/api/stripe/session-details?session_id=${session_id}`)
-        if (res.ok) {
-          const data = await res.json()
-          setCustomerEmail(data.customer_email || null)
-          console.log('✅ Email do pagamento:', data.customer_email)
-          
-          // Aguardar webhook processar (5 segundos)
-          setTimeout(() => {
-            setLoading(false)
-            setSuccess(true)
-            
-            // Se não tem sessão, abrir dialog de login
-            if (!session?.user) {
-              console.log('🔑 Usuário não logado, abrindo dialog...')
-              setAuthDialogOpen(true)
-            } else {
-              setReadyForStore(true)
-              console.log('✅ Usuário já logado, pronto para ir para loja')
-            }
-          }, 5000)
-        }
-      } catch (err) {
-        console.error('Erro ao buscar dados da sessão:', err)
-        setError('Erro ao processar pagamento')
-        setLoading(false)
-      }
-    }
+    // Aguardar 2 segundos e abrir dialog automaticamente
+    setTimeout(() => {
+      setLoading(false)
+      setSuccess(true)
+      console.log('✅ Pagamento confirmado, abrindo dialog...')
+      
+      // Abrir dialog de login imediatamente
+      setAuthDialogOpen(true)
+    }, 2000)
+  }, [searchParams, router])
 
-    fetchSessionData()
-  }, [searchParams, router, session])
-
-  // Quando usuário fizer login, aguardar um pouco e ir para loja
+  // Quando usuário fizer login, mostrar botão de loja
   useEffect(() => {
-    if (session?.user && success && !readyForStore) {
-      console.log('✅ Usuário logado após pagamento, aguardando webhook...')
+    if (session?.user && success) {
+      console.log('✅ Usuário logado após pagamento!')
+      setAuthDialogOpen(false) // Fecha o dialog
       setTimeout(() => {
         setReadyForStore(true)
         setButtonText('Ir para Minha Loja')
-      }, 3000)
+      }, 1000)
     }
-  }, [session, success, readyForStore])
+  }, [session, success])
+
+  // Quando dialog fechar E usuário logado, mostrar botão
+  useEffect(() => {
+    if (!authDialogOpen && session?.user && success && !readyForStore) {
+      setReadyForStore(true)
+      setButtonText('Ir para Minha Loja')
+    }
+  }, [authDialogOpen, session, success, readyForStore])
 
   const handleGoToStore = () => {
     console.log('🏪 Redirecionando para loja...')
