@@ -57,28 +57,19 @@ export function AuthDialog({
       } else if (currentPath.startsWith('/explorar') || currentPath.startsWith('/fornecedor') || currentPath.startsWith('/categoria')) {
         callbackURL = "/api/auth-callback-consumer"
       } else if (currentPath.startsWith('/checkout/stripe-success')) {
-        // Pegar session_id e passar para o callback
+        // Passar session_id para o callback API
         const params = new URLSearchParams(window.location.search)
-        const sessionId = params.get('session_id')
-        callbackURL = `/checkout/stripe-success?session_id=${sessionId || 'authenticated'}`
+        const sessionId = params.get('session_id') || 'authenticated'
+        callbackURL = `/api/auth-callback-stripe-success?session_id=${sessionId}`
       } else {
         callbackURL = "/api/auth-callback-checkout"
       }
       
       console.log('🔐 Login iniciado. Path:', currentPath, 'Plano:', selectedPlan || 'nenhum', 'Callback:', callbackURL)
       
-      // Passar o session_id atual para o callback
-      const searchParams = new URLSearchParams(window.location.search)
-      const sessionId = searchParams.get('session_id')
-      
-      let finalCallbackURL = callbackURL
-      if (sessionId && callbackURL.includes('stripe-success')) {
-        finalCallbackURL = `${callbackURL}?session_id=${sessionId}`
-      }
-      
       await authClient.signIn.social({
         provider: "google",
-        callbackURL: finalCallbackURL,
+        callbackURL,
       })
       
       // NÃO fechar o dialog - vai fechar automaticamente

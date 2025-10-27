@@ -49,12 +49,20 @@ export default function StripeSuccessPage() {
               body: JSON.stringify({ sessionId: session_id })
             })
             
+            if (!res.ok) {
+              const errorText = await res.text()
+              console.error('❌ API retornou erro:', res.status, errorText)
+              throw new Error(`API error: ${res.status}`)
+            }
+            
             const data = await res.json()
             console.log('📦 Resposta da API:', data)
             
             if (data.success && data.store) {
               console.log('✅ Loja criada com sucesso:', data.store.slug)
+              console.log('🎯 SETANDO storeReady = true')
               setStoreReady(true)
+              return // Sair da função imediatamente
             } else if (data.error && attempts < maxAttempts) {
               console.log('⚠️ Falhou, tentando novamente em 2s...')
               setTimeout(trySync, 2000)
@@ -99,7 +107,7 @@ export default function StripeSuccessPage() {
       console.log('🔑 Loja pronta e usuário não logado - abrindo dialog AUTOMATICAMENTE')
       setAuthDialogOpen(true)
     }
-  }, [storeReady, session, authDialogOpen])
+  }, [storeReady, session?.user, authDialogOpen])
 
   // Fechar dialog quando usuário fizer login
   useEffect(() => {
