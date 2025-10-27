@@ -2,11 +2,12 @@
 
 import * as React from "react"
 import { memo, useMemo } from "react"
-import { Package, CreditCard, BarChart3 } from "lucide-react"
+import { Package, CreditCard, BarChart3, Settings } from "lucide-react"
 import { useStoreSlug } from "@/hooks/use-store-slug"
 import { usePendingOrdersCount, useMarkOrdersAsSeen } from "@/hooks/use-pending-quotes"
 import { NavMain } from "./nav-main"
 import { NavUser } from "./nav-user"
+import { NavAdmin } from "./nav-admin"
 import {
   Sidebar,
   SidebarContent,
@@ -20,6 +21,7 @@ import {
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useSession } from "@/lib/auth-client"
 
 export const LojaSidebar = memo(function LojaSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { data: storeSlug } = useStoreSlug()
@@ -27,11 +29,17 @@ export const LojaSidebar = memo(function LojaSidebar({ ...props }: React.Compone
   const pathname = usePathname()
   const { data: pendingCount = 0 } = usePendingOrdersCount()
   const markAsSeen = useMarkOrdersAsSeen()
+  const { data: session } = useSession()
   
   const slug = storeSlug?.slug
   
+  // Emails permitidos para acesso admin
+  const allowedEmails = ['afonsoburginski@gmail.com', 'orcanorte28@gmail.com']
+  const userEmail = session?.user?.email
+  const hasAdminAccess = userEmail && allowedEmails.includes(userEmail)
+  
   // 🚀 Memoizar navItems para evitar recriação
-  const navItems = useMemo(() => [
+  const mainNavItems = useMemo(() => [
     {
       title: "Dashboard",
       url: slug ? `/loja/${slug}` : "/loja/loading",
@@ -58,6 +66,20 @@ export const LojaSidebar = memo(function LojaSidebar({ ...props }: React.Compone
     },
   ], [slug, pathname, pendingCount, markAsSeen])
 
+  // Items de admin separados
+  const adminNavItems = useMemo(() => {
+    if (!hasAdminAccess) return []
+    
+    return [
+      {
+        title: "Admin",
+        url: slug ? `/loja/${slug}/admin` : "/loja/loading",
+        icon: Settings,
+        isActive: pathname === `/loja/${slug}/admin`,
+      }
+    ]
+  }, [slug, pathname, hasAdminAccess])
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -80,7 +102,8 @@ export const LojaSidebar = memo(function LojaSidebar({ ...props }: React.Compone
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={navItems} />
+        <NavMain items={mainNavItems} />
+        {adminNavItems.length > 0 && <NavAdmin items={adminNavItems} />}
       </SidebarContent>
       <SidebarFooter>
         <NavUser />

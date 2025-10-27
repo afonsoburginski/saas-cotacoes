@@ -51,7 +51,10 @@ export const metadata: Metadata = {
   },
   description: "Plataforma B2B para cotação de materiais de construção. Compare preços, encontre fornecedores e faça cotações de forma rápida e inteligente.",
   icons: {
-    icon: '/favicon.ico',
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/logo.png', type: 'image/png' },
+    ],
     shortcut: '/favicon.ico',
     apple: '/logo.png',
   },
@@ -126,9 +129,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning className="light">
       <head>
-        <link rel="icon" href="/favicon.ico" type="image/x-icon" />
-        <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
-        <link rel="apple-touch-icon" href="/logo.png" />
+        <link rel="apple-touch-icon" href="/logo.png" sizes="180x180" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="google-site-verification" content="nI7OGFhCcEFWopffrBBKS83LML1SOkq_2aiO176XCBA" />
       </head>
@@ -156,7 +157,7 @@ export default function RootLayout({
             </ThemeProvider>
           </QueryProvider>
         </SessionProvider>
-        <Analytics />
+        {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
   )

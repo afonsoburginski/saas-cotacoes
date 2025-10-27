@@ -62,11 +62,11 @@ export async function POST(request: Request) {
       console.log('📝 Novo customer será criado no checkout')
     }
     
-    // IDs dos produtos do Stripe
+    // IDs REAIS dos produtos do Stripe (da tabela wrapper)
     const STRIPE_PRODUCT_IDS: Record<string, string> = {
-      'basico': 'prod_TGr7IAyhlL35IF',
-      'plus': 'prod_TGr7gRQ0OaIzxo',
-      'premium': 'prod_TGr9sPpDEtFQ61',
+      'basico': 'prod_TJBr74CwsQFrbo',
+      'plus': 'prod_TJBvLbpuSMhCU4',
+      'premium': 'prod_TJBxi7usfzf57O',
     }
     
     const stripeProductId = STRIPE_PRODUCT_IDS[plan]
@@ -77,16 +77,48 @@ export async function POST(request: Request) {
     
     // Buscar produto do Stripe
     const product = await stripe.products.retrieve(stripeProductId)
-    const price = await stripe.prices.retrieve(product.default_price as string)
     
-    // Criar Stripe Checkout Session usando o Price do produto
+    // 🎯 PEGAR O PREÇO PADRÃO DO PRODUTO (default_price)
+    let priceId: string | undefined = undefined
+    
+    // Tentar usar o default_price (preço oficial do produto)
+    if (product.default_price && typeof product.default_price === 'string') {
+      priceId = product.default_price
+    } else if (product.default_price && typeof product.default_price === 'object') {
+      priceId = product.default_price.id
+    }
+    
+    // Se não tem default_price, buscar TODOS os preços (ativos OU arquivados)
+    if (!priceId) {
+      const prices = await stripe.prices.list({
+        product: stripeProductId,
+        limit: 100,
+      })
+      
+      // Ordenar por valor (MAIS BARATO primeiro) - preços promocionais
+      prices.data.sort((a: any, b: any) => (a.unit_amount || 0) - (b.unit_amount || 0))
+      
+      priceId = prices.data[0]?.id
+      
+      if (!priceId) {
+        return NextResponse.json(
+          { error: 'No price found for this product' },
+          { status: 400 }
+        )
+      }
+    }
+    
+    const latestPrice = await stripe.prices.retrieve(priceId)
+    console.log('💵 Usando preço:', latestPrice.id, latestPrice.unit_amount)
+    
+    // Criar Stripe Checkout Session usando o PREÇO CORRETO
     const checkoutSession = await stripe.checkout.sessions.create({
       ...(customerId ? { customer: customerId } : { customer_email: session.user.email }),
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [
         {
-          price: product.default_price as string,
+          price: priceId, // ✅ Usar o priceId correto
           quantity: 1,
         },
       ],
@@ -118,7 +150,7 @@ export async function POST(request: Request) {
         },
       ],
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout?cancelled=true`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}`,
     })
     
     return NextResponse.json({ 

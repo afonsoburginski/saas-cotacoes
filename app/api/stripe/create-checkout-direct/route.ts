@@ -44,11 +44,11 @@ export async function GET(request: Request) {
       console.log('📝 Novo customer será criado no checkout')
     }
     
-    // IDs dos produtos do Stripe
+    // IDs REAIS dos produtos do Stripe (da tabela wrapper)
     const STRIPE_PRODUCT_IDS: Record<string, string> = {
-      'basico': 'prod_TGr7IAyhlL35IF',
-      'plus': 'prod_TGr7gRQ0OaIzxo',
-      'premium': 'prod_TGr9sPpDEtFQ61',
+      'basico': 'prod_TJBr74CwsQFrbo',
+      'plus': 'prod_TJBvLbpuSMhCU4',
+      'premium': 'prod_TJBxi7usfzf57O',
     }
     
     const stripeProductId = STRIPE_PRODUCT_IDS[plan]

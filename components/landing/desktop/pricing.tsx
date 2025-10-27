@@ -7,6 +7,7 @@ import { useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useStoreSlug } from "@/hooks/use-store-slug";
+import { usePlans } from "@/hooks/use-plans";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,10 +19,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const plans = [
+// Mapear ícones
+const iconMap: Record<string, React.ElementType> = {
+  store: Store,
+  rocket: Rocket,
+  video: Video,
+}
+
+const staticPlans = [
   {
     name: "Básico",
-    price: "R$ 99",
+    price: "R$ 129,99",
     period: "/mês",
     description: "Ideal para pequenas empresas começando",
     icon: Store,
@@ -39,7 +47,7 @@ const plans = [
   },
   {
     name: "Plus",
-    price: "R$ 189,99",
+    price: "R$ 219,99",
     period: "/mês",
     description: "Para empresas crescerem rápido",
     icon: Rocket,
@@ -58,7 +66,7 @@ const plans = [
   },
   {
     name: "Premium",
-    price: "R$ 249,99",
+    price: "R$ 289,99",
     period: "/mês",
     description: "Vídeos e campanhas avançadas",
     icon: Video,
@@ -83,6 +91,28 @@ export function Pricing() {
   const { data: session } = useSession();
   const { data: storeSlug } = useStoreSlug();
   const router = useRouter();
+  const { data: dynamicPlans, isLoading } = usePlans();
+
+  // Combinar dados dinâmicos com dados estáticos
+  const plans = dynamicPlans && dynamicPlans.length > 0 ? dynamicPlans.map((dp: any) => {
+    const staticPlan = staticPlans.find(sp => sp.name === dp.nome);
+    return {
+      ...dp,
+      name: dp.nome,
+      price: dp.precoFormatted,
+      period: "/mês",
+      icon: iconMap[dp.icon] || Store,
+      description: dp.description || staticPlan?.description || "",
+      features: staticPlan?.features || [],
+      buttonText: "Começar Agora",
+      popular: dp.id === 'plus',
+      color: "bg-[#0052FF]",
+    };
+  }) : staticPlans;
+
+  if (isLoading) {
+    return <div>Carregando planos...</div>
+  }
   
   const handlePlanClick = (planName: string) => {
     // Converter nome para ID (sem acentos)
@@ -180,17 +210,17 @@ export function Pricing() {
                 </div>
               </div>
               
-              <Button 
-                onClick={() => handlePlanClick(plan.name)}
-                className="w-full mb-6 bg-[#0052FF] hover:bg-[#0052FF]/90 text-white border-0"
-              >
-                {plan.buttonText}
-              </Button>
+                     <Button 
+                       onClick={() => handlePlanClick(plan.name)}
+                       className="w-full mb-6 bg-[#0052FF] hover:bg-[#0052FF]/90 text-white border-0"
+                     >
+                       {plan.buttonText}
+                     </Button>
               
               <div className="border-t border-gray-100 pt-5">
                 <p className="text-xs font-semibold text-gray-500 mb-3 font-montserrat">Features Incluídas:</p>
                 <ul className="space-y-2.5">
-                  {plan.features.map((feature, featureIndex) => (
+                  {(plan.features || []).map((feature: any, featureIndex: number) => (
                     <li key={featureIndex} className="flex items-center gap-2">
                       <div className="w-4 h-4 rounded bg-[#0052FF]/10 flex items-center justify-center flex-shrink-0">
                         <Check className="w-3 h-3 text-[#0052FF]" />

@@ -14,12 +14,12 @@ export async function middleware(request: NextRequest) {
   // 1. Rotas totalmente públicas (não requerem autenticação)
   const publicPaths = [
     '/',
-    '/landing',
     '/explorar',
     '/categoria',
     '/fornecedor',
     '/comparar',
     '/subscription/expired',
+    '/admin',
   ]
   
   const publicApiPaths = [
@@ -38,6 +38,16 @@ export async function middleware(request: NextRequest) {
     publicPaths.some(p => pathname === p || pathname.startsWith(`${p}/`)) ||
     publicApiPaths.some(p => pathname.startsWith(p))
   ) {
+    return NextResponse.next()
+  }
+  
+  // Permitir /admin/login sem autenticação
+  if (pathname.startsWith('/admin/login')) {
+    return NextResponse.next()
+  }
+  
+  // Permitir /admin/dashboard sem autenticação (vai ser controlado pelo layout)
+  if (pathname.startsWith('/admin/dashboard')) {
     return NextResponse.next()
   }
 
