@@ -46,21 +46,42 @@ export async function POST(request: Request) {
 
     // Detectar plano via subscription
     let plan: 'basico' | 'plus' | 'premium' | null = null
-    const subscriptionId = session.subscription as string
+    const subscriptionData = session.subscription
+    
+    let subscriptionId: string | null = null
+    if (typeof subscriptionData === 'string') {
+      subscriptionId = subscriptionData
+    } else if (typeof subscriptionData === 'object' && subscriptionData?.id) {
+      subscriptionId = subscriptionData.id
+    }
+    
+    console.log('🔍 Subscription ID:', subscriptionId)
     
     if (subscriptionId) {
-      const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-      const priceId = subscription.items.data[0]?.price.id
-      
-      if (priceId === 'price_1SMZvvLW9AlKdS77OQ4Swn6g') plan = 'basico'
-      else if (priceId === 'price_1SMZxbLW9AlKdS77gf63b0Un') plan = 'plus'
-      else if (priceId === 'price_1SMZy0LW9AlKdS771F9gwCPw') plan = 'premium'
-      
-      console.log('🔍 Plan detected:', priceId, '→', plan)
+      try {
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+        const priceId = subscription.items.data[0]?.price.id
+        console.log('📦 Price ID from subscription:', priceId)
+        
+        if (priceId === 'price_1SMZvvLW9AlKdS77OQ4Swn6g') plan = 'basico'
+        else if (priceId === 'price_1SMZxbLW9AlKdS77gf63b0Un') plan = 'plus'
+        else if (priceId === 'price_1SMZy0LW9AlKdS771F9gwCPw') plan = 'premium'
+        
+        console.log('🔍 Plan detected:', priceId, '→', plan)
+      } catch (err) {
+        console.error('❌ Erro ao buscar subscription:', err)
+      }
+    }
+    
+    // Fallback: Tentar detectar plano via metadata
+    if (!plan && session.metadata?.plan) {
+      plan = session.metadata.plan as 'basico' | 'plus' | 'premium'
+      console.log('🔍 Plan from metadata:', plan)
     }
 
     if (!plan) {
-      return NextResponse.json({ error: 'Could not detect plan' }, { status: 400 })
+      console.error('❌ Não foi possível detectar o plano')
+      return NextResponse.json({ error: 'Could not detect plan', details: 'No subscription or metadata found' }, { status: 400 })
     }
 
     // Pegar custom fields

@@ -33,19 +33,36 @@ export default function StripeSuccessPage() {
     const syncStripeData = async () => {
       try {
         console.log('🔄 Sincronizando dados do Stripe...')
-        const res = await fetch('/api/webhooks/stripe-sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId: session_id })
-        })
         
-        const data = await res.json()
-        console.log('📦 Dados sincronizados:', data)
+        // Tentar até 5 vezes
+        let attempts = 0
+        const maxAttempts = 5
         
-        if (data.success && data.store) {
-          console.log('✅ Loja criada com sucesso:', data.store.slug)
-          setStoreReady(true)
+        const trySync = async (): Promise<void> => {
+          attempts++
+          console.log(`🔄 Tentativa ${attempts}/${maxAttempts} de sincronização`)
+          
+          const res = await fetch('/api/webhooks/stripe-sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: session_id })
+          })
+          
+          const data = await res.json()
+          console.log('📦 Resposta da API:', data)
+          
+          if (data.success && data.store) {
+            console.log('✅ Loja criada com sucesso:', data.store.slug)
+            setStoreReady(true)
+          } else if (data.error && attempts < maxAttempts) {
+            console.log('⚠️ Falhou, tentando novamente em 2s...')
+            setTimeout(trySync, 2000)
+          } else {
+            console.error('❌ Falha ao sincronizar após todas as tentativas:', data.error)
+          }
         }
+        
+        trySync()
       } catch (error) {
         console.error('❌ Erro ao sincronizar:', error)
       }
