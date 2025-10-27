@@ -35,8 +35,14 @@ export default function StripeSuccessPage() {
       setLoading(false)
       setSuccess(true)
       console.log('✅ Pagamento confirmado!')
+      
+      // Abrir dialog automaticamente se usuário não estiver logado
+      if (!session?.user) {
+        console.log('🔑 Abrindo dialog de cadastro/login...')
+        setAuthDialogOpen(true)
+      }
     }, 2000)
-  }, [searchParams, router])
+  }, [searchParams, router, session])
 
   // Quando usuário fizer login, mostrar "Tudo Pronto!" depois "Ir para Minha Loja"
   useEffect(() => {
@@ -192,14 +198,30 @@ export default function StripeSuccessPage() {
     )
   }
 
+  console.log('🔍 Estado atual:', { 
+    loading, 
+    success, 
+    authDialogOpen, 
+    session: session?.user ? 'logado' : 'não logado',
+    buttonText,
+    readyForStore
+  })
+
+  console.log('🎨 Renderizando dialog com open={}:', authDialogOpen)
+
   return (
     <>
       {/* Auth Dialog */}
+      {console.log('🎭 AuthDialog sendo renderizado com open={}:', authDialogOpen)}
       <AuthDialog 
         open={authDialogOpen} 
-        onOpenChange={setAuthDialogOpen}
+        onOpenChange={(open) => {
+          console.log('🔄 Dialog mudou para:', open)
+          setAuthDialogOpen(open)
+        }}
         mode="register"
       />
+      {console.log('✅ AuthDialog renderizado')}
     </>
   )
 }
