@@ -93,13 +93,21 @@ export default function StripeSuccessPage() {
     return () => clearTimeout(timer)
   }, [searchParams, router])
 
-  // Fechar dialog quando usuário fizer login e loja estiver pronta
+  // Abrir dialog AUTOMATICAMENTE quando loja estiver pronta e usuário não estiver logado
+  useEffect(() => {
+    if (storeReady && !session?.user && !authDialogOpen) {
+      console.log('🔑 Loja pronta e usuário não logado - abrindo dialog AUTOMATICAMENTE')
+      setAuthDialogOpen(true)
+    }
+  }, [storeReady, session, authDialogOpen])
+
+  // Fechar dialog quando usuário fizer login
   useEffect(() => {
     if (session?.user && authDialogOpen) {
       console.log('✅ Usuário logado, fechando dialog')
       setAuthDialogOpen(false)
     }
-  }, [session, authDialogOpen, storeReady])
+  }, [session, authDialogOpen])
 
   useEffect(() => {
     if (session?.user && success) {
@@ -197,7 +205,7 @@ export default function StripeSuccessPage() {
               Pagamento Confirmado! 🎉
             </h2>
             <p className="text-gray-600 mb-6">
-              {!session?.user && !storeReady && 'Configurando seu pagamento...'}
+              {!session?.user && !storeReady && 'Configurando sua loja...'}
               {!session?.user && storeReady && 'Finalize seu cadastro para acessar sua loja'}
               {session?.user && !storeReady && 'Configurando sua loja...'}
               {session?.user && storeReady && 'Sua loja está pronta!'}
@@ -212,7 +220,7 @@ export default function StripeSuccessPage() {
                   className="bg-blue-100 text-blue-700 border-2 border-blue-400 cursor-wait"
                 >
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {!session?.user ? 'Configurando pagamento...' : 'Configurando loja...'}
+                  Configurando loja...
                 </Button>
                 <p className="text-xs text-gray-500 mt-2">
                   Aguarde, por favor...
@@ -220,14 +228,14 @@ export default function StripeSuccessPage() {
               </div>
             )}
             
-            {/* "Finalizar Cadastro" SÓ aparece se storeReady=true e usuário NÃO logado */}
+            {/* Se storeReady=true e usuário NÃO logado, mostrar botão (dialog abre automaticamente) */}
             {storeReady && !session?.user && (
               <Button 
                 onClick={handleFinalizarCadastro}
                 size="lg"
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
-                Finalizar Cadastro com Google
+                Conectar com Google
               </Button>
             )}
             

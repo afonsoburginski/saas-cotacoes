@@ -176,10 +176,20 @@ export async function POST(request: Request) {
       
       console.log('📝 Atualizando loja:', JSON.stringify(updateData, null, 2))
       
-      [store] = await db.update(stores)
+      const updatedStores = await db.update(stores)
         .set(updateData)
         .where(eq(stores.userId, userId))
         .returning()
+      
+      store = updatedStores[0]
+      
+      if (!store) {
+        console.error('❌ Erro: store não encontrado após update')
+        return NextResponse.json(
+          { error: 'Failed to sync', details: 'Store not found after update' },
+          { status: 500 }
+        )
+      }
       
       console.log('✅ Loja atualizada:', store.id)
     } else {
@@ -199,7 +209,16 @@ export async function POST(request: Request) {
       
       console.log('📝 Criando loja:', JSON.stringify(storeData, null, 2))
       
-      [store] = await db.insert(stores).values(storeData).returning()
+      const insertedStores = await db.insert(stores).values(storeData).returning()
+      store = insertedStores[0]
+      
+      if (!store) {
+        console.error('❌ Erro: store não retornado após insert')
+        return NextResponse.json(
+          { error: 'Failed to sync', details: 'Store not returned after insert' },
+          { status: 500 }
+        )
+      }
       
       console.log('✅ Loja criada:', store.id, store.slug)
     }
