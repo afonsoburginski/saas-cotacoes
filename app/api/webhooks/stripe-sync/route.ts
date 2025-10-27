@@ -132,16 +132,17 @@ export async function POST(request: Request) {
     } else {
       userId = existingUser.id
       
-      const updateData = {
+      const updateData: any = {
         plan: plan,
         businessName: businessName,
         businessType: businessType,
-        phone: phone || undefined,
-        address: fullAddress,
         role: 'fornecedor',
         stripeCustomerId: session.customer as string,
-        updatedAt: new Date(),
       }
+      
+      // Só atualiza se for fornecido
+      if (phone) updateData.phone = phone
+      if (fullAddress) updateData.address = fullAddress
       
       console.log('📝 Atualizando usuário:', JSON.stringify(updateData, null, 2))
       
@@ -167,11 +168,10 @@ export async function POST(request: Request) {
 
     let store
     if (existingStore) {
-      const updateData = {
+      const updateData: any = {
         status: 'approved',
         plano: plan,
         priorityScore: PLAN_DETAILS[plan].priority,
-        updatedAt: new Date()
       }
       
       console.log('📝 Atualizando loja:', JSON.stringify(updateData, null, 2))

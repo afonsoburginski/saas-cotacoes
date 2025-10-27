@@ -42,23 +42,34 @@ export default function StripeSuccessPage() {
           attempts++
           console.log(`🔄 Tentativa ${attempts}/${maxAttempts} de sincronização`)
           
-          const res = await fetch('/api/webhooks/stripe-sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId: session_id })
-          })
-          
-          const data = await res.json()
-          console.log('📦 Resposta da API:', data)
-          
-          if (data.success && data.store) {
-            console.log('✅ Loja criada com sucesso:', data.store.slug)
-            setStoreReady(true)
-          } else if (data.error && attempts < maxAttempts) {
-            console.log('⚠️ Falhou, tentando novamente em 2s...')
-            setTimeout(trySync, 2000)
-          } else {
-            console.error('❌ Falha ao sincronizar após todas as tentativas:', data.error)
+          try {
+            const res = await fetch('/api/webhooks/stripe-sync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sessionId: session_id })
+            })
+            
+            const data = await res.json()
+            console.log('📦 Resposta da API:', data)
+            
+            if (data.success && data.store) {
+              console.log('✅ Loja criada com sucesso:', data.store.slug)
+              setStoreReady(true)
+            } else if (data.error && attempts < maxAttempts) {
+              console.log('⚠️ Falhou, tentando novamente em 2s...')
+              setTimeout(trySync, 2000)
+            } else if (attempts >= maxAttempts) {
+              console.error('❌ Falha ao sincronizar após todas as tentativas:', data.error)
+              setError('Não foi possível sincronizar os dados do pagamento. Por favor, entre em contato com o suporte.')
+            }
+          } catch (fetchError) {
+            console.error('❌ Erro na requisição:', fetchError)
+            if (attempts < maxAttempts) {
+              console.log('⚠️ Tentando novamente em 2s...')
+              setTimeout(trySync, 2000)
+            } else {
+              setError('Erro ao processar pagamento. Por favor, tente novamente.')
+            }
           }
         }
         
@@ -76,24 +87,19 @@ export default function StripeSuccessPage() {
       setSuccess(true)
       console.log('✅ Pagamento confirmado!')
       console.log('🎯 Estado: storeReady =', storeReady)
-      
-      // Abrir dialog automaticamente se usuário não estiver logado
-      if (!session?.user) {
-        console.log('🔑 Abrindo dialog de cadastro/login...')
-        setAuthDialogOpen(true)
-      }
+      console.log('🎯 Sessão: session?.user =', session?.user)
     }, 2000)
     
     return () => clearTimeout(timer)
-  }, [searchParams, router, session])
+  }, [searchParams, router])
 
-  // Fechar dialog quando usuário fizer login
+  // Fechar dialog quando usuário fizer login e loja estiver pronta
   useEffect(() => {
     if (session?.user && authDialogOpen) {
       console.log('✅ Usuário logado, fechando dialog')
       setAuthDialogOpen(false)
     }
-  }, [session, authDialogOpen])
+  }, [session, authDialogOpen, storeReady])
 
   useEffect(() => {
     if (session?.user && success) {
@@ -110,6 +116,14 @@ export default function StripeSuccessPage() {
   }
 
   const handleGoToStore = () => {
+    if (!storeReady) {
+      console.log('⚠️ Loja ainda não está pronta!')
+      return
+    }
+    if (!session?.user) {
+      console.log('⚠️ Usuário ainda não está logado!')
+      return
+    }
     console.log('🏪 Redirecionando para loja...')
     router.push('/loja/loading')
   }
@@ -183,21 +197,14 @@ export default function StripeSuccessPage() {
               Pagamento Confirmado! 🎉
             </h2>
             <p className="text-gray-600 mb-6">
-              {session?.user ? 'Sua loja está pronta!' : 'Finalize seu cadastro para acessar sua loja'}
+              {!session?.user && !storeReady && 'Configurando seu pagamento...'}
+              {!session?.user && storeReady && 'Finalize seu cadastro para acessar sua loja'}
+              {session?.user && !storeReady && 'Configurando sua loja...'}
+              {session?.user && storeReady && 'Sua loja está pronta!'}
             </p>
             
-            {/* Botão muda conforme o estado */}
-            {!session?.user && (
-              <Button 
-                onClick={handleFinalizarCadastro}
-                size="lg"
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                Finalizar Cadastro
-              </Button>
-            )}
-            
-            {session?.user && !storeReady && (
+            {/* Apenas "Configurando loja" se storeReady não está pronto */}
+            {!storeReady && (
               <div>
                 <Button 
                   disabled
@@ -205,15 +212,27 @@ export default function StripeSuccessPage() {
                   className="bg-blue-100 text-blue-700 border-2 border-blue-400 cursor-wait"
                 >
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Configurando loja...
+                  {!session?.user ? 'Configurando pagamento...' : 'Configurando loja...'}
                 </Button>
                 <p className="text-xs text-gray-500 mt-2">
-                  Aguarde enquanto preparamos sua loja
+                  Aguarde, por favor...
                 </p>
               </div>
             )}
             
-            {session?.user && storeReady && (
+            {/* "Finalizar Cadastro" SÓ aparece se storeReady=true e usuário NÃO logado */}
+            {storeReady && !session?.user && (
+              <Button 
+                onClick={handleFinalizarCadastro}
+                size="lg"
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Finalizar Cadastro com Google
+              </Button>
+            )}
+            
+            {/* "Ir para Minha Loja" SÓ aparece se storeReady=true E usuário logado */}
+            {storeReady && session?.user && (
               <Button 
                 onClick={handleGoToStore}
                 size="lg"
