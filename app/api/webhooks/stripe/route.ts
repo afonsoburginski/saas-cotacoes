@@ -49,56 +49,141 @@ export async function POST(request: Request) {
         const session = event.data.object as Stripe.Checkout.Session
         
         const userId = session.metadata?.userId
-        const plan = session.metadata?.plan as keyof typeof PLAN_DETAILS | null
+        const planFromMetadata = session.metadata?.plan as keyof typeof PLAN_DETAILS | null
+        const email = session.customer_details?.email
+        const stripeCustomerId = session.customer as string
+        const stripeSubscriptionId = session.subscription as string
         
-        if (!userId || !plan || !PLAN_DETAILS[plan]) {
-          console.error('❌ Missing or invalid userId or plan in metadata')
+        // Detectar se é um payment link (sem userId)
+        const isPaymentLink = !userId
+        console.log('📦 Processing checkout - isPaymentLink:', isPaymentLink, 'userId:', userId || 'none')
+        
+        // Detectar plano se não veio no metadata (para payment links)
+        let plan: keyof typeof PLAN_DETAILS | null = planFromMetadata
+        if (!plan && stripeSubscriptionId) {
+          try {
+            const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId)
+            const priceId = subscription.items.data[0]?.price.id
+            
+            // Mapear price ID para plano
+            if (priceId === 'price_1SMZvvLW9AlKdS77OQ4Swn6g') plan = 'basico'
+            else if (priceId === 'price_1SMZxbLW9AlKdS77gf63b0Un') plan = 'plus'
+            else if (priceId === 'price_1SMZy0LW9AlKdS771F9gwCPw') plan = 'premium'
+            
+            console.log('🔍 Plano detectado via subscription:', priceId, '→', plan)
+          } catch (err) {
+            console.error('Erro ao buscar subscription:', err)
+          }
+        }
+        
+        if (!plan || !PLAN_DETAILS[plan]) {
+          console.error('❌ Não foi possível detectar o plano')
           break
         }
         
-        console.log('📦 Processing checkout for user:', userId, 'plan:', plan)
+        console.log('📦 Processing checkout for:', userId || 'new user via payment link', 'plan:', plan)
         
         // Pegar custom fields do Stripe
         const businessName = session.custom_fields?.find(f => f.key === 'business_name')?.text?.value
-        const businessType = session.custom_fields?.find(f => f.key === 'business_type')?.dropdown?.value
+        const businessType = session.custom_fields?.find(f => f.key === 'business_type')?.dropdown?.value || 'comercio' // Default comercio
         const phone = session.customer_details?.phone
         const address = session.customer_details?.address
-        const stripeCustomerId = session.customer as string // ID do customer no Stripe
-        const stripeSubscriptionId = session.subscription as string // ID da subscription
         
         // Formatar endereço completo
         const fullAddress = address ? 
           `${address.line1}${address.line2 ? ', ' + address.line2 : ''}, ${address.city} - ${address.state}, ${address.postal_code}` : 
           undefined
         
-        // Atualizar usuário com TODOS os dados incluindo IDs do Stripe
-        const [updatedUser] = await db.update(user).set({
-          plan: plan,
-          businessName: businessName || undefined,
-          businessType: businessType as 'comercio' | 'servico' | undefined,
-          phone: phone || undefined,
-          address: fullAddress,
-          role: 'fornecedor',
-          stripeCustomerId: stripeCustomerId, // ⭐ VINCULA COM stripe_customers
-          updatedAt: new Date(),
-        }).where(eq(user.id, userId)).returning()
+        let updatedUser
         
-        console.log('✅ User updated:', updatedUser.email)
+        if (isPaymentLink && email) {
+          // PAYMENT LINK: Buscar ou criar usuário por email
+          console.log('🔗 Payment link detectado - criando/buscando usuário por email:', email)
+          
+          let [existingUser] = await db
+            .select()
+            .from(user)
+            .where(eq(user.email, email))
+            .limit(1)
+          
+          if (!existingUser) {
+            // Criar novo usuário
+            const newUserId = `usr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+            
+            const [newUser] = await db.insert(user).values({
+              id: newUserId,
+              email: email,
+              name: session.customer_details?.name || 'Usuário',
+              emailVerified: true,
+              role: 'fornecedor',
+              plan: plan,
+              businessName: businessName,
+              businessType: 'comercio', // Default para payment links
+              phone: phone,
+              address: fullAddress,
+              stripeCustomerId: stripeCustomerId,
+            }).returning()
+            
+            updatedUser = newUser
+            console.log('✅ Novo usuário criado:', updatedUser.id)
+          } else {
+            // Usuário já existe, atualizar
+            const [updatedUserData] = await db.update(user).set({
+              plan: plan,
+              businessName: businessName || undefined,
+              businessType: 'comercio',
+              phone: phone || undefined,
+              address: fullAddress,
+              role: 'fornecedor',
+              stripeCustomerId: stripeCustomerId,
+              updatedAt: new Date(),
+            }).where(eq(user.id, existingUser.id)).returning()
+            
+            updatedUser = updatedUserData
+            console.log('✅ Usuário existente atualizado:', updatedUser.id)
+          }
+        } else if (userId) {
+          // CHECKOUT TRADICIONAL: Usuário já existe
+          const businessTypeValue = (businessType || 'comercio') as 'comercio' | 'servico'
+          
+          const [updatedUserData] = await db.update(user).set({
+            plan: plan,
+            businessName: businessName || undefined,
+            businessType: businessTypeValue,
+            phone: phone || undefined,
+            address: fullAddress,
+            role: 'fornecedor',
+            stripeCustomerId: stripeCustomerId,
+            updatedAt: new Date(),
+          }).where(eq(user.id, userId)).returning()
+          
+          updatedUser = updatedUserData
+          console.log('✅ User atualizado:', updatedUser.email)
+        } else {
+          console.error('❌ Não foi possível processar: sem userId e sem email')
+          break
+        }
+        
+        if (!updatedUser) {
+          console.error('❌ updatedUser é undefined')
+          break
+        }
         
         // Gerar slug único do nome da empresa
+        const currentUserId = updatedUser.id
         const slug = (businessName || updatedUser.name || 'empresa')
           .toLowerCase()
           .normalize('NFD')
           .replace(/[\u0300-\u036f]/g, '') // Remove acentos
           .replace(/[^a-z0-9]+/g, '-') // Substitui espaços por -
           .replace(/^-|-$/g, '') // Remove - do início e fim
-          + '-' + userId.substring(0, 6) // Garante unicidade
+          + '-' + currentUserId.substring(0, 6) // Garante unicidade
         
         // Verificar se já existe store (renovação)
         const [existingStore] = await db
           .select()
           .from(stores)
-          .where(eq(stores.userId, userId))
+          .where(eq(stores.userId, currentUserId))
           .limit(1)
         
         if (existingStore) {
@@ -120,7 +205,7 @@ export async function POST(request: Request) {
         } else {
           // PRIMEIRA VEZ: Criar nova store
           const [newStore] = await db.insert(stores).values({
-            userId: userId,
+            userId: currentUserId,
             slug: slug,
             nome: businessName || `${updatedUser.name || 'Empresa'}`,
             email: session.customer_details?.email || undefined,
@@ -136,7 +221,7 @@ export async function POST(request: Request) {
           console.log('🏪 Store created:', newStore.id, newStore.nome)
         }
         
-        console.log('✅ Checkout completo para user:', userId)
+        console.log('✅ Checkout completo para user:', currentUserId)
         break
       }
       

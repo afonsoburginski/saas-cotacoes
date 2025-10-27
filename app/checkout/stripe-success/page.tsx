@@ -13,70 +13,22 @@ export default function StripeSuccessPage() {
   const [success, setSuccess] = useState(false)
 
   useEffect(() => {
-    const processPayment = async () => {
-      try {
-        const session_id = searchParams.get('session_id')
-        
-        if (!session_id) {
-          setError('Sessão de pagamento inválida')
-          setLoading(false)
-          return
-        }
-
-        // Verificar status do pagamento
-        const res = await fetch(`/api/stripe/session-details?session_id=${session_id}`)
-        const data = await res.json()
-
-        if (!res.ok || data.payment_status !== 'paid') {
-          setError('Pagamento não confirmado')
-          setLoading(false)
-          return
-        }
-
-        // Criar/atualizar loja automaticamente
-        const createStoreRes = await fetch('/api/store/create-from-stripe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            session_id,
-            customer_email: data.customer_email,
-            customer_id: data.customer_id,
-            subscription_id: data.subscription_id,
-          })
-        })
-
-        if (!createStoreRes.ok) {
-          const errorData = await createStoreRes.json()
-          console.error('Erro ao criar loja:', errorData)
-          // Continuar mesmo assim - webhook vai processar
-        }
-
-        setSuccess(true)
-        setLoading(false)
-
-        // Redirecionar para loja após 3 segundos
-        setTimeout(async () => {
-          if (createStoreRes.ok) {
-            const storeData = await createStoreRes.json();
-            if (storeData.slug) {
-              router.push(`/loja/${storeData.slug}/catalogo`);
-            } else {
-              router.push('/loja/loading')
-            }
-          } else {
-            // Esperar webhook processar
-            setTimeout(() => router.push('/loja/loading'), 2000)
-          }
-        }, 3000)
-
-      } catch (err) {
-        console.error('Erro no sucesso do pagamento:', err)
-        setError('Erro ao processar pagamento')
-        setLoading(false)
-      }
+    const session_id = searchParams.get('session_id')
+    
+    if (!session_id) {
+      console.error('Sessão de pagamento inválida')
+      router.push('/')
+      return
     }
 
-    processPayment()
+    // Mostrar sucesso e redirecionar
+    setSuccess(true)
+    setLoading(false)
+
+    // Aguardar webhook processar e redirecionar
+    setTimeout(() => {
+      router.push('/loja/loading')
+    }, 3000)
   }, [searchParams, router])
 
   if (loading) {
