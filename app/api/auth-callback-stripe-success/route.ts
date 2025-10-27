@@ -39,10 +39,20 @@ export async function GET(request: Request) {
         .where(eq(userTable.id, session.user.id))
     }
     
-    // O login aconteceu no dialog, não precisa redirecionar!
-    // A página de sucesso já vai detectar a sessão e mostrar o botão "Ir para Minha Loja"
-    console.log('✅ Login confirmado, usuário permanece na página')
-    return new Response(null, { status: 200 })
+    // Pegar a URL da página de sucesso original (do cookie ou referer)
+    const referer = request.headers.get('referer')
+    let redirectUrl = '/checkout/stripe-success?session_id=authenticated'
+    
+    if (referer && referer.includes('stripe-success')) {
+      const refererUrl = new URL(referer)
+      const sessionId = refererUrl.searchParams.get('session_id')
+      if (sessionId) {
+        redirectUrl = `/checkout/stripe-success?session_id=${sessionId}`
+      }
+    }
+    
+    console.log('🔄 Redirecionando de volta para:', redirectUrl)
+    return NextResponse.redirect(new URL(redirectUrl, request.url))
     
   } catch (error) {
     console.error('Error in auth callback:', error)
