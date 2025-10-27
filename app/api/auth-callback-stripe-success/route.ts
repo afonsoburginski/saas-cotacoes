@@ -13,11 +13,14 @@ export async function GET(request: Request) {
       headers: await headers()
     })
     
+    console.log('🔐 Auth callback stripe-success iniciado')
+    
     if (!session?.user) {
+      console.log('❌ Sem sessão de usuário')
       return NextResponse.redirect(new URL('/', request.url))
     }
     
-    console.log('🔐 Auth callback stripe-success - User:', session.user.email)
+    console.log('✅ Usuário logado:', session.user.email, 'ID:', session.user.id)
     
     // Buscar dados do usuário
     const [userData] = await db
@@ -30,6 +33,7 @@ export async function GET(request: Request) {
     
     // Garantir role de fornecedor
     if (userData?.role !== 'fornecedor' && userData?.role !== 'loja') {
+      console.log('🔄 Atualizando role para fornecedor')
       await db.update(userTable)
         .set({ role: 'fornecedor', updatedAt: new Date() })
         .where(eq(userTable.id, session.user.id))
@@ -46,6 +50,7 @@ export async function GET(request: Request) {
         `)
         
         const hasActive = parseInt(result[0]?.count || '0') > 0
+        console.log('💳 Subscription ativa?', hasActive)
         
         if (hasActive) {
           console.log('✅ SUBSCRIPTION ATIVA! Buscando loja...')
@@ -57,6 +62,8 @@ export async function GET(request: Request) {
             .where(eq(stores.userId, session.user.id))
             .limit(1)
           
+          console.log('🏪 Loja encontrada:', store?.slug || 'nenhuma')
+          
           if (store?.slug) {
             console.log('🏪 Redirecionando para loja:', store.slug)
             return NextResponse.redirect(new URL(`/loja/${store.slug}/catalogo`, request.url))
@@ -64,15 +71,19 @@ export async function GET(request: Request) {
             console.log('⚠️ Tem subscription mas não tem store - ir para /loja/loading')
             return NextResponse.redirect(new URL('/loja/loading', request.url))
           }
+        } else {
+          console.log('⚠️ Sem subscription ativa - redirecionando para /loja/loading')
+          return NextResponse.redirect(new URL('/loja/loading', request.url))
         }
       } catch (error) {
-        console.error('Erro ao verificar subscription:', error)
+        console.error('❌ Erro ao verificar subscription:', error)
+        return NextResponse.redirect(new URL('/loja/loading', request.url))
       }
+    } else {
+      console.log('⚠️ Sem customer ID - aguardando webhook processar')
+      // Aguardar webhook processar - ir para /loja/loading que vai tentar buscar a loja
+      return NextResponse.redirect(new URL('/loja/loading', request.url))
     }
-    
-    // Não tem subscription ativa - voltar para stripe-success
-    console.log('📍 Sem subscription ativa - voltando para stripe-success')
-    return NextResponse.redirect(new URL('/checkout/stripe-success', request.url))
   } catch (error) {
     console.error('Error in auth callback:', error)
     return NextResponse.redirect(new URL('/', request.url))
