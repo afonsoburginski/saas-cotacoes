@@ -55,11 +55,11 @@ export default function StripeSuccessPage() {
         setLoading(false)
 
         // Redirecionar para loja após 3 segundos
-        setTimeout(() => {
+        setTimeout(async () => {
           if (createStoreRes.ok) {
-            const storeData = await createStoreRes.json()
+            const storeData = await createStoreRes.json();
             if (storeData.slug) {
-              router.push(`/loja/${storeData.slug}/catalogo`)
+              router.push(`/loja/${storeData.slug}/catalogo`);
             } else {
               router.push('/loja/loading')
             }
