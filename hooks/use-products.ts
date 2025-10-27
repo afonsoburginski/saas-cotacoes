@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { useEffect } from "react"
+import { useEffect, useCallback } from "react"
 import { createRealtimeSubscription } from "@/lib/supabase"
 import type { Product } from "@/lib/types"
 
@@ -45,7 +45,8 @@ export function useProducts(params?: UseProductsParams) {
       return res.json() as Promise<ProductsResponse>
     },
     staleTime: 1000 * 60 * 5, // 5 minutos de cache
-    // Removido enabled para permitir busca pública sem storeId
+    gcTime: 1000 * 60 * 10, // 10 minutos no cache
+    refetchOnWindowFocus: false, // Não recarregar ao focar janela
   })
 }
 
@@ -76,7 +77,40 @@ export function useCreateProduct() {
       if (!res.ok) throw new Error("Failed to create product")
       return res.json()
     },
-    onSuccess: () => {
+    // 🚀 UI OTIMISTA: Adiciona imediatamente antes do servidor responder
+    onMutate: async (newProduct) => {
+      await queryClient.cancelQueries({ queryKey: ["products"] })
+      
+      const previousData = queryClient.getQueryData<ProductsResponse>(["products"])
+      
+      // Criar produto temporário com ID fake
+      const tempProduct = {
+        ...newProduct,
+        id: String(Date.now()), // ID temporário como string
+      } as Product
+      
+      // Adicionar ao cache otimista
+      queryClient.setQueriesData<ProductsResponse>(
+        { queryKey: ["products"] },
+        (old) => {
+          if (!old) return { data: [tempProduct], total: 1 }
+          return {
+            ...old,
+            data: [tempProduct, ...old.data],
+            total: old.total + 1
+          }
+        }
+      )
+      
+      return { previousData, tempProduct }
+    },
+    onError: (_err, _variables, context) => {
+      // Reverter em caso de erro
+      if (context?.previousData) {
+        queryClient.setQueryData(["products"], context.previousData)
+      }
+    },
+    onSuccess: (_data, _variables, context) => {
       queryClient.invalidateQueries({ queryKey: ["products"] })
     },
   })
@@ -95,6 +129,36 @@ export function useUpdateProduct() {
       })
       if (!res.ok) throw new Error("Failed to update product")
       return res.json()
+    },
+    // 🚀 UI OTIMISTA: Atualiza imediatamente antes do servidor responder
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries({ queryKey: ["products"] })
+      
+      const previousData = queryClient.getQueryData<ProductsResponse>(["products"])
+      
+      // Atualizar cache otimista
+      queryClient.setQueriesData<ProductsResponse>(
+        { queryKey: ["products"] },
+        (old) => {
+          if (!old) return old
+          return {
+            ...old,
+            data: old.data.map(product => 
+              product.id.toString() === id 
+                ? { ...product, ...data }
+                : product
+            )
+          }
+        }
+      )
+      
+      return { previousData }
+    },
+    onError: (_err, _variables, context) => {
+      // Reverter em caso de erro
+      if (context?.previousData) {
+        queryClient.setQueryData(["products"], context.previousData)
+      }
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["products"] })
@@ -115,7 +179,33 @@ export function useDeleteProduct() {
       if (!res.ok) throw new Error("Failed to delete product")
       return res.json()
     },
-    onSuccess: () => {
+    // 🚀 UI OTIMISTA: Remove imediatamente antes do servidor responder
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ["products"] })
+      
+      const previousData = queryClient.getQueryData<ProductsResponse>(["products"])
+      
+      // Remover do cache otimista
+      queryClient.setQueriesData<ProductsResponse>(
+        { queryKey: ["products"] },
+        (old) => {
+          if (!old) return old
+          return {
+            ...old,
+            data: old.data.filter(product => product.id.toString() !== id)
+          }
+        }
+      )
+      
+      return { previousData }
+    },
+    onError: (_err, _id, context) => {
+      // Reverter em caso de erro
+      if (context?.previousData) {
+        queryClient.setQueryData(["products"], context.previousData)
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] })
     },
   })
@@ -138,7 +228,31 @@ export function useDeleteProducts() {
       )
       return results
     },
-    onSuccess: () => {
+    // 🚀 UI OTIMISTA: Remove múltiplos imediatamente
+    onMutate: async (ids) => {
+      await queryClient.cancelQueries({ queryKey: ["products"] })
+      
+      const previousData = queryClient.getQueryData<ProductsResponse>(["products"])
+      
+      queryClient.setQueriesData<ProductsResponse>(
+        { queryKey: ["products"] },
+        (old) => {
+          if (!old) return old
+          return {
+            ...old,
+            data: old.data.filter(product => !ids.includes(product.id.toString()))
+          }
+        }
+      )
+      
+      return { previousData }
+    },
+    onError: (_err, _ids, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(["products"], context.previousData)
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] })
     },
   })
@@ -164,7 +278,35 @@ export function useUpdateProducts() {
       )
       return results
     },
-    onSuccess: () => {
+    // 🚀 UI OTIMISTA: Atualiza múltiplos imediatamente
+    onMutate: async ({ ids, data }) => {
+      await queryClient.cancelQueries({ queryKey: ["products"] })
+      
+      const previousData = queryClient.getQueryData<ProductsResponse>(["products"])
+      
+      queryClient.setQueriesData<ProductsResponse>(
+        { queryKey: ["products"] },
+        (old) => {
+          if (!old) return old
+          return {
+            ...old,
+            data: old.data.map(product => 
+              ids.includes(product.id.toString())
+                ? { ...product, ...data }
+                : product
+            )
+          }
+        }
+      )
+      
+      return { previousData }
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(["products"], context.previousData)
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] })
     },
   })
@@ -189,6 +331,36 @@ export function useBulkCreateProducts() {
         )
       )
       return results
+    },
+    // 🚀 UI OTIMISTA: Adiciona múltiplos imediatamente
+    onMutate: async (newProducts) => {
+      await queryClient.cancelQueries({ queryKey: ["products"] })
+      
+      const previousData = queryClient.getQueryData<ProductsResponse>(["products"])
+      
+      const tempProducts = newProducts.map((product, idx) => ({
+        ...product,
+        id: String(Date.now() + idx),
+      })) as Product[]
+      
+      queryClient.setQueriesData<ProductsResponse>(
+        { queryKey: ["products"] },
+        (old) => {
+          if (!old) return { data: tempProducts, total: tempProducts.length }
+          return {
+            ...old,
+            data: [...tempProducts, ...old.data],
+            total: old.total + tempProducts.length
+          }
+        }
+      )
+      
+      return { previousData, tempProducts }
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(["products"], context.previousData)
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] })

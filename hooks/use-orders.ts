@@ -144,3 +144,84 @@ export function useUpdateOrderStatus() {
     },
   })
 }
+
+export function useDeleteOrder() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async (orderId: number | string) => {
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) throw new Error("Failed to delete order")
+      return res.json()
+    },
+    // 🚀 UI OTIMISTA: Remove imediatamente
+    onMutate: async (orderId) => {
+      await queryClient.cancelQueries({ queryKey: ["orders"] })
+      
+      const previousData = queryClient.getQueryData<Order[]>(["orders"])
+      
+      queryClient.setQueriesData<Order[]>(
+        { queryKey: ["orders"] },
+        (old) => {
+          if (!old) return old
+          return old.filter(order => order.id !== Number(orderId))
+        }
+      )
+      
+      return { previousData }
+    },
+    onError: (_err, _orderId, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(["orders"], context.previousData)
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] })
+    },
+  })
+}
+
+export function useDeleteOrders() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async (orderIds: number[]) => {
+      const results = await Promise.all(
+        orderIds.map(id => 
+          fetch(`/api/orders/${id}`, { method: 'DELETE' })
+            .then(res => {
+              if (!res.ok) throw new Error(`Failed to delete order ${id}`)
+              return res.json()
+            })
+        )
+      )
+      return results
+    },
+    // 🚀 UI OTIMISTA: Remove múltiplos imediatamente
+    onMutate: async (orderIds) => {
+      await queryClient.cancelQueries({ queryKey: ["orders"] })
+      
+      const previousData = queryClient.getQueryData<Order[]>(["orders"])
+      
+      queryClient.setQueriesData<Order[]>(
+        { queryKey: ["orders"] },
+        (old) => {
+          if (!old) return old
+          return old.filter(order => !orderIds.includes(order.id))
+        }
+      )
+      
+      return { previousData }
+    },
+    onError: (_err, _orderIds, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(["orders"], context.previousData)
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] })
+    },
+  })
+}

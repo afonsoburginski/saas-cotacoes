@@ -1,27 +1,27 @@
 import { useQuery } from "@tanstack/react-query"
 
-export interface Plan {
+interface Plan {
   id: string
   nome: string
   preco: number
-  periodicidade: 'mensal' | 'anual'
-  recursos: string[]
+  precoFormatted: string
+  periodicidade: string
   ativo: boolean
-}
-
-interface PlansResponse {
-  data: Plan[]
-  total: number
+  stripeProductId: string
+  stripePriceId?: string
+  icon: string
+  description: string
 }
 
 export function usePlans() {
-  return useQuery({
+  return useQuery<Plan[]>({
     queryKey: ["plans"],
     queryFn: async () => {
       const res = await fetch("/api/plans")
       if (!res.ok) throw new Error("Failed to fetch plans")
-      return res.json() as Promise<PlansResponse>
+      const data = await res.json()
+      return data.data
     },
+    staleTime: 1000 * 60 * 5, // 5 minutos
   })
 }
-

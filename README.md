@@ -8,17 +8,7 @@ Plataforma para cotações de materiais de construção, conectando consumidores
 
 ## 🚀 Deploy
 
-### Cloudflare Pages (Recomendado)
-
-1. Acesse: https://dash.cloudflare.com
-2. Workers & Pages → Pages → Criar aplicação
-3. Conecte GitHub
-4. Configurações:
-   - Framework: Next.js
-   - Build: `npm run build`
-   - Output: `.next`
-5. Adicione variáveis de `env.txt`
-6. Deploy!
+**Vercel** - Deploy automático via Git
 
 ---
 
@@ -31,11 +21,8 @@ npm run dev
 # Build
 npm run build
 
-# Testar com Docker
-npm run docker:up
-
-# Deploy Cloudflare
-npm run cf:deploy
+# Docker local
+docker-compose up
 ```
 
 ---
@@ -54,22 +41,7 @@ drizzle/                # Database schema
 
 ## ⚙️ Variáveis de Ambiente
 
-Copie `env.txt` para `.env` (já feito)
-
----
-
-## 🐳 Docker
-
-```bash
-# Build
-docker build -t orcanorte .
-
-# Run
-docker run -p 3000:3000 --env-file .env orcanorte
-
-# Compose
-docker-compose up
-```
+Configure as variáveis necessárias no `.env`
 
 ---
 
@@ -77,9 +49,8 @@ docker-compose up
 
 - ✅ Site funcionando
 - ✅ SEO configurado
-- ✅ Deploy automático
 - ✅ API pública
-- ✅ Exclusão de produtos/serviços funcionando
+- ✅ Deploy automático
 
 ---
 
@@ -90,7 +61,6 @@ docker-compose up
 - PostgreSQL (Supabase)
 - Drizzle ORM
 - Tailwind CSS
-- Shadcn/ui
 - Stripe
 - Better Auth
 

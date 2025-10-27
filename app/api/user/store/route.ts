@@ -52,6 +52,8 @@ export async function GET() {
         telefone: store.telefone,
         plano: store.plano,
         status: store.status,
+        logo: store.logo, // 🖼️ Adicionar logo
+        coverImage: store.coverImage, // 🖼️ Adicionar coverImage
       }
     })
   } catch (error) {

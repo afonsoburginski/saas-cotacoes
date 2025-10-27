@@ -1,13 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { useSession } from "@/lib/auth-client"
 import { useQueryClient } from "@tanstack/react-query"
 import { createRealtimeSubscription } from "@/lib/supabase"
 import { ProductTable } from "@/components/products/product-table"
+import { LojaHeader } from "@/components/loja/loja-header"
 import { useProducts } from "@/hooks/use-products"
 import { useServices } from "@/hooks/use-services"
-import { LojaHeader } from "@/components/loja/loja-header"
 import { Package, Star, TrendingUp, TrendingDown, AlertTriangle, Wrench, Clock, DollarSign } from "lucide-react"
 import { 
   Card, 
@@ -81,6 +81,7 @@ export default function CatalogoPage({ params }: CatalogoPageProps) {
     fetchStore()
   }, [session?.user?.id])
   
+  // 🚀 Buscar dados com hooks otimizados
   const { data: productsData, isLoading: isLoadingProducts } = useProducts({ 
     storeId: storeId || undefined,
     includeInactive: true
@@ -118,18 +119,22 @@ export default function CatalogoPage({ params }: CatalogoPageProps) {
     }
   }, [storeId, queryClient])
   
-  // Estatísticas calculadas baseadas na tab ativa
+  // 🚀 Estatísticas memoizadas para performance
   const isProductsTab = activeTab === 'produtos'
   const currentItems = isProductsTab ? products : services
   
-  const totalItems = currentItems.length
-  const activeItems = currentItems.filter(item => item.ativo).length
-  const featuredItems = currentItems.filter(item => item.destacado).length
+  const stats = useMemo(() => {
+    const totalItems = currentItems.length
+    const activeItems = currentItems.filter(item => item.ativo).length
+    const featuredItems = currentItems.filter(item => item.destacado).length
+    const warningItems = isProductsTab 
+      ? products.filter(p => p.estoque < 10).length
+      : services.filter(s => !s.preco || s.preco <= 0).length
+    
+    return { totalItems, activeItems, featuredItems, warningItems }
+  }, [currentItems, isProductsTab, products, services])
   
-  // Para produtos: estoque baixo, para serviços: sem preço definido
-  const warningItems = isProductsTab 
-    ? products.filter(p => p.estoque < 10).length
-    : services.filter(s => !s.preco || s.preco <= 0).length
+  const { totalItems, activeItems, featuredItems, warningItems } = stats
 
   return (
     <>

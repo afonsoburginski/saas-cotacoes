@@ -1,7 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { useState } from "react"
+import { useState, useMemo } from "react"
+import { useDebounce } from "@/hooks/use-debounce"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -109,9 +110,11 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
   
   // React Query - Products
   const [searchTerm, setSearchTerm] = useState("")
+  const debouncedSearchTerm = useDebounce(searchTerm, 300) // 🚀 Debounce de 300ms para performance
   const { data: productsData, isLoading: isLoadingProducts } = useProducts({ 
     storeId,
-    includeInactive: true 
+    includeInactive: true,
+    search: debouncedSearchTerm // 🚀 Usar busca com debounce
   })
   const createProduct = useCreateProduct()
   const updateProduct = useUpdateProduct()
@@ -123,7 +126,8 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
   // React Query - Services
   const { data: servicesData, isLoading: isLoadingServices } = useServices({
     storeId,
-    includeInactive: true
+    includeInactive: true,
+    search: debouncedSearchTerm // 🚀 Usar busca com debounce
   })
   const createService = useCreateService()
   const updateService = useUpdateService()
@@ -155,32 +159,36 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
   const currentItems = currentTab === 'products' ? products : services
   
   // Obter opções únicas para filtros
-  const uniqueCategories = [...new Set(currentItems.map(p => p.categoria))]
-  const uniqueStatus = [
+  const uniqueStatus = useMemo(() => [
     { value: "ativo", label: "Ativo", count: currentItems.filter(p => p.ativo).length },
     { value: "inativo", label: "Inativo", count: currentItems.filter(p => !p.ativo).length }
-  ]
-  const uniqueDestacado = [
+  ], [currentItems])
+  
+  const uniqueDestacado = useMemo(() => [
     { value: "sim", label: "Destacado", count: currentItems.filter(p => p.destacado).length },
     { value: "nao", label: "Normal", count: currentItems.filter(p => !p.destacado).length }
-  ]
+  ], [currentItems])
   // Type guards
   const isProduct = (item: Product | Service): item is Product => 'estoque' in item
   const isService = (item: Product | Service): item is Service => 'tipoPrecificacao' in item
 
   // Filtro de estoque apenas para produtos
-  const uniqueEstoque = currentTab !== 'services' ? [
+  const uniqueEstoque = useMemo(() => currentTab !== 'services' ? [
     { value: "baixo", label: "Estoque Baixo", count: products.filter(p => p.estoque < 10).length },
     { value: "normal", label: "Estoque Normal", count: products.filter(p => p.estoque >= 10).length },
     { value: "zerado", label: "Sem Estoque", count: products.filter(p => p.estoque === 0).length }
-  ] : []
-  const uniquePreco = [
+  ] : [], [currentTab, products])
+  
+  const uniquePreco = useMemo(() => [
     { value: "variacao", label: "Variação de Preço", count: currentItems.filter(p => isProduct(p) ? p.temVariacaoPreco : !!(p as Service).precoMinimo).length },
     { value: "fixo", label: "Preço Fixo", count: currentItems.filter(p => isProduct(p) ? !p.temVariacaoPreco : !(p as Service).precoMinimo).length }
-  ]
+  ], [currentItems])
 
+  // 🚀 Memoizar itens únicos para performance
+  const uniqueCategories = useMemo(() => [...new Set(currentItems.map(p => p.categoria))], [currentItems])
+  
   // Filtrar items
-  const filteredProducts = currentItems.filter(product => {
+  const filteredProducts = useMemo(() => currentItems.filter(product => {
     const matchesSearch = product.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (isProduct(product) && product.sku?.toLowerCase().includes(searchTerm.toLowerCase())) ||
                          product.categoria.toLowerCase().includes(searchTerm.toLowerCase())
@@ -213,7 +221,7 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
                          ))
     
     return matchesSearch && matchesStatus && matchesCategoria && matchesDestacado && matchesEstoque && matchesPreco
-  })
+  }), [currentItems, searchTerm, filters])
 
   const handleSelectProduct = (productId: number, checked: boolean) => {
     if (checked) {
@@ -401,29 +409,52 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
     if (count === 0) {
       toast({
         title: "Nenhum item selecionado",
-        description: "Selecione ao menos um produto para excluir.",
+        description: currentTab === 'products' 
+          ? "Selecione ao menos um produto para excluir." 
+          : "Selecione ao menos um serviço para excluir.",
         variant: "destructive",
       })
       return
     }
     
-    deleteProducts.mutate(selectedProducts.map(id => String(id)), {
-      onSuccess: () => {
-        setSelectedProducts([])
-        setShowBulkDeleteDialog(false)
-        toast({
-          title: "Produtos excluídos!",
-          description: `${count} produtos foram removidos.`,
-        })
-      },
-      onError: () => {
-        toast({
-          title: "Erro!",
-          description: "Não foi possível excluir os produtos.",
-          variant: "destructive",
-        })
-      },
-    })
+    // 🚀 Usar função correta baseada na aba ativa
+    if (currentTab === 'services') {
+      deleteServices.mutate(selectedProducts.map(id => String(id)), {
+        onSuccess: () => {
+          setSelectedProducts([])
+          setShowBulkDeleteDialog(false)
+          toast({
+            title: "Serviços excluídos!",
+            description: `${count} serviço${count > 1 ? 's' : ''} ${count > 1 ? 'foram' : 'foi'} removido${count > 1 ? 's' : ''}.`,
+          })
+        },
+        onError: () => {
+          toast({
+            title: "Erro!",
+            description: "Não foi possível excluir os serviços.",
+            variant: "destructive",
+          })
+        },
+      })
+    } else {
+      deleteProducts.mutate(selectedProducts.map(id => String(id)), {
+        onSuccess: () => {
+          setSelectedProducts([])
+          setShowBulkDeleteDialog(false)
+          toast({
+            title: "Produtos excluídos!",
+            description: `${count} produto${count > 1 ? 's' : ''} foram removidos.`,
+          })
+        },
+        onError: () => {
+          toast({
+            title: "Erro!",
+            description: "Não foi possível excluir os produtos.",
+            variant: "destructive",
+          })
+        },
+      })
+    }
   }
 
   const handleBulkToggleStatus = (active: boolean) => {
@@ -432,31 +463,56 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
     if (count === 0) {
       toast({
         title: "Nenhum item selecionado",
-        description: "Selecione ao menos um produto para continuar.",
+        description: currentTab === 'products' 
+          ? "Selecione ao menos um produto para continuar." 
+          : "Selecione ao menos um serviço para continuar.",
         variant: "destructive",
       })
       return
     }
     
-    updateProducts.mutate(
-      { ids: selectedProducts.map(id => String(id)), data: { ativo: active } },
-      {
-        onSuccess: () => {
-          setSelectedProducts([])
-          toast({
-            title: `Produtos ${active ? "ativados" : "desativados"}!`,
-            description: `${count} produtos foram ${active ? "ativados" : "desativados"}.`,
-          })
-        },
-        onError: () => {
-          toast({
-            title: "Erro!",
-            description: "Não foi possível atualizar os produtos.",
-            variant: "destructive",
-          })
-        },
-      }
-    )
+    // 🚀 Usar função correta baseada na aba ativa
+    if (currentTab === 'services') {
+      updateServices.mutate(
+        { ids: selectedProducts.map(id => String(id)), data: { ativo: active } },
+        {
+          onSuccess: () => {
+            setSelectedProducts([])
+            toast({
+              title: `Serviços ${active ? "ativados" : "desativados"}!`,
+              description: `${count} serviço${count > 1 ? 's' : ''} ${count > 1 ? 'foram' : 'foi'} ${active ? "ativado" : "desativado"}${count > 1 ? 's' : ''}.`,
+            })
+          },
+          onError: () => {
+            toast({
+              title: "Erro!",
+              description: "Não foi possível atualizar os serviços.",
+              variant: "destructive",
+            })
+          },
+        }
+      )
+    } else {
+      updateProducts.mutate(
+        { ids: selectedProducts.map(id => String(id)), data: { ativo: active } },
+        {
+          onSuccess: () => {
+            setSelectedProducts([])
+            toast({
+              title: `Produtos ${active ? "ativados" : "desativados"}!`,
+              description: `${count} produto${count > 1 ? 's' : ''} ${count > 1 ? 'foram' : 'foi'} ${active ? "ativado" : "desativado"}${count > 1 ? 's' : ''}.`,
+            })
+          },
+          onError: () => {
+            toast({
+              title: "Erro!",
+              description: "Não foi possível atualizar os produtos.",
+              variant: "destructive",
+            })
+          },
+        }
+      )
+    }
   }
 
   const handleProductFormSubmit = (formData: ProductFormData) => {
@@ -1310,9 +1366,11 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
       <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Produtos</AlertDialogTitle>
+            <AlertDialogTitle>
+              Excluir {currentTab === 'products' ? 'Produtos' : 'Serviços'}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir {selectedProducts.length} produto{selectedProducts.length > 1 ? 's' : ''}? 
+              Tem certeza que deseja excluir {selectedProducts.length} {currentTab === 'products' ? 'produto' : 'serviço'}{selectedProducts.length > 1 ? 's' : ''}? 
               Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1324,9 +1382,11 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
                 setShowBulkDeleteDialog(false)
               }}
               className="bg-red-600 hover:bg-red-700"
-              disabled={deleteProducts.isPending}
+              disabled={currentTab === 'products' ? deleteProducts.isPending : deleteServices.isPending}
             >
-              {deleteProducts.isPending ? "Excluindo..." : `Excluir ${selectedProducts.length} produto${selectedProducts.length > 1 ? 's' : ''}`}
+              {currentTab === 'products' && deleteProducts.isPending ? "Excluindo..." : 
+               currentTab === 'services' && deleteServices.isPending ? "Excluindo..." :
+               `Excluir ${selectedProducts.length} ${currentTab === 'products' ? 'produto' : 'serviço'}${selectedProducts.length > 1 ? 's' : ''}`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
