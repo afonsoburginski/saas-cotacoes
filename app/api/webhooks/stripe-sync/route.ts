@@ -32,6 +32,16 @@ export async function POST(request: Request) {
     })
 
     console.log('📦 Session completa:', JSON.stringify(session, null, 2))
+    
+    // Extrair stripe_customer_id corretamente
+    let stripeCustomerId: string | null = null
+    if (typeof session.customer === 'string') {
+      stripeCustomerId = session.customer
+    } else if (typeof session.customer === 'object' && session.customer?.id) {
+      stripeCustomerId = session.customer.id
+    }
+    
+    console.log('👤 Stripe Customer ID:', stripeCustomerId)
 
     const email = session.customer_details?.email
     if (!email) {
@@ -110,7 +120,7 @@ export async function POST(request: Request) {
     if (!existingUser) {
       userId = `usr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       
-      const userData = {
+      const userData: any = {
         id: userId,
         email: email,
         name: session.customer_details?.name || 'Usuário',
@@ -121,7 +131,11 @@ export async function POST(request: Request) {
         businessType: businessType,
         phone: phone,
         address: fullAddress,
-        stripeCustomerId: session.customer as string,
+      }
+      
+      // Só adiciona se tiver customer ID
+      if (stripeCustomerId) {
+        userData.stripeCustomerId = stripeCustomerId
       }
       
       console.log('📝 Criando usuário:', JSON.stringify(userData, null, 2))
@@ -137,12 +151,12 @@ export async function POST(request: Request) {
         businessName: businessName,
         businessType: businessType,
         role: 'fornecedor',
-        stripeCustomerId: session.customer as string,
       }
       
       // Só atualiza se for fornecido
       if (phone) updateData.phone = phone
       if (fullAddress) updateData.address = fullAddress
+      if (stripeCustomerId) updateData.stripeCustomerId = stripeCustomerId
       
       console.log('📝 Atualizando usuário:', JSON.stringify(updateData, null, 2))
       

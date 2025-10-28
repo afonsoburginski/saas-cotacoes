@@ -4,20 +4,10 @@ import { Button } from "@/components/ui/button"
 import { AuthDialog } from "@/components/auth/auth-dialog"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useEffect, useState } from "react"
-import { useSession, signOut } from "@/lib/auth-client"
+import { useSession } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
 import { useStoreSlug } from "@/hooks/use-store-slug"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Settings, LogOut, Store } from "lucide-react"
 import Image from "next/image"
-import Link from "next/link"
 
 export function LandingTopbar() {
   const [isScrolled, setIsScrolled] = useState(false)
@@ -31,11 +21,6 @@ export function LandingTopbar() {
   const isFornecedor = userRole === 'fornecedor' || userRole === 'loja'
   const displayInitials = ((user?.name || "U").trim().split(/\s+/).map((n) => n.charAt(0)).slice(0, 2).join("") || "U").toUpperCase()
   const slug = storeSlug?.slug
-  
-  const handleLogout = async () => {
-    await signOut()
-    router.push('/explorar')
-  }
 
   useEffect(() => {
     const handleScroll = () => {
@@ -75,22 +60,16 @@ export function LandingTopbar() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
-            <Link href="/explorar">
-              <Button
-                className="bg-blue-600 text-white hover:text-gray-900 hover:bg-gray-100 transition-all duration-200 px-3 sm:px-4 text-sm sm:text-base h-9 sm:h-10"
-              >
-                Buscar Produtos
-              </Button>
-            </Link>
-            
-            {!user ? (
+            {!user || !isFornecedor ? (
               <Button
                 onClick={() => setAuthDialogOpen(true)}
                 className="bg-[#22C55E] text-white hover:bg-[#22C55E]/90 transition-all duration-200 px-4 sm:px-6 text-sm sm:text-base h-9 sm:h-10"
               >
                 Entrar
               </Button>
-            ) : isFornecedor ? (
+            ) : null}
+
+            {isFornecedor && (
               <Button
                 onClick={() => {
                   if (isLoadingSlug) return
@@ -107,16 +86,8 @@ export function LandingTopbar() {
                     {displayInitials}
                   </AvatarFallback>
                 </Avatar>
-                <span className="text-sm sm:text-base">Entrar</span>
+                <span className="text-sm sm:text-base">Entrar na Loja</span>
               </Button>
-            ) : (
-            <Link href="/explorar">
-              <Button
-                className="bg-[#22C55E] text-white hover:bg-[#22C55E]/90 transition-all duration-200 px-4 sm:px-6 text-sm sm:text-base h-9 sm:h-10"
-              >
-                Ir para Explorar
-              </Button>
-            </Link>
             )}
           </div>
         </div>

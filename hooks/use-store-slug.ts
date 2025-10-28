@@ -15,7 +15,10 @@ export function useStoreSlug() {
   return useQuery<StoreData | null>({
     queryKey: ["store-slug"],
     queryFn: async () => {
-      const res = await fetch("/api/user/store")
+      const res = await fetch("/api/user/store", { 
+        cache: 'no-store',
+        next: { revalidate: 0 }
+      })
       if (!res.ok) return null
       const data = await res.json()
       return {
@@ -27,9 +30,10 @@ export function useStoreSlug() {
       }
     },
     enabled: !!session?.user,
-    staleTime: Infinity,
-    refetchOnWindowFocus: false, // 🚀 Não recarregar ao focar janela
-    refetchOnMount: false, // 🚀 Não recarregar ao montar se já tem cache
+    staleTime: 0, // 🚀 Sempre refetch para detectar assinaturas novas
+    refetchOnWindowFocus: true, // 🚀 Refetch ao focar para detectar mudanças
+    refetchOnMount: true, // 🚀 Sempre refetch para verificar se tem plano ativo
+    gcTime: 0, // 🚀 Não guardar cache para sempre detectar novos planos
   })
 }
 
