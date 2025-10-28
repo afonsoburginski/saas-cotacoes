@@ -8,6 +8,7 @@ import { useSession } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
 import { useStoreSlug } from "@/hooks/use-store-slug"
 import Image from "next/image"
+import Link from "next/link"
 
 export function LandingTopbar() {
   const [isScrolled, setIsScrolled] = useState(false)
@@ -60,6 +61,14 @@ export function LandingTopbar() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
+            <Button
+              asChild
+              variant="outline"
+              className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-200 px-3 sm:px-4 text-sm sm:text-base h-9 sm:h-10"
+            >
+              <Link href="/explorar">Explorar Produtos</Link>
+            </Button>
+
             {!user || !isFornecedor ? (
               <Button
                 onClick={() => setAuthDialogOpen(true)}
