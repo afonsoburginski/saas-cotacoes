@@ -43,9 +43,20 @@ export async function POST(request: Request) {
     
     console.log('👤 Stripe Customer ID:', stripeCustomerId)
 
-    const email = session.customer_details?.email
+    let email = session.customer_details?.email as string | undefined
+    if (!email && stripeCustomerId) {
+      try {
+        const customer = await stripe.customers.retrieve(stripeCustomerId)
+        if (customer && typeof customer !== 'string') {
+          email = (customer.email as string | undefined) || undefined
+        }
+      } catch (err) {
+        console.warn('⚠️ Falha ao buscar email no Stripe Customer:', err)
+      }
+    }
     if (!email) {
-      return NextResponse.json({ error: 'No email in session' }, { status: 400 })
+      console.error('❌ Email não encontrado nem na sessão nem no Stripe Customer')
+      return NextResponse.json({ error: 'No email found for session' }, { status: 400 })
     }
 
     // Detectar plano via subscription
@@ -90,15 +101,42 @@ export async function POST(request: Request) {
       plan = 'basico'
     }
 
-    // Pegar informações coletadas (custom fields estava vazio!)
-    const businessName = session.collected_information?.business_name || session.customer_details?.business_name || 'Minha Loja'
-    const businessType = 'comercio' // Default para payment links (não vem em collected_information)
-    const phone = session.customer_details?.phone
-    const address = session.customer_details?.address
-    // Formatar endereço limpo (line2 estava duplicado)
-    const fullAddress = address ? 
-      `${address.line1 || ''}, ${address.city || ''} - ${address.state || ''}, ${address.postal_code || ''}`.trim().replace(/,\s*$/, '') : 
-      undefined
+    // Pegar informações coletadas dos custom_fields (Payment Links)
+    const customFields = (session as any).custom_fields as Array<any> | undefined
+    const businessNameFromCustom = customFields?.find(f => f.key === 'business_name')?.text?.value as string | undefined
+    const businessTypeFromCustom = customFields?.find(f => f.key === 'business_type')?.dropdown?.value as ('comercio' | 'servico') | undefined
+
+    // Nome da empresa: custom_fields → customer_details.business_name → customer_details.name → fallback
+    const businessName = businessNameFromCustom
+      || session.customer_details?.business_name
+      || session.customer_details?.name
+      || 'Minha Loja'
+
+    // Tipo do negócio: custom_fields → default 'comercio'
+    const businessType = (businessTypeFromCustom || 'comercio') as 'comercio' | 'servico'
+
+    // Telefone e endereço: tentar da sessão; se faltar e houver customer, buscar no Stripe Customer
+    let phone = session.customer_details?.phone as string | undefined
+    let address = session.customer_details?.address as Stripe.Address | null | undefined
+
+    if ((!address || (!address.line1 && !address.city)) && stripeCustomerId) {
+      try {
+        const customer = await stripe.customers.retrieve(stripeCustomerId)
+        if (customer && typeof customer !== 'string') {
+          address = customer.address || address
+          phone = (customer.phone as string | undefined) || phone
+        }
+      } catch (err) {
+        console.warn('⚠️ Falha ao buscar Stripe Customer para completar endereço/telefone:', err)
+      }
+    }
+
+    // Formatar endereço limpo (inclui line2 quando existir)
+    const fullAddress = address ?
+      `${address.line1 || ''}${address.line2 ? ', ' + address.line2 : ''}, ${address.city || ''} - ${address.state || ''}, ${address.postal_code || ''}`
+        .replace(/^,\s*/, '')
+        .replace(/,\s*$/, '')
+      : undefined
 
     console.log('📦 Extracted data:', {
       businessName,
@@ -157,6 +195,7 @@ export async function POST(request: Request) {
       if (phone) updateData.phone = phone
       if (fullAddress) updateData.address = fullAddress
       if (stripeCustomerId) updateData.stripeCustomerId = stripeCustomerId
+      updateData.updatedAt = new Date()
       
       console.log('📝 Atualizando usuário:', JSON.stringify(updateData, null, 2))
       
@@ -186,6 +225,13 @@ export async function POST(request: Request) {
         status: 'approved',
         plano: plan,
         priorityScore: PLAN_DETAILS[plan].priority,
+        // Manter dados da loja em sincronia com o que foi pago
+        nome: businessName || existingStore.nome,
+        email: email || existingStore.email,
+        telefone: phone || existingStore.telefone,
+        endereco: fullAddress || existingStore.endereco,
+        descricao: `${businessType === 'comercio' ? 'Comércio' : 'Prestador de serviço'} - ${businessName}`,
+        updatedAt: new Date(),
       }
       
       console.log('📝 Atualizando loja:', JSON.stringify(updateData, null, 2))
@@ -219,6 +265,7 @@ export async function POST(request: Request) {
         plano: plan,
         priorityScore: PLAN_DETAILS[plan].priority,
         rating: '0',
+        updatedAt: new Date(),
       }
       
       console.log('📝 Criando loja:', JSON.stringify(storeData, null, 2))
