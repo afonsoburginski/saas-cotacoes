@@ -42,6 +42,7 @@ interface Store {
   totalReviews?: number
   createdAt: string
   updatedAt: string
+  businessType?: 'comercio' | 'servico'
 }
 
 interface AdminStore {

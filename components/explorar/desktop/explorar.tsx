@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useState, useMemo, useEffect, useCallback, memo } from "react"
+import { useState, useMemo, useEffect, useCallback, memo, useRef } from "react"
 
 // Fisher-Yates shuffle algorithm para randomizar arrays
 function shuffleArray<T>(array: T[]): T[] {
@@ -36,7 +36,7 @@ import {
   Check 
 } from "lucide-react"
 import { Card } from "@/components/ui/card"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -76,20 +76,53 @@ const ExplorarDesktop = memo(function ExplorarDesktop({
   
   // Embaralhar prestadores (buscar do banco)
   const [shuffledProviders, setShuffledProviders] = useState<any[]>([])
+  const fetchedProvidersOnceRef = useRef(false)
   
   useEffect(() => {
-    // Buscar prestadores de serviço
+    if (fetchedProvidersOnceRef.current) return
+
+    let isMounted = true
+    const controller = new AbortController()
+
     console.log('🔍 Buscando prestadores de serviço...')
-    fetch('/api/service-providers?limit=15')
-      .then(res => res.json())
-      .then(data => {
+
+    async function fetchWithRetry(url: string, attempts = 3, delayMs = 500): Promise<any> {
+      for (let attempt = 1; attempt <= attempts; attempt++) {
+        try {
+          const res = await fetch(url, { signal: controller.signal })
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          return await res.json()
+        } catch (err) {
+          if (controller.signal.aborted) throw err
+          if (attempt === attempts) throw err
+          await new Promise(r => setTimeout(r, delayMs * attempt))
+        }
+      }
+    }
+
+    fetchWithRetry('/api/service-providers?limit=15')
+      .then((data) => {
         console.log('📦 Prestadores recebidos:', data)
-        if (data.data) {
+        if (!isMounted) return
+        if (data?.data) {
           setShuffledProviders(shuffleArray(data.data))
           console.log('✅ Prestadores embaralhados:', data.data.length)
+          fetchedProvidersOnceRef.current = true
+        } else {
+          setShuffledProviders([])
         }
       })
-      .catch(err => console.error('❌ Erro ao buscar prestadores:', err))
+      .catch((err) => {
+        if (!controller.signal.aborted) {
+          console.warn('⚠️ Falha ao buscar prestadores (será ignorado):', err)
+          if (isMounted) setShuffledProviders([])
+        }
+      })
+
+    return () => {
+      isMounted = false
+      controller.abort()
+    }
   }, [])
 
   // Listen for supplier modal events from ProductCard - memoized
@@ -450,11 +483,14 @@ const ExplorarDesktop = memo(function ExplorarDesktop({
                           onClick={() => router.push(`/fornecedor/${provider.id}`)}
                         >
                           <div className="flex flex-col items-center text-center">
-                            <Avatar className="h-16 w-16 mb-3 border-2 border-green-200">
-                              <AvatarFallback className="bg-green-600 text-white font-bold">
-                                {provider.nome?.split(' ')[0]?.charAt(0)}{provider.nome?.split(' ')[1]?.charAt(0) || ''}
-                              </AvatarFallback>
-                            </Avatar>
+                          <Avatar className="h-16 w-16 mb-3 border-2 border-green-200 overflow-hidden">
+                            {provider.logo ? (
+                              <AvatarImage src={provider.logo} alt={provider.nome} />
+                            ) : null}
+                            <AvatarFallback className="bg-green-600 text-white font-bold">
+                              {provider.nome?.split(' ')[0]?.charAt(0)}{provider.nome?.split(' ')[1]?.charAt(0) || ''}
+                            </AvatarFallback>
+                          </Avatar>
                             
                             <TypographySmall className="font-semibold mb-1 line-clamp-2">
                               {provider.nome}
@@ -501,8 +537,8 @@ const ExplorarDesktop = memo(function ExplorarDesktop({
                       filteredProducts.filter(p => p.storeId === store.id)
                     ).slice(0, 6)
                     
-                    // A cada 2 fornecedores, mostrar row de prestadores
-                    const showProviders = (index + 1) % 2 === 0
+                    // Mostrar prestadores ao menos uma vez: a cada 2 lojas e SEMPRE no último item
+                    const showProviders = ((index + 1) % 2 === 0) || (index === filteredStores.length - 1)
                     const providerStart = Math.floor(index / 2) * 10
                     const providersToShow = shuffledProviders.slice(providerStart, providerStart + 10)
 
@@ -514,7 +550,10 @@ const ExplorarDesktop = memo(function ExplorarDesktop({
                           className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
                           onClick={() => router.push(`/fornecedor/${store.id}`)}
                         >
-                          <Avatar className="h-14 w-14 rounded-full border-2 border-white shadow-sm">
+                          <Avatar className="h-14 w-14 rounded-full border-2 border-white shadow-sm overflow-hidden">
+                            {store.logo ? (
+                              <AvatarImage src={store.logo} alt={store.nome} />
+                            ) : null}
                             <AvatarFallback className="bg-[#0052FF] text-white font-semibold text-lg">
                               @{store.nome.charAt(0)}
                             </AvatarFallback>

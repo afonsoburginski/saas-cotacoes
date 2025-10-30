@@ -15,27 +15,48 @@ export function useAdminRealtime() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
     
-    let timeoutId: NodeJS.Timeout
-    
     // Fetch initial data
     async function fetchInitialData() {
       try {
         setIsLoading(true)
         
-        // Timeout de 2 segundos - não espera mais que isso
-        timeoutId = setTimeout(() => {
-          setIsLoading(false)
-        }, 2000)
-        
-        // Fetch stores
-        const { data: stores, error: storesError } = await supabase
+        // 1) Buscar stores rapidamente (somente a tabela principal)
+        const { data: baseStores, error: storesError } = await supabase
           .from('stores')
           .select('*')
           .order('created_at', { ascending: false })
 
-        if (storesError) throw storesError
-
-        adminStore.setStores(stores || [])
+        if (storesError) {
+          console.error('⚠️ Erro ao buscar stores:', storesError)
+          adminStore.setStores([])
+        } else {
+          const stores = baseStores || []
+          // 2) Buscar business_type dos usuários relacionados em background (não bloqueia render)
+          const userIds = Array.from(new Set(stores.map((s: any) => s.user_id).filter(Boolean))) as string[]
+          adminStore.setStores(stores as any)
+          if (userIds.length > 0) {
+            ;(async () => {
+              try {
+                const { data: usersData, error: usersError } = await supabase
+                  .from('user')
+                  .select('id, business_type')
+                  .in('id', userIds)
+                if (!usersError && usersData) {
+                  const userIdToType = usersData.reduce((acc: Record<string, string | undefined>, u: any) => {
+                    acc[u.id] = u.business_type || undefined
+                    return acc
+                  }, {} as Record<string, string | undefined>)
+                  adminStore.setStores((stores as any).map((s: any) => ({
+                    ...s,
+                    businessType: userIdToType[s.user_id] || s.businessType,
+                  })))
+                }
+              } catch (e) {
+                console.warn('⚠️ Falha ao buscar users para business_type:', e)
+              }
+            })()
+          }
+        }
 
         // Fetch stats em background
         fetch('/api/admin/stats')
@@ -45,7 +66,6 @@ export function useAdminRealtime() {
       } catch (error) {
         console.error('Error fetching initial data:', error)
       } finally {
-        clearTimeout(timeoutId)
         setIsLoading(false)
       }
     }
@@ -125,7 +145,6 @@ export function useAdminRealtime() {
     // Cleanup on unmount
     return () => {
       adminStore.cleanup()
-      if (timeoutId) clearTimeout(timeoutId)
     }
   }, [])
 

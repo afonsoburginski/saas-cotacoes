@@ -22,6 +22,8 @@ export async function GET(request: Request) {
         status: stores.status,
         slug: stores.slug,
         userId: stores.userId,
+        logo: stores.logo,
+        coverImage: stores.coverImage,
       })
       .from(stores)
       .innerJoin(userTable, eq(stores.userId, userTable.id))

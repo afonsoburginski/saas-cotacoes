@@ -4,6 +4,7 @@ import * as React from "react"
 import { Upload, X, Image as ImageIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu"
 import { createClient } from "@/lib/supabase"
 
 interface ImageUploadProps {
@@ -117,64 +118,83 @@ export function ImageUpload({ value = [], onChange, maxImages = 5, className, bu
       {/* Upload Area */}
       <div
         className={cn(
-          "relative border-2 border-dashed rounded-lg p-6 transition-colors",
+          "relative border-2 border-dashed rounded-lg transition-colors",
           dragActive ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-gray-400",
-          value.length >= maxImages && "opacity-50 pointer-events-none"
+          value.length >= maxImages && "opacity-50",
+          value.length === 0 ? "p-6 min-h-48" : "p-0"
         )}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
       >
-        <div className="text-center">
-          <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <div className="mt-4">
-            <label htmlFor="file-upload" className="cursor-pointer">
-              <span className="mt-2 block text-sm font-medium text-gray-900">
-                {isUploading ? 'Enviando imagens...' : 'Arraste imagens aqui ou clique para selecionar'}
-              </span>
-              <span className="mt-1 block text-sm text-gray-500">
-                PNG, JPG até {maxImages} imagens
-              </span>
-            </label>
-            <input
-              ref={fileInputRef}
-              id="file-upload"
-              name="file-upload"
-              type="file"
-              multiple
-              accept="image/*"
-              className="sr-only"
-              onChange={handleFileInput}
-              disabled={value.length >= maxImages || isUploading}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Image Preview */}
-      {value.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {value.map((url, index) => (
-            <div key={index} className="relative group">
-              <img
-                src={url}
-                alt={`Preview ${index + 1}`}
-                className="w-full h-32 object-cover rounded-lg border"
-              />
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={() => removeImage(index)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
+        {value.length === 0 ? (
+          <div className="text-center">
+            <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
+            <div className="mt-4">
+              <label htmlFor="file-upload" className="cursor-pointer">
+                <span className="mt-2 block text-sm font-medium text-gray-900">
+                  {isUploading ? 'Enviando imagens...' : 'Arraste imagens aqui ou clique para selecionar'}
+                </span>
+                <span className="mt-1 block text-sm text-gray-500">
+                  PNG, JPG até {maxImages} imagens
+                </span>
+              </label>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        ) : (
+          <div className={cn("grid gap-3", maxImages === 1 ? "grid-cols-1" : "grid-cols-2 md:grid-cols-3")}> 
+            {value.map((url, index) => (
+              <ContextMenu key={index}>
+                <ContextMenuTrigger asChild>
+                  <div className="relative group">
+                    <img
+                      src={url}
+                      alt={`Preview ${index + 1}`}
+                      className={cn(
+                        "w-full object-cover rounded-md border",
+                        maxImages === 1 ? "h-72 md:h-80" : "h-56"
+                      )}
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        removeImage(index)
+                      }}
+                      title="Remover imagem"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                    {/* Hover overlay to improve affordance */}
+                    <div className="pointer-events-none absolute inset-0 rounded-md bg-black/0 group-hover:bg-black/10 transition-colors" />
+                  </div>
+                </ContextMenuTrigger>
+                <ContextMenuContent>
+                  <ContextMenuItem onSelect={(e) => { e.preventDefault(); removeImage(index) }}>Remover imagem</ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
+            ))}
+          </div>
+        )}
+
+        {/* Hidden file input to keep dropzone clickable */}
+        <input
+          ref={fileInputRef}
+          id="file-upload"
+          name="file-upload"
+          type="file"
+          multiple
+          accept="image/*"
+          className="sr-only"
+          onChange={handleFileInput}
+          disabled={value.length >= maxImages || isUploading}
+        />
+      </div>
 
       {/* Upload Button */}
       <Button

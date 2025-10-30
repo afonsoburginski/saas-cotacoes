@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect, useCallback, memo } from "react"
+import { useState, useMemo, useEffect, useCallback, memo, useRef } from "react"
 
 // Fisher-Yates shuffle algorithm para randomizar arrays
 function shuffleArray<T>(array: T[]): T[] {
@@ -33,6 +33,7 @@ import {
 import { FaArrowRightLong } from "react-icons/fa6"
 import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { AvatarImage } from "@radix-ui/react-avatar"
 import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
 import { OptimizedSearchInput } from "@/components/ui/optimized-search-input"
@@ -68,15 +69,85 @@ const ExplorarMobile = memo(function ExplorarMobile({
   
   // Buscar prestadores de serviço
   const [shuffledProviders, setShuffledProviders] = useState<any[]>([])
+  const fetchedProvidersOnceRef = useRef(false)
+  const warmedUpOnceRef = useRef(false)
   
   useEffect(() => {
-    fetch('/api/service-providers?limit=15')
-      .then(res => res.json())
-      .then(data => {
-        if (data.data) {
+    if (fetchedProvidersOnceRef.current) return
+
+    let isMounted = true
+    const controller = new AbortController()
+
+    async function fetchWithRetry(url: string, attempts = 3, delayMs = 500): Promise<any> {
+      for (let attempt = 1; attempt <= attempts; attempt++) {
+        try {
+          const res = await fetch(url, { signal: controller.signal })
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          return await res.json()
+        } catch (err) {
+          if (controller.signal.aborted) throw err
+          if (attempt === attempts) throw err
+          await new Promise(r => setTimeout(r, delayMs * attempt))
+        }
+      }
+    }
+
+    fetchWithRetry('/api/service-providers?limit=15')
+      .then((data) => {
+        if (!isMounted) return
+        if (data?.data) {
           setShuffledProviders(shuffleArray(data.data))
+          fetchedProvidersOnceRef.current = true
+        } else {
+          setShuffledProviders([])
         }
       })
+      .catch((err) => {
+        if (!controller.signal.aborted) {
+          console.warn('⚠️ Falha ao buscar prestadores (mobile):', err)
+          if (isMounted) setShuffledProviders([])
+        }
+      })
+
+    return () => {
+      isMounted = false
+      controller.abort()
+    }
+  }, [])
+
+  // Warm-up public endpoints to ensure data loads even when not logged in
+  useEffect(() => {
+    if (warmedUpOnceRef.current) return
+    warmedUpOnceRef.current = true
+
+    let isMounted = true
+    const controller = new AbortController()
+
+    async function fetchWithRetry(url: string, attempts = 3, delayMs = 400): Promise<void> {
+      for (let attempt = 1; attempt <= attempts; attempt++) {
+        try {
+          const res = await fetch(url, { signal: controller.signal })
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          return
+        } catch (err) {
+          if (controller.signal.aborted) return
+          if (attempt === attempts) {
+            console.warn('⚠️ Warm-up falhou:', url, err)
+            return
+          }
+          await new Promise(r => setTimeout(r, delayMs * attempt))
+        }
+      }
+    }
+
+    // Use the same filters as desktop defaults
+    fetchWithRetry('/api/products')
+    fetchWithRetry('/api/stores?status=ativo&businessType=comercio')
+
+    return () => {
+      isMounted = false
+      controller.abort()
+    }
   }, [])
 
   // Listen for supplier modal events from ProductCard - memoized
@@ -264,35 +335,30 @@ const ExplorarMobile = memo(function ExplorarMobile({
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {/* Group products by category - Netflix style rows */}
-                  {categorias
-                    .filter(categoria => filteredProducts.some(p => p.categoria === categoria))
-                    .map((categoria) => {
-                      const categoryProducts = filteredProducts.filter(p => p.categoria === categoria)
-                      return (
-                        <div key={categoria} className="space-y-3">
-                          <Link href={`/categoria/${encodeURIComponent(categoria)}`}>
-                            <div className="flex items-center justify-between px-4 cursor-pointer active:opacity-70 transition-opacity">
-                              <div className="flex items-center gap-2">
-                                <TypographyH4 className="text-lg text-gray-700 font-montserrat">{categoria}</TypographyH4>
-                                <FaArrowRightLong className="h-5 w-5 text-gray-700" />
-                              </div>
-                              <TypographySmall className="text-gray-500 font-montserrat">
-                                {categoryProducts.length} itens
-                              </TypographySmall>
-                            </div>
-                          </Link>
-                          
-                          {/* Horizontal Scrollable Row */}
-                          <div className="overflow-x-auto scrollbar-hide">
-                            <VirtualizedProductList 
-                              products={categoryProducts} 
-                              alwaysShowButtons={true}
-                            />
+                  {/* Group products by category - Netflix style rows (derivado dos próprios produtos) */}
+                  {Object.entries(productsByCategory).map(([categoria, categoryProducts]: [string, any[]]) => (
+                    <div key={categoria} className="space-y-3">
+                      <Link href={`/categoria/${encodeURIComponent(categoria)}`}>
+                        <div className="flex items-center justify-between px-4 cursor-pointer active:opacity-70 transition-opacity">
+                          <div className="flex items-center gap-2">
+                            <TypographyH4 className="text-lg text-gray-700 font-montserrat">{categoria}</TypographyH4>
+                            <FaArrowRightLong className="h-5 w-5 text-gray-700" />
                           </div>
+                          <TypographySmall className="text-gray-500 font-montserrat">
+                            {categoryProducts.length} itens
+                          </TypographySmall>
                         </div>
-                      )
-                    })}
+                      </Link>
+
+                      {/* Horizontal Scrollable Row */}
+                      <div className="overflow-x-auto scrollbar-hide">
+                        <VirtualizedProductList 
+                          products={categoryProducts} 
+                          alwaysShowButtons={true}
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
                 </>
@@ -307,6 +373,61 @@ const ExplorarMobile = memo(function ExplorarMobile({
                 <SuppliersSkeleton />
               ) : (
                 <>
+                  {/* Se NÃO tem fornecedores, mostra prestadores primeiro */}
+                  {filteredStores.length === 0 && shuffledProviders.length > 0 && (
+                    <div className="mb-6">
+                      <div className="flex items-center justify-between mb-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <Wrench className="h-4 w-4 text-green-600" />
+                          <TypographySmall className="font-semibold font-montserrat">Prestadores de Serviço</TypographySmall>
+                        </div>
+                        <Badge variant="outline" className="text-green-700 border-green-200 bg-green-50 text-xs">
+                          {shuffledProviders.length} profissionais
+                        </Badge>
+                      </div>
+                      <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
+                        <div className="flex gap-3 pb-2">
+                          {shuffledProviders.map((provider: any) => (
+                            <Card 
+                              key={provider.id}
+                              className="flex-none w-[160px] p-3 border-green-100"
+                              onClick={() => router.push(`/fornecedor/${provider.id}`)}
+                            >
+                              <div className="flex flex-col items-center text-center">
+                                <Avatar className="h-12 w-12 mb-2 border-2 border-green-200 overflow-hidden">
+                                  {provider.logo ? (
+                                    <AvatarImage src={provider.logo} alt={provider.nome} />
+                                  ) : null}
+                                  <AvatarFallback className="bg-green-600 text-white font-bold text-xs">
+                                    {provider.nome?.split(' ')[0]?.charAt(0)}{provider.nome?.split(' ')[1]?.charAt(0) || ''}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <TypographySmall className="font-semibold mb-1 line-clamp-2 text-xs leading-tight">
+                                  {provider.nome}
+                                </TypographySmall>
+                                <div className="flex items-center gap-1 mb-3">
+                                  <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
+                                  <span className="text-[10px] font-medium">{provider.rating || 5.0}</span>
+                                  <Shield className="h-2.5 w-2.5 text-green-600" />
+                                </div>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="w-full text-[10px] h-6 border-green-600 text-green-700 hover:bg-green-50"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    router.push(`/fornecedor/${provider.id}`);
+                                  }}
+                                >
+                                  Ver Perfil
+                                </Button>
+                              </div>
+                            </Card>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between mb-4 px-4">
                     <TypographyH4 className="font-montserrat">Fornecedores Disponíveis</TypographyH4>
                     <Badge variant="outline" className="bg-gray-50">
@@ -330,7 +451,8 @@ const ExplorarMobile = memo(function ExplorarMobile({
                       filteredProducts.filter(p => p.storeId === store.id)
                     ).slice(0, 6)
                     
-                    const showProviders = (index + 1) % 2 === 0
+                    // Mostrar prestadores ao menos uma vez: a cada 2 lojas e SEMPRE no último item
+                    const showProviders = ((index + 1) % 2 === 0) || (index === filteredStores.length - 1)
                     const providerStart = Math.floor(index / 2) * 10
                     const providersToShow = shuffledProviders.slice(providerStart, providerStart + 10)
 
@@ -343,7 +465,11 @@ const ExplorarMobile = memo(function ExplorarMobile({
                           onClick={() => router.push(`/fornecedor/${store.id}`)}
                         >
                           <div className="flex items-center gap-3">
-                            <Avatar className="h-12 w-12 rounded-full">
+                            <Avatar className="h-12 w-12 rounded-full overflow-hidden border-2 border-white">
+                              {store.logo ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={store.logo} alt={store.nome} className="h-full w-full object-cover" />
+                              ) : null}
                               <AvatarFallback className="bg-blue-500 text-white font-semibold rounded-full">
                                 {store.nome.charAt(0)}
                               </AvatarFallback>
@@ -404,7 +530,10 @@ const ExplorarMobile = memo(function ExplorarMobile({
                                   onClick={() => router.push(`/fornecedor/${provider.id}`)}
                                 >
                                   <div className="flex flex-col items-center text-center">
-                                    <Avatar className="h-12 w-12 mb-2 border-2 border-green-200">
+                                    <Avatar className="h-12 w-12 mb-2 border-2 border-green-200 overflow-hidden">
+                                      {provider.logo ? (
+                                        <AvatarImage src={provider.logo} alt={provider.nome} />
+                                      ) : null}
                                       <AvatarFallback className="bg-green-600 text-white font-bold text-xs">
                                         {provider.nome?.split(' ')[0]?.charAt(0)}{provider.nome?.split(' ')[1]?.charAt(0) || ''}
                                       </AvatarFallback>

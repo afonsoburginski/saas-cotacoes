@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import { useCartStore } from "@/stores/cart-store"
 import { useToast } from "@/hooks/use-toast"
 import { Button } from "@/components/ui/button"
@@ -47,6 +47,17 @@ export function FornecedorMobile({ store, storeProducts, storeServices }: Fornec
   const addToCart = useCartStore((state) => state.addToCart)
   const { toast } = useToast()
   const [distanceKm, setDistanceKm] = useState<number | null>(null)
+  const resultsRef = useRef<HTMLDivElement | null>(null)
+
+  // Motion refs for search animations
+  const searchContainerRef = useRef<HTMLDivElement | null>(null)
+  
+  const animateBoxShadow = (el: Element, from: string, to: string) => {
+    ;(el as HTMLElement).animate(
+      [ { boxShadow: from }, { boxShadow: to } ],
+      { duration: 200, easing: 'ease-out', fill: 'forwards' }
+    )
+  }
 
   // 🔴 Buscar avaliações reais da database
   const { data: reviews = [], isLoading: isLoadingReviews } = useReviews({ 
@@ -141,6 +152,42 @@ export function FornecedorMobile({ store, storeProducts, storeServices }: Fornec
     acc[product.categoria].push(product)
     return acc
   }, {})
+
+  // Suave: anima resultados quando a busca muda
+  useEffect(() => {
+    if (!resultsRef.current) return
+    const items = resultsRef.current.querySelectorAll('[data-animate="item"]')
+    items.forEach((el, idx) => {
+      ;(el as HTMLElement).animate(
+        [
+          { opacity: 0, transform: 'translateY(6px)' },
+          { opacity: 1, transform: 'translateY(0)' },
+        ],
+        { duration: 300, delay: idx * 40, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'forwards' }
+      )
+    })
+  }, [debouncedSearch])
+
+  // Animate underline when search changes
+  // underline animation removed
+
+  const handleSearchFocus = () => {
+    if (!searchContainerRef.current) return
+    animateBoxShadow(
+      searchContainerRef.current as Element,
+      "0 0 0 0 rgba(0,82,255,0)",
+      "0 0 0 4px rgba(0,82,255,0.15)"
+    )
+  }
+
+  const handleSearchBlur = () => {
+    if (!searchContainerRef.current) return
+    animateBoxShadow(
+      searchContainerRef.current as Element,
+      "0 0 0 4px rgba(0,82,255,0.15)",
+      "0 0 0 0 rgba(0,82,255,0)"
+    )
+  }
 
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
@@ -282,15 +329,17 @@ export function FornecedorMobile({ store, storeProducts, storeServices }: Fornec
 
           {/* Produtos Tab */}
           <TabsContent value="produtos" className="mt-0">
-            <div className="bg-[#FAFAFA] min-h-screen">
+            <div className="bg-[#FAFAFA] min-h-screen" ref={resultsRef}>
               {/* Search Bar */}
               <div className="bg-white border-b border-gray-100 px-4 py-3 sticky top-0 z-20">
-                <div className="relative">
+                <div ref={searchContainerRef} className="relative rounded-2xl">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-600 z-10" />
                   <Input
                     placeholder="Buscar no catálogo..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
+                    onFocus={handleSearchFocus}
+                    onBlur={handleSearchBlur}
                     className="pl-12 pr-4 h-11 !bg-gray-50 border-0 rounded-2xl text-base placeholder:text-gray-400 focus:!bg-white focus:ring-2 focus:ring-blue-500 font-medium font-montserrat"
                   />
                 </div>
@@ -324,22 +373,44 @@ export function FornecedorMobile({ store, storeProducts, storeServices }: Fornec
                         <div className="overflow-x-auto scrollbar-hide">
                           <div className="flex gap-3 px-4 pb-2">
                             {produtos.map((item: any) => (
-                              <div key={item.id} className="flex-none w-[45vw]">
+                              <div key={item.id} className="flex-none w-[45vw]" data-animate="item">
                                 {item.isService ? (
-                                  <Card className="p-3 hover:shadow-lg transition-shadow border-green-100">
-                                    <Badge className="mb-2 bg-green-600 text-white text-[10px]">Serviço</Badge>
-                                    <h4 className="font-bold text-xs mb-1 line-clamp-2">{item.nome}</h4>
-                                    <p className="text-[10px] text-gray-600 mb-2">{item.categoria}</p>
-                                    <p className={`text-[10px] font-semibold mb-2 ${formatServicePrice(item).includes('Sob consulta') ? 'text-amber-600' : 'text-green-700'}`}>
-                                      {formatServicePrice(item)}
-                                    </p>
-                                    <Button 
-                                      size="sm" 
-                                      className="w-full text-[10px] h-7 bg-green-600 text-white"
-                                      onClick={() => handleAddService(item)}
-                                    >
-                                      Adicionar Serviço
-                                    </Button>
+                                  <Card className="relative overflow-hidden h-full p-0 border border-gray-200 rounded-xl shadow-sm">
+                                    <div className="relative w-full aspect-[4/5]">
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img
+                                        src={item.imagemUrl || "/placeholder.svg?height=1000&width=800"}
+                                        alt={item.nome}
+                                        className="object-cover w-full h-full"
+                                      />
+
+                                      {/* Badge serviço/categoria */}
+                                      <div className="absolute top-2 left-2">
+                                        <Badge variant="secondary" className="text-[10px] px-2 py-0.5 font-semibold backdrop-blur-md bg-white/90 text-gray-900 border-0">
+                                          Serviço {item.categoria ? `• ${item.categoria}` : ''}
+                                        </Badge>
+                                      </div>
+
+                                      {/* Overlay inferior com ação */}
+                                      <div className="absolute inset-0">
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                                        <div className="absolute inset-x-0 bottom-0 p-3 space-y-2">
+                                          <h4 className="text-white font-bold text-xs leading-tight line-clamp-2 drop-shadow-lg font-marlin">
+                                            {item.nome}
+                                          </h4>
+                                          {formatServicePrice(item).includes('Sob consulta') && (
+                                            <Badge className="bg-amber-500/90 text-white border-0 text-[9px] font-semibold w-fit">Sob consulta</Badge>
+                                          )}
+                                          <Button 
+                                            size="sm" 
+                                            className="w-full text-[10px] h-7 bg-green-600 text-white"
+                                            onClick={() => handleAddService(item)}
+                                          >
+                                            Adicionar Serviço
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </div>
                                   </Card>
                                 ) : (
                                   <ProductCardAdaptive product={item} alwaysShowButtons={true} />
@@ -480,28 +551,16 @@ export function FornecedorMobile({ store, storeProducts, storeServices }: Fornec
                   </div>
                 </div>
                 
-                {/* Services */}
-                <div className="bg-white rounded-lg p-4 shadow-sm">
-                  <TypographySmall className="font-semibold mb-3 block">Serviços oferecidos</TypographySmall>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                      <Truck className="h-3 w-3 mr-1" />
-                      Entrega grátis
-                    </Badge>
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                      <CreditCard className="h-3 w-3 mr-1" />
-                      Cartão aceito
-                    </Badge>
-                    <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-                      <Clock className="h-3 w-3 mr-1" />
-                      Entrega rápida
-                    </Badge>
-                    <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-                      <Shield className="h-3 w-3 mr-1" />
-                      Garantia
-                    </Badge>
+                {Array.isArray(store.servicesOffered) && store.servicesOffered.length > 0 && (
+                  <div className="bg-white rounded-lg p-4 shadow-sm">
+                    <TypographySmall className="font-semibold mb-3 block">Serviços oferecidos</TypographySmall>
+                    <div className="flex flex-wrap gap-2">
+                      {store.servicesOffered.map((s: string) => (
+                        <Badge key={s} variant="outline" className="text-xs">{s}</Badge>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </TabsContent>

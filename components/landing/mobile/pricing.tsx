@@ -109,7 +109,7 @@ export function PricingMobile() {
     };
   }) : staticPlans;
 
-  const handlePlanClick = (planName: string) => {
+  const handlePlanClick = async (planName: string) => {
     // Converter nome para ID (sem acentos)
     const planId = planName
       .toLowerCase()
@@ -117,6 +117,16 @@ export function PricingMobile() {
       .replace(/[\u0300-\u036f]/g, ''); // Remove acentos: básico → basico
     
     if (session?.user) {
+      try {
+        const subRes = await fetch('/api/user/subscription')
+        if (subRes.ok) {
+          const subJson = await subRes.json()
+          if (subJson?.hasSubscription) {
+            setShowExistingSubDialog(true)
+            return
+          }
+        }
+      } catch {}
       createStripeCheckout(planId);
     } else {
       setSelectedPlanForAuth(planId);

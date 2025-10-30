@@ -22,6 +22,7 @@ interface StoreProfile {
   horarioFuncionamento?: string | null
   logo?: string | null
   coverImage?: string | null
+  servicesOffered?: Array<{ label: string; icon?: string }>
 }
 
 export default function LojaPerfilPage() {
@@ -67,7 +68,10 @@ export default function LojaPerfilPage() {
         estado: json.data.estado || '',
         horarioFuncionamento: json.data.horarioFuncionamento || '',
         logo: json.data.logo || '',
-        coverImage: json.data.coverImage || ''
+        coverImage: json.data.coverImage || '',
+        servicesOffered: (json.data.servicesOffered || []).map((it: any) => (
+          typeof it === 'string' ? { label: it } : { label: it.label, icon: it.icon }
+        ))
       })
       setIsLoading(false)
     })()

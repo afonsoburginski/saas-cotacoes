@@ -28,7 +28,28 @@ export async function GET(request: Request) {
     
     console.log('👤 User role:', userData?.role, 'Customer ID:', userData?.stripeCustomerId)
     
-    // 🔍 PRIMEIRO: Verificar se tem subscription ativa (ANTES de olhar role)
+    // ✅ CURTO-CIRCUITO: se já existe loja com slug, manda direto para a loja
+    try {
+      const [existingStore] = await db
+        .select()
+        .from(stores)
+        .where(eq(stores.userId, session.user.id))
+        .limit(1)
+
+      if (existingStore?.slug) {
+        // Garante role correta mas não bloqueia redirect
+        if (userData?.role !== 'fornecedor' && userData?.role !== 'loja') {
+          await db.update(userTable)
+            .set({ role: 'fornecedor', updatedAt: new Date() })
+            .where(eq(userTable.id, session.user.id))
+        }
+        return NextResponse.redirect(new URL(`/loja/${existingStore.slug}`, request.url))
+      }
+    } catch (e) {
+      // segue o fluxo normal abaixo
+    }
+
+    // 🔍 Verificar se tem subscription ativa (caso ainda não tenha store)
     if (userData?.stripeCustomerId) {
       console.log('💳 Tem customer ID - verificando subscription...')
       

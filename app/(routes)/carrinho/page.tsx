@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useSession } from "@/lib/auth-client"
 import { useCartStore, type CartItem } from "@/stores/cart-store"
 import { useToast } from "@/hooks/use-toast"
@@ -8,6 +8,7 @@ import { useListsStore } from "@/stores/lists-store"
 import { useRouter } from "next/navigation"
 import { useStores } from "@/hooks/use-stores"
 import jsPDF from "jspdf"
+import html2canvas from "html2canvas"
 import { PageBackground } from "@/components/layout/page-background"
 import { CarrinhoAdaptive } from "@/components/carrinho"
 import { LoginRequiredDialog } from "@/components/explorar/login-required-dialog"
@@ -36,65 +37,91 @@ import {
   const [customerPhone, setCustomerPhone] = useState("")
   const { data: storesData } = useStores()
   const stores = storesData?.data || []
+  const pdfRef = useRef<HTMLDivElement | null>(null)
+  const [renderPdfDOM, setRenderPdfDOM] = useState(false)
   
   console.log("🛒 [Zustand] Carrinho carregado com", cartItems.length, "itens:", cartItems)
 
-  const generatePDF = () => {
-    if (cartItems.length === 0) return
-
-    const groupedItems = cartItems.reduce((groups, item) => {
+  const groupedForPdf = useMemo(() => {
+    return cartItems.reduce((groups, item) => {
       const storeId = item.storeId
       if (!groups[storeId]) {
-        groups[storeId] = { storeNome: item.storeNome, items: [] }
+        groups[storeId] = { storeNome: item.storeNome, items: [] as CartItem[] }
       }
       groups[storeId].items.push(item)
       return groups
     }, {} as Record<string, { storeNome: string; items: CartItem[] }>)
+  }, [cartItems])
 
-    const date = new Date().toLocaleDateString('pt-BR')
-    
-    // Criar PDF
-    const doc = new jsPDF()
-    
-    // Header
-    doc.setFontSize(20)
-    doc.text('SOLICITACAO DE ORCAMENTO', 20, 30)
-    
-    doc.setFontSize(12)
-    doc.text(`Data: ${date}`, 20, 45)
-    doc.text(`Total de itens: ${cartItems.length}`, 20, 55)
-    doc.text(`Lojas: ${Object.keys(groupedItems).length}`, 20, 65)
-    
-    let yPosition = 85
-    
-    Object.values(groupedItems).forEach(group => {
-      // Store header
-      doc.setFontSize(14)
-      doc.setFont('helvetica', 'bold')
-      doc.text(`${group.storeNome.toUpperCase()}`, 20, yPosition)
-      yPosition += 10
-      
-      // Store items
-      doc.setFontSize(10)
-      doc.setFont('helvetica', 'normal')
-      
-      group.items.forEach(item => {
-        doc.text(`• ${item.productNome}`, 25, yPosition)
-        yPosition += 7
-        doc.text(`  Quantidade: ${item.qty}`, 30, yPosition)
-        yPosition += 12
-      })
-      
-      yPosition += 10
+  const totalItems = useMemo(() => cartItems.reduce((acc, it) => acc + it.qty, 0), [cartItems])
+
+  const generatePDF = async () => {
+    if (cartItems.length === 0) return
+    // Render DOM escondido com o template idêntico ao modelo
+    setRenderPdfDOM(true)
+    // aguarda layout
+    await new Promise((r) => requestAnimationFrame(() => r(null)))
+    const el = pdfRef.current
+    if (!el) return
+
+    // Captura com html2canvas para manter o layout 1:1 (A4)
+    const canvas = await html2canvas(el, { 
+      scale: 2, 
+      useCORS: true, 
+      backgroundColor: '#ffffff',
+      onclone: (doc) => {
+        // Garante fundo branco e remove backgrounds com oklch do clone
+        try {
+          doc.body.style.background = '#ffffff'
+          // Isola estilos externos no root do PDF
+          const root = doc.getElementById('pdf-root') as HTMLElement | null
+          if (root) {
+            ;(root.style as any).setProperty('all', 'initial')
+            root.style.backgroundColor = '#ffffff'
+            root.style.color = '#111827'
+            root.style.fontFamily = 'Inter, Arial, sans-serif'
+          }
+          const all = Array.from((root || doc).querySelectorAll('*')) as HTMLElement[]
+          for (const node of all) {
+            const cs = doc.defaultView?.getComputedStyle(node)
+            const bg = cs?.background || ''
+            const bgc = cs?.backgroundColor || ''
+            const bgi = cs?.backgroundImage || ''
+            if (bg.includes('oklch') || bgc.includes('oklch') || bgi.includes('oklch')) {
+              node.style.background = 'transparent'
+              node.style.backgroundColor = 'transparent'
+              node.style.backgroundImage = 'none'
+            }
+            // Também neutraliza gradientes
+            if ((bgi || '').includes('gradient(')) {
+              node.style.backgroundImage = 'none'
+            }
+            const col = cs?.color || ''
+            if (col.includes('oklch')) {
+              node.style.color = '#111827'
+            }
+          }
+        } catch {}
+      }
     })
-    
-    // Footer note
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'italic')
-    doc.text('Precos e valores serao informados apos analise do orcamento pelas lojas.', 20, yPosition)
-    
-    // Baixar PDF
-    doc.save(`Solicitacao-Orcamento_${date.replace(/\//g, '-')}.pdf`)
+    // Usa JPEG para evitar erros de assinatura PNG e reduzir tamanho
+    const imgData = canvas.toDataURL('image/jpeg', 0.95)
+    const pdf = new jsPDF('p', 'mm', 'a4')
+    const pageWidth = 210
+    const pageHeight = 297
+    const cWidth = Math.max(1, canvas.width)
+    const cHeight = Math.max(1, canvas.height)
+    // escala para caber na página usando largura
+    let imgWidth = pageWidth
+    let imgHeight = (cHeight * imgWidth) / cWidth
+    // se exceder altura, ajusta pela altura
+    if (!isFinite(imgHeight) || imgHeight <= 0 || imgHeight > pageHeight) {
+      imgHeight = pageHeight
+      imgWidth = (cWidth * imgHeight) / cHeight
+    }
+    pdf.addImage(imgData, 'JPEG', 0, 0, Number(imgWidth), Number(imgHeight))
+    pdf.save(`Orcamento_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`)
+    setRenderPdfDOM(false)
   }
 
   const handleGenerateQuote = () => {
@@ -290,6 +317,102 @@ import {
   return (
     <>
       <PageBackground />
+      {/* DOM oculto para render do PDF no modelo do V0 */}
+      {renderPdfDOM && (
+        <div style={{ position: 'fixed', left: -99999, top: 0, width: '794px', height: '1123px', overflow: 'hidden', visibility: 'hidden' }}>
+          <div
+            id="pdf-root"
+            ref={pdfRef}
+            style={{ width: '794px', height: '1123px', backgroundColor: 'white', color: '#111827', fontFamily: 'Inter, Arial, sans-serif', ['all' as any]: 'initial' }}
+          >
+            {/* Modelo baseado em components/pdf/index.tsx, com dados dinâmicos */}
+            <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ padding: '64px 48px 0 48px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                  <div>
+                    <p style={{ color: '#2563eb', fontWeight: 600, fontSize: 16 }}>Data: {new Date().toLocaleDateString('pt-BR')}</p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 0, marginRight: '64px' }}>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 24, fontWeight: 'bold', lineHeight: 1 }}>
+                        <span style={{ color: '#16a34a' }}>Orça</span>
+                        <span style={{ color: '#2563eb' }}>norte</span>
+                      </div>
+                    </div>
+                    <div style={{ position: 'absolute', top: 0, right: '48px', width: 40, height: 100, backgroundColor: '#1e3a8a' }} />
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 32 }}>
+                <div style={{ width: '55%', height: 24, backgroundColor: '#1e3a8a' }} />
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', paddingLeft: 16, paddingRight: 48 }}>
+                  <h1 style={{ color: '#2563eb', fontSize: 22, fontWeight: 'normal', fontFamily: 'sans-serif', letterSpacing: '0.05em' }}>
+                    ORÇAMENTO #01234
+                  </h1>
+                </div>
+              </div>
+
+              <div style={{ padding: '0 48px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ marginBottom: 32 }}>
+                  <h3 style={{ color: '#2563eb', fontWeight: 'bold', fontSize: 16, marginBottom: 8 }}>A/C:</h3>
+                  <p style={{ fontWeight: 'bold', color: 'black', fontSize: 16, marginBottom: 2 }}>{session?.user?.name || 'Cliente'}</p>
+                  <p style={{ color: 'black', fontSize: 16, marginBottom: 2 }}>{session?.user?.email || ''}</p>
+                </div>
+
+                {/* Lista de itens por loja */}
+                <div style={{ flex: 1 }} />
+
+                {/* Total + separador + pagamentos/termos + rodapé idêntico ao modelo */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 64 }}>
+                  <div style={{ backgroundColor: '#1e3a8a', color: 'white', padding: '10px 40px', fontWeight: 'bold', fontSize: 20, letterSpacing: '0.05em' }}>
+                    TOTAL: R$ 0,00
+                  </div>
+                </div>
+
+                <div style={{ width: 128, height: 3, backgroundColor: '#1e3a8a', marginBottom: 16 }} />
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, marginBottom: 32 }}>
+                  <div>
+                    <h3 style={{ color: '#2563eb', fontWeight: 'bold', fontSize: 16, marginBottom: 6 }}>FORMA DE PAGAMENTO</h3>
+                    <p style={{ fontSize: 14, color: 'black', lineHeight: 1.625 }}>Pix com 10% de desconto</p>
+                    <p style={{ fontSize: 14, color: 'black', lineHeight: 1.625 }}>ou 2x no cartão de crédito</p>
+                  </div>
+                  <div>
+                    <h3 style={{ color: '#2563eb', fontWeight: 'bold', fontSize: 16, marginBottom: 6 }}>TERMOS E CONDIÇÕES</h3>
+                    <p style={{ fontSize: 14, color: 'black', lineHeight: 1.625 }}>Este orçamento é válido por 30 dias.</p>
+                  </div>
+                </div>
+
+                <div style={{ backgroundColor: '#1e3a8a', color: 'white', padding: '12px 48px', marginBottom: 88 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 40 }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span>📱</span>
+                        <span>(66) 9 9661-4628</span>
+                      </span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span>✉️</span>
+                        <span>orcanorte28@gmail.com</span>
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 40 }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span>🌐</span>
+                        <span>www.orcanorte.com.br</span>
+                      </span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span>📷</span>
+                        <span>@orcanorte</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <CarrinhoAdaptive
         cartItems={cartItems}
         onUpdateQuantity={updateQuantity}

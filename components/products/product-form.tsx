@@ -20,7 +20,9 @@ import {
 } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { Product } from "@/lib/types"
-import { Package, DollarSign, Hash, FileText, Image as ImageIcon } from "lucide-react"
+import { Package, DollarSign, Hash, FileText, Image as ImageIcon, Search } from "lucide-react"
+import { useCategories } from "@/hooks/use-categories"
+import { useUnits } from "@/hooks/use-units"
 
 interface ProductFormProps {
   product?: Product
@@ -52,32 +54,16 @@ export interface ProductFormData {
   }
 }
 
-const categorias = [
-  "Cimento", "Tijolos", "Areia", "Ferro", "Brita", "Telhas", "Tintas",
-  "Madeira", "Aço", "Vidro", "Plástico", "Cerâmica", "Pedra", "Outros"
-]
-
-const unidadesMedida = [
-  "Unidade (un)",
-  "Metro (m)",
-  "Metro Quadrado (m²)",
-  "Metro Cúbico (m³)",
-  "Quilograma (kg)",
-  "Tonelada (t)",
-  "Saco (sc)",
-  "Pacote (pct)",
-  "Caixa (cx)",
-  "Litro (L)",
-  "Galão (gal)",
-  "Barra (barra)",
-  "Peça (pç)",
-  "Rolo (rolo)",
-  "Lata (lata)",
-  "Balde (balde)"
-]
+// Opções dinâmicas via hooks; manteremos fallback vazio se não carregar
 
 export function ProductForm({ product, isOpen, onClose, onSubmit, storeId }: ProductFormProps) {
   const { toast } = useToast()
+  const { data: catResp } = useCategories({ tipo: 'produto' })
+  const categoryOptions = catResp?.data ?? []
+  const { data: unitsResp } = useUnits()
+  const unitOptions = unitsResp?.data ?? []
+  const [categorySearch, setCategorySearch] = useState("")
+  const [unitSearch, setUnitSearch] = useState("")
   const [formData, setFormData] = useState<ProductFormData>({
     nome: product?.nome || "",
     categoria: product?.categoria || "",
@@ -98,28 +84,18 @@ export function ProductForm({ product, isOpen, onClose, onSubmit, storeId }: Pro
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Derivar requisitos conforme a unidade de medida
-  const getMeasureKind = (unidade: string): "unit" | "length" | "area" | "volume" | "weight" => {
-    if (!unidade) return "unit"
-    if (unidade.includes("m³")) return "volume"
-    if (unidade.includes("m²")) return "area"
-    if (unidade.includes("Metro (m)")) return "length"
-    if (unidade.includes("kg") || unidade.includes("Tonelada")) return "weight"
-    return "unit"
-  }
+  // Derivar requisitos conforme unidade escolhida (usando tabela measurement_units)
+  const selectedUnit = unitOptions.find(u => u.nome === formData.unidadeMedida)
+  const getMeasureKind = (): "unit" | "length" | "area" | "volume" | "weight" => selectedUnit?.tipo as any || "unit"
+  const getUnitAbbrev = (): string => selectedUnit?.abreviacao || "un"
 
-  const getUnitAbbrev = (unidade: string): string => {
-    const match = unidade.match(/\(([^)]+)\)/)
-    return match?.[1] || "un"
-  }
-
-  const measureKind = getMeasureKind(formData.unidadeMedida)
+  const measureKind = getMeasureKind()
   const requiresVolume = measureKind === "volume"
   const requiresArea = measureKind === "area"
   const requiresLength = measureKind === "length"
   const requiresWeight = measureKind === "weight"
   const dimUnit = requiresVolume || requiresArea || requiresLength ? "m" : "cm"
-  const unitAbbrev = getUnitAbbrev(formData.unidadeMedida)
+  const unitAbbrev = getUnitAbbrev()
 
   // Máscara para estoque com sufixo de unidade
   const [estoqueDisplay, setEstoqueDisplay] = useState<string>(
@@ -278,8 +254,19 @@ export function ProductForm({ product, isOpen, onClose, onSubmit, storeId }: Pro
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione uma categoria" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {categorias.map((categoria) => (
+                  <SelectContent inline>
+                    <div className="relative p-2">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Buscar categoria"
+                        value={categorySearch}
+                        onChange={(e) => setCategorySearch(e.target.value)}
+                        className="h-8 pl-7 bg-transparent border border-gray-300 rounded-sm focus-visible:ring-0 focus-visible:ring-offset-0"
+                      />
+                    </div>
+                    {categoryOptions
+                      .filter(c => !categorySearch || c.toLowerCase().includes(categorySearch.toLowerCase()))
+                      .map((categoria) => (
                       <SelectItem key={categoria} value={categoria}>
                         {categoria}
                       </SelectItem>
@@ -339,10 +326,21 @@ export function ProductForm({ product, isOpen, onClose, onSubmit, storeId }: Pro
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione a unidade" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {unidadesMedida.map((unidade) => (
-                      <SelectItem key={unidade} value={unidade}>
-                        {unidade}
+                  <SelectContent inline>
+                    <div className="relative p-2">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Buscar unidade"
+                        value={unitSearch}
+                        onChange={(e) => setUnitSearch(e.target.value)}
+                        className="h-8 pl-7 bg-transparent border border-gray-300 rounded-sm focus-visible:ring-0 focus-visible:ring-offset-0"
+                      />
+                    </div>
+                    {unitOptions
+                      .filter(u => !unitSearch || u.nome.toLowerCase().includes(unitSearch.toLowerCase()))
+                      .map((u) => (
+                      <SelectItem key={u.id} value={u.nome}>
+                        {u.nome}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -494,101 +492,75 @@ export function ProductForm({ product, isOpen, onClose, onSubmit, storeId }: Pro
             </div>
           </div>
 
-          {/* Preços */}
-          <div className="space-y-4 pb-6 border-b-2 border-dashed border-gray-300">
-            <h3 className="text-base font-semibold flex items-center gap-2 text-gray-800">
-              <DollarSign className="h-5 w-5 text-gray-600" />
-              Preços e Valores
-            </h3>
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-              <div>
-                <Label htmlFor="precoHabilitado" className="text-sm font-medium text-gray-700 cursor-pointer">
-                  Definir preço de referência
-                </Label>
-                <p className="text-xs text-gray-500 mt-1">
-                  Preço interno para sua referência. Clientes sempre veem "Sob consulta"
-                </p>
-              </div>
-              <Switch
-                id="precoHabilitado"
-                checked={!!formData.precoHabilitado}
-                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, precoHabilitado: checked }))}
-              />
-            </div>
-            
-            {formData.precoHabilitado ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="preco" className="text-sm font-medium text-gray-700">Preço Base (R$) *</Label>
-                  <CurrencyInput
-                    id="preco"
-                    value={formData.preco}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, preco: value || 0 }))}
-                    required
-                  />
-                  <p className="text-xs text-gray-500">Preço unitário padrão</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="precoPromocional" className="text-sm font-medium text-gray-700">Preço Promocional (R$)</Label>
-                  <CurrencyInput
-                    id="precoPromocional"
-                    value={formData.precoPromocional}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, precoPromocional: value }))}
-                  />
-                  <p className="text-xs text-gray-500">Preço em promoção</p>
-                </div>
-              </div>
-            ) : (
-              <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-900">
-                Preço sob consulta — o cliente fará orçamento pelo carrinho.
-              </div>
-            )}
-
-            {/* Switch para Variação de Preços */}
-            <div className="pt-4 border-t border-dashed border-gray-200">
+          {/* Preços + Imagem lado a lado */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b-2 border-dashed border-gray-300">
+            {/* Preços */}
+            <div className="space-y-4">
+              <h3 className="text-base font-semibold flex items-center gap-2 text-gray-800">
+                <DollarSign className="h-5 w-5 text-gray-600" />
+                Preços e Valores
+              </h3>
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-                <div className="flex-1">
-                  <Label htmlFor="temVariacaoPreco" className="text-sm font-medium text-gray-700 cursor-pointer">
-                    Variação de Preço
+                <div>
+                  <Label htmlFor="precoHabilitado" className="text-sm font-medium text-gray-700 cursor-pointer">
+                    Definir preço de referência
                   </Label>
                   <p className="text-xs text-gray-500 mt-1">
-                    Ative se o preço varia e requer contato com o vendedor
+                    Preço interno para sua referência. Clientes sempre veem "Sob consulta"
                   </p>
                 </div>
-                <Switch
-                  id="temVariacaoPreco"
-                  checked={formData.temVariacaoPreco}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, temVariacaoPreco: checked }))}
-                />
+                <Switch id="precoHabilitado" checked={!!formData.precoHabilitado} onCheckedChange={(checked) => setFormData(prev => ({ ...prev, precoHabilitado: checked }))} />
               </div>
-              
-              {formData.temVariacaoPreco && (
-                <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-md">
-                  <p className="text-xs text-amber-800">
-                    ℹ️ Cliente verá "Preço sob consulta" e precisará entrar em contato para negociar
-                  </p>
+              {formData.precoHabilitado ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="preco" className="text-sm font-medium text-gray-700">Preço Base (R$) *</Label>
+                    <CurrencyInput id="preco" value={formData.preco} onValueChange={(value) => setFormData(prev => ({ ...prev, preco: value || 0 }))} required />
+                    <p className="text-xs text-gray-500">Preço unitário padrão</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="precoPromocional" className="text-sm font-medium text-gray-700">Preço Promocional (R$)</Label>
+                    <CurrencyInput id="precoPromocional" value={formData.precoPromocional} onValueChange={(value) => setFormData(prev => ({ ...prev, precoPromocional: value }))} />
+                    <p className="text-xs text-gray-500">Preço em promoção</p>
+                  </div>
                 </div>
+              ) : (
+                <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-900">Preço sob consulta — o cliente fará orçamento pelo carrinho.</div>
               )}
+              <div className="pt-4 border-t border-dashed border-gray-200">
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                  <div className="flex-1">
+                    <Label htmlFor="temVariacaoPreco" className="text-sm font-medium text-gray-700 cursor-pointer">Variação de Preço</Label>
+                    <p className="text-xs text-gray-500 mt-1">Ative se o preço varia e requer contato com o vendedor</p>
+                  </div>
+                  <Switch id="temVariacaoPreco" checked={formData.temVariacaoPreco} onCheckedChange={(checked) => setFormData(prev => ({ ...prev, temVariacaoPreco: checked }))} />
+                </div>
+                {formData.temVariacaoPreco && (
+                  <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                    <p className="text-xs text-amber-800">ℹ️ Cliente verá "Preço sob consulta" e precisará entrar em contato para negociar</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Imagem do Produto */}
+            <div className="space-y-2">
+              <h3 className="text-base font-semibold flex items-center gap-2 text-gray-800">
+                <ImageIcon className="h-5 w-5 text-gray-600" />
+                Imagem do Produto
+              </h3>
+              <ImageUpload
+                value={formData.imagemUrl ? [formData.imagemUrl] : []}
+                onChange={(urls) => setFormData(prev => ({ ...prev, imagemUrl: urls[0] || '' }))}
+                maxImages={1}
+                bucket="images"
+                pathPrefix={`stores/${storeId}/products`}
+              />
             </div>
           </div>
 
 
-          {/* Imagem do Produto */}
-          <div className="space-y-4">
-            <h3 className="text-base font-semibold flex items-center gap-2 text-gray-800">
-              <ImageIcon className="h-5 w-5 text-gray-600" />
-              Imagem do Produto
-            </h3>
-            
-            <ImageUpload
-              value={formData.imagemUrl ? [formData.imagemUrl] : []}
-              onChange={(urls) => setFormData(prev => ({ ...prev, imagemUrl: urls[0] || '' }))}
-              maxImages={1}
-              bucket="images"
-              pathPrefix={`stores/${storeId}/products`}
-            />
-          </div>
+          
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>

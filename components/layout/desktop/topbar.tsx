@@ -16,6 +16,7 @@ import { useEffect, useState } from "react"
 import { useSession, signOut } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
 import { useCartStore } from "@/stores/cart-store"
+import { useStoreSlug } from "@/hooks/use-store-slug"
 import { AuthDialog } from "@/components/auth/auth-dialog"
 import Image from "next/image"
 import Link from "next/link"
@@ -35,6 +36,8 @@ export function TopbarDesktop() {
   const cartCount = isClient ? getCartItemsCount() : 0
   const user = session?.user
   const displayInitials = ((user?.name || "U").trim().split(/\s+/).map((n) => n.charAt(0)).slice(0, 2).join("") || "U").toUpperCase()
+  const { data: storeSlug } = useStoreSlug()
+  const storeLogo = storeSlug?.logo
   
   const handleLogout = async () => {
     const currentPath = window.location.pathname
@@ -107,9 +110,13 @@ export function TopbarDesktop() {
                 className="relative h-10 w-10 rounded-full hover:bg-gray-100 transition-all duration-200"
               >
                 <Avatar className="h-9 w-9">
-                  <AvatarFallback className="bg-[#0052FF] text-white font-semibold">
-                    {displayInitials}
-                  </AvatarFallback>
+                  {storeLogo ? (
+                    <img src={storeLogo} alt={storeSlug?.storeName || "Loja"} className="h-full w-full object-cover rounded-full" />
+                  ) : (
+                    <AvatarFallback className="bg-[#0052FF] text-white font-semibold">
+                      {displayInitials}
+                    </AvatarFallback>
+                  )}
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>

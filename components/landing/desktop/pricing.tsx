@@ -114,7 +114,7 @@ export function Pricing() {
     return <div>Carregando planos...</div>
   }
   
-  const handlePlanClick = (planName: string) => {
+  const handlePlanClick = async (planName: string) => {
     // Converter nome para ID (sem acentos)
     const planId = planName
       .toLowerCase()
@@ -122,8 +122,19 @@ export function Pricing() {
       .replace(/[\u0300-\u036f]/g, ''); // Remove acentos: básico → basico
     
     if (session?.user) {
-      // Se já estiver logado, cria checkout Stripe direto
-      createStripeCheckout(planId);
+      // Primeiro: checar rapidamente se já possui assinatura ativa e mostrar o alerta
+      try {
+        const subRes = await fetch('/api/user/subscription')
+        if (subRes.ok) {
+          const subJson = await subRes.json()
+          if (subJson?.hasSubscription) {
+            setShowExistingSubDialog(true)
+            return
+          }
+        }
+      } catch {}
+      // Caso não tenha, prossegue para checkout
+      createStripeCheckout(planId)
     } else {
       // Salva o plano selecionado no state
       setSelectedPlanForAuth(planId);

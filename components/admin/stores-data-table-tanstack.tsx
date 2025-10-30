@@ -36,12 +36,20 @@ import {
 import {
   ContextMenu,
   ContextMenuContent,
+  ContextMenuGroup,
   ContextMenuItem,
   ContextMenuLabel,
   ContextMenuSeparator,
+  ContextMenuPortal,
   ContextMenuTrigger,
+  ContextMenuSub,
+  ContextMenuSubTrigger,
+  ContextMenuSubContent,
+  ContextMenuRadioGroup,
+  ContextMenuRadioItem,
 } from "@/components/ui/context-menu"
-import { CheckCircle, Clock, AlertCircle, Eye, Edit } from "lucide-react"
+import { CheckCircle, Clock, AlertCircle, Eye, Edit, Check } from "lucide-react"
+import { useAdminStore } from "@/stores/admin-store"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -60,6 +68,12 @@ export function StoresDataTable<TData, TValue>({
   onSuspend,
   onBlock,
 }: DataTableProps<TData, TValue>) {
+  const [bump, setBump] = React.useState(0)
+  React.useEffect(() => {
+    const handler = () => setBump((x) => x + 1)
+    window.addEventListener('admin:stores:updated', handler)
+    return () => window.removeEventListener('admin:stores:updated', handler)
+  }, [])
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
@@ -132,26 +146,66 @@ export function StoresDataTable<TData, TValue>({
                     ))}
                   </TableRow>
                 </ContextMenuTrigger>
-                <ContextMenuContent>
+                <ContextMenuContent className="w-56">
                   <ContextMenuLabel>{(row.original as any).nome}</ContextMenuLabel>
                   <ContextMenuSeparator />
-                  <ContextMenuItem onClick={() => onViewDetails?.(row.original)}>
-                    <Eye className="mr-2 h-4 w-4" />
-                    Ver detalhes
-                  </ContextMenuItem>
+                  <ContextMenuGroup>
+                    <ContextMenuItem onClick={() => onViewDetails?.(row.original)}>
+                      <Eye className="mr-2 h-4 w-4" />
+                      Ver detalhes
+                    </ContextMenuItem>
+                  </ContextMenuGroup>
                   <ContextMenuSeparator />
-                  <ContextMenuItem onClick={() => onApprove?.(row.original)}>
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Aprovar
-                  </ContextMenuItem>
-                  <ContextMenuItem onClick={() => onSuspend?.(row.original)}>
-                    <Clock className="mr-2 h-4 w-4" />
-                    Suspender
-                  </ContextMenuItem>
-                  <ContextMenuItem onClick={() => onBlock?.(row.original)}>
-                    <AlertCircle className="mr-2 h-4 w-4" />
-                    Bloquear
-                  </ContextMenuItem>
+                  <ContextMenuGroup>
+                    <ContextMenuItem onClick={() => onApprove?.(row.original)}>
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Aprovar
+                    </ContextMenuItem>
+                    <ContextMenuItem onClick={() => onSuspend?.(row.original)}>
+                      <Clock className="mr-2 h-4 w-4" />
+                      Suspender
+                    </ContextMenuItem>
+                    <ContextMenuItem onClick={() => onBlock?.(row.original)}>
+                      <AlertCircle className="mr-2 h-4 w-4" />
+                      Bloquear
+                    </ContextMenuItem>
+                  </ContextMenuGroup>
+                  <ContextMenuSeparator />
+                  <ContextMenuSub>
+                    <ContextMenuSubTrigger>Tipo do Negócio</ContextMenuSubTrigger>
+                    <ContextMenuPortal>
+                      <ContextMenuSubContent>
+                        <ContextMenuRadioGroup
+                          value={(row.original as any).businessType || 'comercio'}
+                          onValueChange={async (value) => {
+                            const val = (value === 'servico' ? 'servico' : 'comercio') as 'comercio' | 'servico'
+                            console.log('🟦 ContextMenu onValueChange ->', val, 'storeId:', (row.original as any).id)
+                            const store: any = row.original as any
+                            const uid = store.userId || store.user_id
+                            if (!uid) {
+                              console.warn('⚠️ Sem userId para storeId', store.id)
+                              return
+                            }
+                            const updateStore = useAdminStore.getState().updateStore
+                            updateStore(store.id, { businessType: val })
+                            ;(row as any).original.businessType = val
+                            try {
+                              await fetch(`/api/admin/users/${uid}/business-type`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ businessType: val }),
+                              })
+                              console.log('🟩 ContextMenu PATCH success for', val)
+                              window.dispatchEvent(new CustomEvent('admin:stores:updated'))
+                            } catch (e) { console.error(e) }
+                          }}
+                        >
+                          <ContextMenuRadioItem value="comercio">Comércio (Loja Física)</ContextMenuRadioItem>
+                          <ContextMenuRadioItem value="servico">Prestador de Serviço</ContextMenuRadioItem>
+                        </ContextMenuRadioGroup>
+                      </ContextMenuSubContent>
+                    </ContextMenuPortal>
+                  </ContextMenuSub>
                 </ContextMenuContent>
               </ContextMenu>
             ))

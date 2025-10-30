@@ -263,6 +263,19 @@ async function applySchema() {
       )
     `
     
+    // Measurement Units
+    await client`
+      CREATE TABLE IF NOT EXISTS "measurement_units" (
+        "id" serial PRIMARY KEY NOT NULL,
+        "nome" varchar(100) NOT NULL UNIQUE,
+        "abreviacao" varchar(20) NOT NULL,
+        "tipo" varchar(20) NOT NULL,
+        "ativo" boolean DEFAULT true,
+        "ordem" integer DEFAULT 0,
+        "created_at" timestamp DEFAULT now()
+      )
+    `
+
     await client`
       CREATE TABLE IF NOT EXISTS "subscriptions" (
         "id" serial PRIMARY KEY NOT NULL,

@@ -54,10 +54,10 @@ function SelectContent({
   className,
   children,
   position = 'popper',
+  inline,
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Content>) {
-  return (
-    <SelectPrimitive.Portal>
+}: React.ComponentProps<typeof SelectPrimitive.Content> & { inline?: boolean }) {
+  const Content = (
       <SelectPrimitive.Content
         data-slot="select-content"
         className={cn(
@@ -81,7 +81,9 @@ function SelectContent({
         </SelectPrimitive.Viewport>
         <SelectScrollDownButton />
       </SelectPrimitive.Content>
-    </SelectPrimitive.Portal>
+  )
+  return inline ? Content : (
+    <SelectPrimitive.Portal>{Content}</SelectPrimitive.Portal>
   )
 }
 

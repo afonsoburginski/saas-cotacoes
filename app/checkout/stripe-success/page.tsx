@@ -29,6 +29,18 @@ export default function StripeSuccessPage() {
       return
     }
 
+    // Evitar rodar duas vezes após o callback do Google (idempotência por sessão)
+    const syncFlagKey = `stripe_sync_done_${session_id}`
+    const alreadySynced = typeof window !== 'undefined' ? sessionStorage.getItem(syncFlagKey) === '1' : false
+
+    if (alreadySynced) {
+      // Pular sync e logs duplicados e ir direto para estado final
+      setStoreReady(true)
+      setLoading(false)
+      setSuccess(true)
+      return
+    }
+
     // Sincronizar dados do Stripe imediatamente
     const syncStripeData = async () => {
       try {
@@ -62,6 +74,8 @@ export default function StripeSuccessPage() {
               console.log('✅ Loja criada com sucesso:', data.store.slug)
               console.log('🎯 SETANDO storeReady = true')
               setStoreReady(true)
+              // Marcar sync concluído para evitar duplicidade após redirecionamentos
+              try { sessionStorage.setItem(syncFlagKey, '1') } catch {}
               return // Sair da função imediatamente
             } else if (data.error && attempts < maxAttempts) {
               console.log('⚠️ Falhou, tentando novamente em 2s...')

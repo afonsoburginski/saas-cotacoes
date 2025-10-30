@@ -520,7 +520,7 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
       // Atualizar produto existente
       const productData = {
         ...formData,
-        imagemUrl: formData.imagemUrl || editingProduct.imagemUrl,
+        imagemUrl: formData.imagemUrl && formData.imagemUrl.trim() !== "" ? formData.imagemUrl : "",
       }
       
       updateProduct.mutate(
@@ -618,7 +618,7 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
         tipoPrecificacao: formData.tipoPrecificacao,
         rating: 0,
         ativo: formData.ativo,
-        imagemUrl: "/placeholder.svg",
+        imagemUrl: formData.imagemUrl || "/placeholder.svg",
         descricao: formData.descricao,
         destacado: formData.destacado,
       }
@@ -1054,12 +1054,13 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
                 {activeTab !== 'servicos' && <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Unidade</th>}
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Preço</th>
                 {activeTab !== 'servicos' && <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Estoque</th>}
+                {activeTab === 'servicos' && <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Cobrança</th>}
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-900">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredProducts.map((product) => (
-                <ContextMenu key={product.id}>
+                <ContextMenu key={product.id} modal={false}>
                   <ContextMenuTrigger asChild>
                     <tr className="hover:bg-gray-50">
                       <td className="px-4 py-3">
@@ -1165,29 +1166,55 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
                       </td>
                       {currentTab !== 'services' && (
                         <td className="px-4 py-3 text-sm">
-                          <span className={'estoque' in product && product.estoque > 0 ? "text-gray-900" : "text-red-600"}>
-                            {'estoque' in product ? `${product.estoque} unidades` : "-"}
-                          </span>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={'estoque' in product && product.estoque > 0 ? "text-gray-900" : "text-red-600"}>
+                              {'estoque' in product ? `${product.estoque} unidades` : "-"}
+                            </span>
+                            {isProduct(product) && product.estoque === 0 && (
+                              <Badge variant="outline" className="text-xs border-red-200 text-red-700">
+                                Zerado
+                              </Badge>
+                            )}
+                            {isProduct(product) && product.estoque > 0 && product.estoque < 10 && (
+                              <Badge variant="outline" className="text-xs border-orange-200 text-orange-700">
+                                Baixo
+                              </Badge>
+                            )}
+                          </div>
+                        </td>
+                      )}
+                      {currentTab === 'services' && (
+                        <td className="px-4 py-3 text-sm text-gray-700">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="secondary" className="text-xs capitalize">
+                              {(product as Service).tipoPrecificacao}
+                            </Badge>
+                            {('precoMinimo' in product && (product as Service).precoMinimo != null) ? (
+                              <Badge variant="outline" className="text-xs border-amber-200 text-amber-700">Faixa</Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs">Fixo</Badge>
+                            )}
+                          </div>
                         </td>
                       )}
                       <td className="px-4 py-3">
-                        <DropdownMenu>
+                        <DropdownMenu modal={false}>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setEditingProduct(product)}>
+                            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setTimeout(() => setEditingProduct(product), 0) }}>
                               <Edit className="h-4 w-4 mr-2" />
                               Editar
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDuplicate(product)}>
+                            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleDuplicate(product) }}>
                               <Copy className="h-4 w-4 mr-2" />
                               Duplicar
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleToggleStatus(product.id)}>
+                            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleToggleStatus(product.id) }}>
                               {product.ativo ? (
                                 <>
                                   <EyeOff className="h-4 w-4 mr-2" />
@@ -1200,7 +1227,7 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
                                 </>
                               )}
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleToggleFeatured(product.id)}>
+                            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleToggleFeatured(product.id) }}>
                               {product.destacado ? (
                                 <>
                                   <StarOff className="h-4 w-4 mr-2" />
@@ -1215,7 +1242,7 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
-                              onClick={() => setDeleteProductState(product)}
+                              onSelect={(e) => { e.preventDefault(); setDeleteProductState(product) }}
                               className="text-red-600"
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
@@ -1228,16 +1255,16 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
                   </ContextMenuTrigger>
                   
                   <ContextMenuContent>
-                    <ContextMenuItem onClick={() => setEditingProduct(product)}>
+                    <ContextMenuItem onSelect={(e) => { e.preventDefault(); setTimeout(() => setEditingProduct(product), 0) }}>
                       <Edit className="h-4 w-4 mr-2" />
                       Editar Produto
                     </ContextMenuItem>
-                    <ContextMenuItem onClick={() => handleDuplicate(product)}>
+                    <ContextMenuItem onSelect={(e) => { e.preventDefault(); handleDuplicate(product) }}>
                       <Copy className="h-4 w-4 mr-2" />
                       Duplicar Produto
                     </ContextMenuItem>
                     <ContextMenuSeparator />
-                    <ContextMenuItem onClick={() => handleToggleStatus(product.id)}>
+                    <ContextMenuItem onSelect={(e) => { e.preventDefault(); handleToggleStatus(product.id) }}>
                       {product.ativo ? (
                         <>
                           <EyeOff className="h-4 w-4 mr-2" />
@@ -1250,7 +1277,7 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
                         </>
                       )}
                     </ContextMenuItem>
-                    <ContextMenuItem onClick={() => handleToggleFeatured(product.id)}>
+                    <ContextMenuItem onSelect={(e) => { e.preventDefault(); handleToggleFeatured(product.id) }}>
                       {product.destacado ? (
                         <>
                           <StarOff className="h-4 w-4 mr-2" />
@@ -1265,7 +1292,7 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
                     </ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem 
-                      onClick={() => setDeleteProductState(product)}
+                      onSelect={(e) => { e.preventDefault(); setDeleteProductState(product) }}
                       className="text-red-600"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />

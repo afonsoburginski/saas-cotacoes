@@ -27,6 +27,8 @@ import {
   Image as ImageIcon,
   Search
 } from "lucide-react"
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import { QrCode, Banknote, Receipt, ShoppingCart, Hammer, Wrench, Package, Boxes, BadgeDollarSign } from "lucide-react"
 import Image from "next/image"
 
 interface PerfilLojaDesktopProps {
@@ -47,6 +49,7 @@ interface PerfilLojaDesktopProps {
     bairro?: string | null
     cidade?: string | null
     estado?: string | null
+    servicesOffered?: Array<{ label: string; icon?: string }>
   }
   setProfile: (profile: any) => void
   storeId: string | null
@@ -61,6 +64,38 @@ export function PerfilLojaDesktop({ profile, setProfile, storeId }: PerfilLojaDe
   const logoInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
+  const [selectedIcon, setSelectedIcon] = useState<string | undefined>(undefined)
+
+  const renderIcon = (key?: string, cls = "h-4 w-4") => {
+    switch (key) {
+      case 'truck': return <Truck className={cls} />
+      case 'credit-card': return <CreditCard className={cls} />
+      case 'clock': return <Clock className={cls} />
+      case 'shield': return <Shield className={cls} />
+      case 'map-pin': return <MapPin className={cls} />
+      case 'phone': return <Phone className={cls} />
+      case 'star': return <Star className={cls} />
+      case 'qr-code': return <QrCode className={cls} />
+      case 'banknote': return <Banknote className={cls} />
+      case 'receipt': return <Receipt className={cls} />
+      case 'shopping-cart': return <ShoppingCart className={cls} />
+      case 'hammer': return <Hammer className={cls} />
+      case 'wrench': return <Wrench className={cls} />
+      case 'package': return <Package className={cls} />
+      case 'boxes': return <Boxes className={cls} />
+      case 'badge-dollar-sign': return <BadgeDollarSign className={cls} />
+      default: return <Star className={cls + " opacity-30"} />
+    }
+  }
+
+  const ICON_KEYS = [
+    // Pagamentos
+    'credit-card','qr-code','banknote','receipt','badge-dollar-sign',
+    // Produtos/Serviços
+    'shopping-cart','package','boxes','hammer','wrench',
+    // Gerais
+    'truck','clock','shield','map-pin','phone','star'
+  ] as const
 
   const handleBlur = async (field: keyof typeof profile, newValue: string) => {
     // Sempre salva, mesmo se o valor for igual (pode ter mudado)
@@ -572,24 +607,64 @@ export function PerfilLojaDesktop({ profile, setProfile, storeId }: PerfilLojaDe
               
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <h4 className="font-medium mb-3 font-montserrat">Serviços oferecidos</h4>
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 font-montserrat">
-                    <Truck className="h-3 w-3 mr-1" />
-                    Entrega grátis
-                  </Badge>
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 font-montserrat">
-                    <CreditCard className="h-3 w-3 mr-1" />
-                    Cartão aceito
-                  </Badge>
-                  <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 font-montserrat">
-                    <Clock className="h-3 w-3 mr-1" />
-                    Entrega rápida
-                  </Badge>
-                  <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 font-montserrat">
-                    <Shield className="h-3 w-3 mr-1" />
-                    Garantia
-                  </Badge>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="relative max-w-sm w-full">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-10 p-0 flex items-center justify-center">
+                          {renderIcon(selectedIcon)}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="grid grid-cols-6 gap-1 p-2 max-w-xs">
+                        {ICON_KEYS.map((key) => (
+                          <DropdownMenuItem key={key} className="p-2 h-8 w-8 justify-center" onSelect={() => setSelectedIcon(key)} title={key}>
+                            {renderIcon(key)}
+                          </DropdownMenuItem>
+                        ))}
+                        <DropdownMenuItem className="col-span-6 justify-center" onSelect={() => setSelectedIcon(undefined)}>
+                          Nenhum
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Input
+                      placeholder="Adicionar serviço (ex: Entrega grátis)"
+                      className="pl-12"
+                      onKeyDown={async (e) => {
+                        if (e.key === 'Enter') {
+                          const target = e.currentTarget as HTMLInputElement
+                          const label = target.value.trim()
+                          if (!label) return
+                          const icon = selectedIcon
+                          const next = [ ...(profile.servicesOffered || []), { label, icon } ]
+                          setProfile({ ...profile, servicesOffered: next })
+                          target.value = ''
+                          setSelectedIcon(undefined)
+                          if (storeId) {
+                            await fetch(`/api/stores/${storeId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ servicesOffered: next }) })
+                          }
+                        }
+                      }}
+                    />
+                  </div>
                 </div>
+                {profile.servicesOffered && profile.servicesOffered.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {profile.servicesOffered.map((s, idx) => (
+                      <Badge key={`${s.label}-${idx}`} variant="outline" className="font-montserrat group cursor-pointer" onClick={async () => {
+                        const next = (profile.servicesOffered || []).filter((x) => !(x.label === s.label && x.icon === s.icon))
+                        setProfile({ ...profile, servicesOffered: next })
+                        if (storeId) {
+                          await fetch(`/api/stores/${storeId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ servicesOffered: next }) })
+                        }
+                      }}>
+                        {s.icon && (
+                          <span className="mr-1" title={s.label}>{renderIcon(s.icon)}</span>
+                        )}
+                        <span>{s.label}</span>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </TabsContent>

@@ -20,6 +20,22 @@ export async function GET(
       )
     }
     
+    let servicesOffered: Array<{ label: string; icon?: string }> | undefined
+    try {
+      if (store.shippingPolicy) {
+        const parsed = typeof store.shippingPolicy === 'string' 
+          ? JSON.parse(store.shippingPolicy) 
+          : (store.shippingPolicy as any)
+        if (parsed && Array.isArray(parsed.servicesOffered)) {
+          servicesOffered = parsed.servicesOffered.map((item: any) => {
+            if (typeof item === 'string') return { label: item }
+            if (item && typeof item.label === 'string') return { label: item.label, icon: item.icon || undefined }
+            return null
+          }).filter(Boolean) as Array<{ label: string; icon?: string }>
+        }
+      }
+    } catch {}
+
     const formatted = {
       id: store.id.toString(),
       nome: store.nome,
@@ -44,6 +60,7 @@ export async function GET(
       shippingPolicy: store.shippingPolicy,
       address: store.address,
       rating: store.rating ? parseFloat(store.rating as string) : 0,
+      servicesOffered,
     }
     
     return NextResponse.json({ data: formatted })
@@ -79,6 +96,29 @@ export async function PUT(
     if (body.horarioFuncionamento !== undefined) data.horarioFuncionamento = body.horarioFuncionamento
     if (body.logo !== undefined) data.logo = body.logo
     if (body.coverImage !== undefined) data.coverImage = body.coverImage
+    if (body.servicesOffered !== undefined) {
+      try {
+        const existingRaw: any = body.shippingPolicy ?? null
+        let existing: any = {}
+        if (existingRaw) {
+          existing = typeof existingRaw === 'string' ? JSON.parse(existingRaw) : existingRaw
+        }
+        const normalized = (Array.isArray(body.servicesOffered) ? body.servicesOffered : []).map((item: any) => {
+          if (typeof item === 'string') return { label: item }
+          if (item && typeof item.label === 'string') return { label: item.label, icon: item.icon || undefined }
+          return null
+        }).filter(Boolean)
+        const merged = { ...existing, servicesOffered: normalized }
+        data.shippingPolicy = merged
+      } catch {
+        const normalized = (Array.isArray(body.servicesOffered) ? body.servicesOffered : []).map((item: any) => {
+          if (typeof item === 'string') return { label: item }
+          if (item && typeof item.label === 'string') return { label: item.label, icon: item.icon || undefined }
+          return null
+        }).filter(Boolean)
+        data.shippingPolicy = { servicesOffered: normalized }
+      }
+    }
 
     if (Object.keys(data).length === 0) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 })

@@ -80,13 +80,24 @@ export function LandingTopbar() {
 
             {isFornecedor && (
               <Button
-                onClick={() => {
+                onClick={async () => {
                   if (isLoadingSlug) return
                   if (slug) {
                     router.push(`/loja/${slug}`)
-                  } else {
-                    router.push('/loja/loading')
+                    return
                   }
+                  // Slug ainda não carregou: tentar buscar diretamente
+                  try {
+                    const res = await fetch('/api/user/store')
+                    if (res.ok) {
+                      const data = await res.json()
+                      if (data?.slug) {
+                        router.push(`/loja/${data.slug}`)
+                        return
+                      }
+                    }
+                  } catch {}
+                  router.push('/loja/loading')
                 }}
                 className="bg-[#22C55E] text-white hover:bg-[#22C55E]/90 transition-all duration-200 h-9 sm:h-10 gap-2 px-4 sm:px-6"
               >

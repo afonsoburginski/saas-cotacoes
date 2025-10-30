@@ -5,13 +5,15 @@ interface CategoriesResponse {
   total: number
 }
 
-export function useCategories() {
-  return useQuery({
-    queryKey: ["categories"],
+export function useCategories(opts?: { tipo?: 'produto' | 'servico' }) {
+  const tipo = opts?.tipo
+  return useQuery<CategoriesResponse>({
+    queryKey: ["categories", tipo ?? "all"],
     queryFn: async () => {
-      const res = await fetch("/api/categories")
+      const url = tipo ? `/api/categories?tipo=${tipo}` : "/api/categories"
+      const res = await fetch(url)
       if (!res.ok) throw new Error("Failed to fetch categories")
-      return res.json() as Promise<CategoriesResponse>
+      return res.json()
     },
   })
 }

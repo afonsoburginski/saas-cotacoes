@@ -251,21 +251,45 @@ export function FornecedorDesktop({ store, storeProducts, storeServices }: Forne
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {catalogItems.map((item) => (
                 item.isService ? (
-                  <Card key={item.id} className="p-4 hover:shadow-lg transition-shadow border-green-100 flex flex-col">
-                    <Badge className="mb-2 bg-green-600 text-white self-start">Serviço</Badge>
-                    <h4 className="font-bold text-sm mb-1 line-clamp-2">{item.nome}</h4>
-                    <p className="text-xs text-gray-600 mb-3">{item.categoria}</p>
-                    <div className="mt-auto">
-                      <p className={`text-xs font-semibold mb-2 ${formatServicePrice(item).includes('Sob consulta') ? 'text-amber-600' : 'text-green-700'}`}>
-                        {formatServicePrice(item)}
-                      </p>
-                      <Button 
-                        size="sm" 
-                        className="w-full text-xs bg-green-600 text-white hover:bg-green-700"
-                        onClick={() => handleAddService(item)}
-                      >
-                        Adicionar Serviço
-                      </Button>
+                  <Card key={item.id} className="group relative overflow-hidden h-full p-0 border border-gray-200 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300">
+                    <div className="relative w-full aspect-[4/5]">
+                      {/* Imagem ocupa o card inteiro */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={item.imagemUrl || "/placeholder.svg?height=1000&width=800"}
+                        alt={item.nome}
+                        className="object-cover w-full h-full"
+                      />
+
+                      {/* Badge de categoria/serviço */}
+                      <div className="absolute top-3 left-3 transition-opacity duration-300">
+                        <Badge variant="secondary" className="text-[11px] px-2 py-1 font-semibold backdrop-blur-md font-montserrat">
+                          Serviço {item.categoria ? `• ${item.categoria}` : ''}
+                        </Badge>
+                      </div>
+
+                      {/* Overlay inferior com infos e ação */}
+                      <div className="pointer-events-none absolute inset-0">
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/35 to-transparent" />
+                        <div className="absolute inset-x-0 bottom-0 p-4 space-y-3">
+                          <h3 className="pointer-events-auto text-white font-bold text-base leading-snug line-clamp-2 drop-shadow font-marlin">
+                            {item.nome}
+                          </h3>
+                          {formatServicePrice(item).includes('Sob consulta') && (
+                            <Badge className="bg-amber-500/90 text-white border-0 text-[10px] font-semibold w-fit">Sob consulta</Badge>
+                          )}
+                          <div className="pointer-events-auto">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="w-full h-9 font-semibold relative overflow-hidden font-montserrat bg-green-600 hover:bg-green-700 text-white"
+                              onClick={() => handleAddService(item)}
+                            >
+                              Adicionar Serviço
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </Card>
                 ) : (
@@ -380,27 +404,27 @@ export function FornecedorDesktop({ store, storeProducts, storeServices }: Forne
                 </div>
               </div>
               
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <h4 className="font-medium mb-3 font-montserrat">Serviços oferecidos</h4>
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 font-montserrat">
-                    <Truck className="h-3 w-3 mr-1" />
-                    Entrega grátis
-                  </Badge>
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 font-montserrat">
-                    <CreditCard className="h-3 w-3 mr-1" />
-                    Cartão aceito
-                  </Badge>
-                  <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 font-montserrat">
-                    <Clock className="h-3 w-3 mr-1" />
-                    Entrega rápida
-                  </Badge>
-                  <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 font-montserrat">
-                    <Shield className="h-3 w-3 mr-1" />
-                    Garantia
-                  </Badge>
+              {Array.isArray(store.servicesOffered) && store.servicesOffered.length > 0 && (
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <h4 className="font-medium mb-3 font-montserrat">Serviços oferecidos</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {store.servicesOffered.map((s: any, idx: number) => (
+                      <Badge key={`${s.label||s}-${idx}`} variant="outline" className="font-montserrat">
+                        {typeof s === 'object' && s.icon ? (
+                          s.icon === 'truck' ? <Truck className="h-3 w-3 mr-1 inline"/> :
+                          s.icon === 'credit-card' ? <CreditCard className="h-3 w-3 mr-1 inline"/> :
+                          s.icon === 'clock' ? <Clock className="h-3 w-3 mr-1 inline"/> :
+                          s.icon === 'shield' ? <Shield className="h-3 w-3 mr-1 inline"/> :
+                          s.icon === 'map-pin' ? <MapPin className="h-3 w-3 mr-1 inline"/> :
+                          s.icon === 'phone' ? <Phone className="h-3 w-3 mr-1 inline"/> :
+                          s.icon === 'star' ? <Star className="h-3 w-3 mr-1 inline"/> : null
+                        ) : null}
+                        {typeof s === 'object' ? s.label : s}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </TabsContent>
         </Tabs>

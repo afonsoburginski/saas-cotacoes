@@ -239,6 +239,17 @@ export const categories = pgTable('categories', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+// Tabela de Unidades de Medida
+export const measurementUnits = pgTable('measurement_units', {
+  id: serial('id').primaryKey(),
+  nome: varchar('nome', { length: 100 }).notNull().unique(), // ex.: "Unidade (un)", "Metro (m)"
+  abreviacao: varchar('abreviacao', { length: 20 }).notNull(), // ex.: "un", "m", "m²", "m³", "kg"
+  tipo: varchar('tipo', { length: 20 }).notNull(), // 'unit' | 'length' | 'area' | 'volume' | 'weight'
+  ativo: boolean('ativo').default(true),
+  ordem: integer('ordem').default(0),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 // Tabela de Favoritos
 export const favorites = pgTable('favorites', {
   id: serial('id').primaryKey(),

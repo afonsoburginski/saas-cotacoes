@@ -50,8 +50,23 @@ export const NavUser = memo(function NavUser() {
     router.push('/')
   }, [router])
   
-  const handleProfileClick = useCallback(() => {
-    router.push(slug ? `/loja/${slug}/perfil` : '/loja/loading')
+  const handleProfileClick = useCallback(async () => {
+    if (slug) {
+      router.push(`/loja/${slug}/perfil`)
+      return
+    }
+    // Tentar obter o slug diretamente antes de cair no loading
+    try {
+      const res = await fetch('/api/user/store')
+      if (res.ok) {
+        const data = await res.json()
+        if (data?.slug) {
+          router.push(`/loja/${data.slug}/perfil`)
+          return
+        }
+      }
+    } catch {}
+    router.push('/loja/loading')
   }, [router, slug])
 
   return (

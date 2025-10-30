@@ -1,19 +1,28 @@
 "use client"
 
+import * as React from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Checkbox } from "@/components/ui/checkbox"
 import { CheckCircle, Clock, AlertCircle, Star, Package, TrendingUp, Wrench, Edit, Eye, MoreHorizontal } from "lucide-react"
 import { DataTableColumnHeader } from "./data-table-column-header"
+import { useAdminStore } from "@/stores/admin-store"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuPortal,
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+} from "@/components/ui/dropdown-menu"
 
 export type Store = {
   id: number
@@ -48,6 +57,7 @@ export type Store = {
   totalReviews?: number
   createdAt: string
   updatedAt: string
+  businessType?: 'comercio' | 'servico'
 }
 
 const getStatusBadge = (status: string) => {
@@ -112,6 +122,8 @@ export const columns: ColumnDef<Store>[] = [
     enableSorting: false,
     enableHiding: false,
   },
+  
+  // Removida coluna de Tipo do Negócio; badge será exibida na coluna "Loja".
   {
     accessorKey: "nome",
     header: ({ column }) => (
@@ -119,9 +131,13 @@ export const columns: ColumnDef<Store>[] = [
     ),
     cell: ({ row }) => {
       const store = row.original
+      const label = store.businessType === 'servico' ? 'Prestador de Serviço' : 'Comércio (Loja Física)'
       return (
         <div>
-          <p className="font-medium text-gray-900">{store.nome}</p>
+          <div className="flex items-center gap-1">
+            <p className="font-medium text-gray-900">{store.nome}</p>
+            <Badge variant="secondary">{label}</Badge>
+          </div>
           {store.descricao && (
             <p className="text-xs text-gray-400 mt-1 line-clamp-2">{store.descricao}</p>
           )}
@@ -257,47 +273,62 @@ export const columns: ColumnDef<Store>[] = [
   },
   {
     id: "actions",
+    header: () => null,
     cell: ({ row }) => {
       const store = row.original
-
       return (
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">Abrir menu</span>
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>{store.nome}</DropdownMenuLabel>
+          <DropdownMenuContent className="w-56" align="start">
+            <DropdownMenuLabel>Ações</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => console.log('Ver detalhes', store.id)}>
-              <Eye className="mr-2 h-4 w-4" />
-              Ver detalhes
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => console.log('Aprovar', store.id)}>
-              <CheckCircle className="mr-2 h-4 w-4" />
-              Aprovar
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => console.log('Suspender', store.id)}>
-              <Clock className="mr-2 h-4 w-4" />
-              Suspender
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => console.log('Bloquear', store.id)}>
-              <AlertCircle className="mr-2 h-4 w-4" />
-              Bloquear
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              onClick={() => console.log('Excluir', store.id)}
-              className="text-red-600"
-            >
-              Excluir
-            </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>Tipo do Negócio</DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent>
+                  <DropdownMenuRadioGroup
+                    value={store.businessType || 'comercio'}
+                    onValueChange={async (value) => {
+                      const val = (value === 'servico' ? 'servico' : 'comercio') as 'comercio' | 'servico'
+                      console.log('🟦 Dropdown onValueChange ->', val, 'storeId:', store.id)
+                      const uid = (store as any).userId || (store as any).user_id
+                      if (!uid) {
+                        console.warn('⚠️ Sem userId para storeId', store.id)
+                        return
+                      }
+                      const updateStore = useAdminStore.getState().updateStore
+                      updateStore(store.id, { businessType: val })
+                      ;(row as any).original.businessType = val
+                      await fetch(`/api/admin/users/${uid}/business-type`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ businessType: val }),
+                        cache: 'no-store',
+                        keepalive: true,
+                      })
+                      if (typeof window !== 'undefined') {
+                        window.dispatchEvent(new CustomEvent('admin:stores:updated'))
+                      }
+                      console.log('🟩 Dropdown PATCH success for', val)
+                    }}
+                  >
+                    <DropdownMenuRadioItem value="comercio">Comércio (Loja Física)</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="servico">Prestador de Serviço</DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
           </DropdownMenuContent>
         </DropdownMenu>
       )
     },
+    enableSorting: false,
+    enableHiding: false,
   },
+  
 ]

@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { CurrencyInput } from "@/components/ui/currency-input"
+import { ImageUpload } from "@/components/ui/image-upload"
 import {
   Dialog,
   DialogContent,
@@ -19,7 +20,8 @@ import {
 } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { Service } from "@/lib/types"
-import { Package, DollarSign, Briefcase } from "lucide-react"
+import { Package, DollarSign, Briefcase, Search } from "lucide-react"
+import { useCategories } from "@/hooks/use-categories"
 
 interface ServiceFormProps {
   service?: Service
@@ -36,24 +38,12 @@ export interface ServiceFormData {
   precoMaximo?: number
   tipoPrecificacao: 'hora' | 'dia' | 'projeto' | 'm2' | 'visita'
   descricao: string
+  imagemUrl?: string
   ativo: boolean
   destacado: boolean
 }
 
-const serviceCategories = [
-  "Alvenaria",
-  "Elétrica", 
-  "Hidráulica",
-  "Pintura",
-  "Acabamento",
-  "Marcenaria",
-  "Serralheria",
-  "Gesso",
-  "Vidraçaria",
-  "Jardinagem",
-  "Limpeza",
-  "Outros"
-]
+// categorias dinâmicas
 
 const tiposPrecificacao = [
   { value: "hora", label: "Por Hora" },
@@ -65,6 +55,12 @@ const tiposPrecificacao = [
 
 export function ServiceForm({ service, isOpen, onClose, onSubmit }: ServiceFormProps) {
   const { toast } = useToast()
+  const { data: catResp } = useCategories({ tipo: 'servico' })
+  const { data: catAll } = useCategories()
+  const serviceCategories = (catResp?.data && catResp.data.length > 0)
+    ? catResp.data
+    : (catAll?.data ?? [])
+  const [categorySearch, setCategorySearch] = useState("")
   const [formData, setFormData] = useState<ServiceFormData>({
     nome: service?.nome || "",
     categoria: service?.categoria || "",
@@ -73,6 +69,7 @@ export function ServiceForm({ service, isOpen, onClose, onSubmit }: ServiceFormP
     precoMaximo: service?.precoMaximo,
     tipoPrecificacao: service?.tipoPrecificacao || "hora",
     descricao: service?.descricao || "",
+    imagemUrl: service?.imagemUrl || "",
     ativo: service?.ativo ?? true,
     destacado: service?.destacado ?? false,
   })
@@ -90,6 +87,7 @@ export function ServiceForm({ service, isOpen, onClose, onSubmit }: ServiceFormP
         precoMaximo: service.precoMaximo,
         tipoPrecificacao: service.tipoPrecificacao,
         descricao: service.descricao || "",
+        imagemUrl: (service as any).imagemUrl || "",
         ativo: service.ativo,
         destacado: service.destacado ?? false,
       })
@@ -202,16 +200,27 @@ export function ServiceForm({ service, isOpen, onClose, onSubmit }: ServiceFormP
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="categoria" className="text-sm font-medium text-gray-700">Especialidade *</Label>
+                <Label htmlFor="categoria" className="text-sm font-medium text-gray-700">Categoria *</Label>
                 <Select
                   value={formData.categoria}
                   onValueChange={(value) => setFormData({ ...formData, categoria: value })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione a especialidade" />
+                    <SelectValue placeholder="Selecione a categoria" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {serviceCategories.map((cat) => (
+                  <SelectContent inline>
+                    <div className="relative p-2">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Buscar categoria"
+                        value={categorySearch}
+                        onChange={(e) => setCategorySearch(e.target.value)}
+                        className="h-8 pl-7 bg-transparent border border-gray-300 rounded-sm focus-visible:ring-0 focus-visible:ring-offset-0"
+                      />
+                    </div>
+                    {serviceCategories
+                      .filter(c => !categorySearch || c.toLowerCase().includes(categorySearch.toLowerCase()))
+                      .map((cat) => (
                       <SelectItem key={cat} value={cat}>
                         {cat}
                       </SelectItem>
@@ -233,79 +242,75 @@ export function ServiceForm({ service, isOpen, onClose, onSubmit }: ServiceFormP
             </div>
           </div>
 
-          {/* Precificação */}
-          <div className="space-y-4 pb-6 border-b-2 border-dashed border-gray-300">
-            <h3 className="text-base font-semibold flex items-center gap-2 text-gray-800">
-              <DollarSign className="h-5 w-5 text-gray-600" />
-              Precificação
-            </h3>
-
-            <div className="space-y-2">
-              <Label htmlFor="tipoPrecificacao" className="text-sm font-medium text-gray-700">Tipo de Cobrança *</Label>
-              <Select
-                value={formData.tipoPrecificacao}
-                onValueChange={(value) => setFormData({ ...formData, tipoPrecificacao: value as any })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {tiposPrecificacao.map((tipo) => (
-                    <SelectItem key={tipo.value} value={tipo.value}>
-                      {tipo.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center space-x-2 p-4 bg-gray-50 rounded-lg">
-              <Switch
-                id="hasVariacao"
-                checked={hasVariacao}
-                onCheckedChange={setHasVariacao}
-              />
-              <Label htmlFor="hasVariacao" className="text-sm cursor-pointer font-medium">
-                Trabalho com faixa de preço (mínimo e máximo)
-              </Label>
-            </div>
-
-            {!hasVariacao ? (
+          {/* Precificação + Imagem lado a lado */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b-2 border-dashed border-gray-300">
+            {/* Precificação */}
+            <div className="space-y-4">
+              <h3 className="text-base font-semibold flex items-center gap-2 text-gray-800">
+                <DollarSign className="h-5 w-5 text-gray-600" />
+                Precificação
+              </h3>
               <div className="space-y-2">
-                <Label htmlFor="preco" className="text-sm font-medium text-gray-700">
-                  Preço (por {tiposPrecificacao.find(t => t.value === formData.tipoPrecificacao)?.label.toLowerCase().replace('por ', '')}) *
-                </Label>
-                <CurrencyInput
-                  id="preco"
-                  value={formData.preco}
-                  onValueChange={(value) => setFormData({ ...formData, preco: value || 0 })}
-                  required
-                />
+                <Label htmlFor="tipoPrecificacao" className="text-sm font-medium text-gray-700">Tipo de Cobrança *</Label>
+                <Select
+                  value={formData.tipoPrecificacao}
+                  onValueChange={(value) => setFormData({ ...formData, tipoPrecificacao: value as any })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tiposPrecificacao.map((tipo) => (
+                      <SelectItem key={tipo.value} value={tipo.value}>
+                        {tipo.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="precoMinimo" className="text-sm font-medium text-gray-700">Preço Mínimo *</Label>
-                  <CurrencyInput
-                    id="precoMinimo"
-                    value={formData.precoMinimo}
-                    onValueChange={(value) => setFormData({ ...formData, precoMinimo: value })}
-                    required
-                  />
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="precoMaximo" className="text-sm font-medium text-gray-700">Preço Máximo *</Label>
-                  <CurrencyInput
-                    id="precoMaximo"
-                    value={formData.precoMaximo}
-                    onValueChange={(value) => setFormData({ ...formData, precoMaximo: value })}
-                    required
-                  />
-                </div>
+              <div className="flex items-center space-x-2 p-4 bg-gray-50 rounded-lg">
+                <Switch id="hasVariacao" checked={hasVariacao} onCheckedChange={setHasVariacao} />
+                <Label htmlFor="hasVariacao" className="text-sm cursor-pointer font-medium">
+                  Trabalho com faixa de preço (mínimo e máximo)
+                </Label>
               </div>
-            )}
+
+              {!hasVariacao ? (
+                <div className="space-y-2">
+                  <Label htmlFor="preco" className="text-sm font-medium text-gray-700">
+                    Preço (por {tiposPrecificacao.find(t => t.value === formData.tipoPrecificacao)?.label.toLowerCase().replace('por ', '')}) *
+                  </Label>
+                  <CurrencyInput id="preco" value={formData.preco} onValueChange={(value) => setFormData({ ...formData, preco: value || 0 })} required />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="precoMinimo" className="text-sm font-medium text-gray-700">Preço Mínimo *</Label>
+                    <CurrencyInput id="precoMinimo" value={formData.precoMinimo} onValueChange={(v) => setFormData({ ...formData, precoMinimo: v })} required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="precoMaximo" className="text-sm font-medium text-gray-700">Preço Máximo *</Label>
+                    <CurrencyInput id="precoMaximo" value={formData.precoMaximo} onValueChange={(v) => setFormData({ ...formData, precoMaximo: v })} required />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Imagem do Serviço */}
+            <div className="space-y-3">
+              <h3 className="text-base font-semibold text-gray-800">Imagem do Serviço</h3>
+              <ImageUpload
+                value={formData.imagemUrl ? [formData.imagemUrl] : []}
+                onChange={(urls) => setFormData({ ...formData, imagemUrl: urls[0] })}
+                maxImages={1}
+                bucket="images"
+                pathPrefix="services"
+                className="h-full"
+              />
+            </div>
           </div>
+
 
           {/* Status e Visibilidade */}
           <div className="space-y-4">

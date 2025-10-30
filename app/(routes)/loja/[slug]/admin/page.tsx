@@ -14,6 +14,9 @@ import { LojaHeader } from "@/components/loja/loja-header"
 import { useStoreSlug } from "@/hooks/use-store-slug"
 import { useSession } from "@/lib/auth-client"
 import { PaymentLinksCard } from "@/components/admin/payment-links-card"
+import { CategoriesManager } from "@/components/admin/categories-manager"
+import { UnitsManager } from "@/components/admin/units-manager"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useSessionCookie } from "@/hooks/use-session-cookie"
 
 interface LojaAdminPageProps {
@@ -200,22 +203,37 @@ export default function LojaAdminPage({ params }: LojaAdminPageProps) {
           <ChartPlansGrowth data={[]} />
 
           <Card>
-            <CardHeader>
-              <div>
-                <CardTitle>Todas as Lojas</CardTitle>
-                <CardDescription>Gerencie todas as lojas cadastradas no sistema</CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <StoresDataTable 
-                columns={columns} 
-                data={stores}
-                onViewDetails={handleViewDetails}
-                onApprove={handleApprove}
-                onSuspend={handleSuspend}
-                onBlock={handleBlock}
-              />
-            </CardContent>
+            <Tabs defaultValue="lojas" className="w-full">
+              <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <CardTitle>Todas as Lojas</CardTitle>
+                  <CardDescription>Gerencie lojas e categorias</CardDescription>
+                </div>
+                <TabsList>
+                  <TabsTrigger value="lojas">Lojas</TabsTrigger>
+                  <TabsTrigger value="categorias">Categorias</TabsTrigger>
+                  <TabsTrigger value="unidades">Unidade de medida</TabsTrigger>
+                </TabsList>
+              </CardHeader>
+              <CardContent>
+                <TabsContent value="lojas">
+                  <StoresDataTable 
+                    columns={columns} 
+                    data={stores}
+                    onViewDetails={handleViewDetails}
+                    onApprove={handleApprove}
+                    onSuspend={handleSuspend}
+                    onBlock={handleBlock}
+                  />
+                </TabsContent>
+                <TabsContent value="categorias">
+                  <CategoriesManager />
+                </TabsContent>
+                <TabsContent value="unidades">
+                  <UnitsManager />
+                </TabsContent>
+              </CardContent>
+            </Tabs>
           </Card>
 
           <PaymentLinksCard />
