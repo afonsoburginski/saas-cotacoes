@@ -10,6 +10,7 @@ import { ChartPlansGrowth } from "@/components/admin/chart-plans-growth"
 import { useAdminRealtime } from "@/hooks/use-admin-realtime"
 import { useAdminStore } from "@/stores/admin-store"
 import { StoreDetailsDialog } from "@/components/admin/store-details-dialog"
+import { StoreAdvertisementDialog } from "@/components/admin/store-advertisement-dialog"
 import { LojaHeader } from "@/components/loja/loja-header"
 import { useStoreSlug } from "@/hooks/use-store-slug"
 import { useSession } from "@/lib/auth-client"
@@ -34,6 +35,8 @@ export default function LojaAdminPage({ params }: LojaAdminPageProps) {
   
   const [viewDialogOpen, setViewDialogOpen] = React.useState(false)
   const [selectedStore, setSelectedStore] = React.useState<any>(null)
+  const [advertisementDialogOpen, setAdvertisementDialogOpen] = React.useState(false)
+  const [selectedStoreForAdvertisement, setSelectedStoreForAdvertisement] = React.useState<any>(null)
 
   // Emails permitidos para acesso admin
   const allowedEmails = ['afonsoburginski@gmail.com', 'orcanorte28@gmail.com']
@@ -122,6 +125,11 @@ export default function LojaAdminPage({ params }: LojaAdminPageProps) {
     } catch (err) {
       console.error('Error blocking store:', err)
     }
+  }
+
+  const handleManageAdvertisement = (store: any) => {
+    setSelectedStoreForAdvertisement(store)
+    setAdvertisementDialogOpen(true)
   }
 
   return (
@@ -224,6 +232,7 @@ export default function LojaAdminPage({ params }: LojaAdminPageProps) {
                     onApprove={handleApprove}
                     onSuspend={handleSuspend}
                     onBlock={handleBlock}
+                    onManageAdvertisement={handleManageAdvertisement}
                   />
                 </TabsContent>
                 <TabsContent value="categorias">
@@ -245,6 +254,15 @@ export default function LojaAdminPage({ params }: LojaAdminPageProps) {
           open={viewDialogOpen}
           onOpenChange={setViewDialogOpen}
           store={selectedStore}
+        />
+      )}
+
+      {selectedStoreForAdvertisement && (
+        <StoreAdvertisementDialog
+          open={advertisementDialogOpen}
+          onOpenChange={setAdvertisementDialogOpen}
+          storeId={selectedStoreForAdvertisement.id}
+          storeName={selectedStoreForAdvertisement.nome}
         />
       )}
       </div>

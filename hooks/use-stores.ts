@@ -34,10 +34,27 @@ export function useStores(params?: UseStoresParams) {
   return useQuery({
     queryKey: ["stores", params],
     queryFn: async () => {
-      const res = await fetch(`/api/stores?${searchParams.toString()}`)
-      if (!res.ok) throw new Error("Failed to fetch stores")
-      return res.json() as Promise<StoresResponse>
+      try {
+        const res = await fetch(`/api/stores?${searchParams.toString()}`)
+        if (!res.ok) {
+          // Retornar array vazio ao invés de lançar erro
+          return { data: [], total: 0 } as StoresResponse
+        }
+        const json = await res.json()
+        return json as StoresResponse
+      } catch (error) {
+        // Sempre retornar dados, mesmo com erro
+        return { data: [], total: 0 } as StoresResponse
+      }
     },
+    staleTime: 1000 * 30, // 30 segundos de cache
+    gcTime: 1000 * 60 * 5, // 5 minutos no cache
+    refetchOnWindowFocus: true, // Recarregar ao focar janela
+    refetchOnMount: true, // Sempre refetch ao montar componente
+    retry: 2, // Retry 2 vezes
+    retryDelay: 1000, // 1 segundo entre retries
+    // Removido refetchInterval - estava causando muitas requisições repetidas
+    // O refetchOnWindowFocus e refetchOnMount são suficientes
   })
 }
 

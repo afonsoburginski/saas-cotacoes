@@ -289,4 +289,17 @@ export const processedWebhooks = pgTable('processed_webhooks', {
   processedAt: timestamp('processed_at').defaultNow(),
   payload: jsonb('payload'),
 });
+
+// Tabela de Publicidades nas Lojas
+export const storeAdvertisements = pgTable('store_advertisements', {
+  id: serial('id').primaryKey(),
+  storeId: integer('store_id').references(() => stores.id).notNull(),
+  images: jsonb('images').notNull().default('[]'), // Array de URLs das imagens
+  startDate: timestamp('start_date'), // Data de início da exibição
+  endDate: timestamp('end_date'), // Data de término da exibição
+  active: boolean('active').default(true), // Se está ativo
+  link: text('link'), // Link opcional para o banner (se não tiver, vai pro perfil do fornecedor)
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
         

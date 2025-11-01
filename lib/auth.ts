@@ -68,8 +68,30 @@ export const auth = betterAuth({
       },
     }
   },
+  session: {
+    // Expiração da sessão: 30 dias (em segundos)
+    expiresIn: 60 * 60 * 24 * 30,
+    // Atualizar sessão a cada 7 dias de atividade (evita perder sessão por inatividade)
+    updateAge: 60 * 60 * 24 * 7,
+  },
   advanced: {
     cookiePrefix: "orca-norte",
+    // Configurações de cookie para manter sessão persistentemente
+    cookies: {
+      sessionToken: {
+        attributes: {
+          // HttpOnly para segurança (proteção contra XSS)
+          httpOnly: true,
+          // Secure apenas em produção (HTTPS)
+          secure: process.env.NODE_ENV === "production",
+          // SameSite para permitir cookies em cross-site quando necessário
+          sameSite: "lax",
+          // Path para garantir que o cookie seja enviado em todas as rotas
+          path: "/",
+          // Max-Age será gerenciado pelo Better Auth baseado em expiresIn
+        },
+      },
+    },
   },
 })
 

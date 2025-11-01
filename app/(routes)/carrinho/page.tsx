@@ -317,95 +317,146 @@ import {
   return (
     <>
       <PageBackground />
-      {/* DOM oculto para render do PDF no modelo do V0 */}
+      {/* DOM oculto para render do PDF - Template idêntico ao components/pdf/page.tsx */}
       {renderPdfDOM && (
         <div style={{ position: 'fixed', left: -99999, top: 0, width: '794px', height: '1123px', overflow: 'hidden', visibility: 'hidden' }}>
           <div
             id="pdf-root"
             ref={pdfRef}
-            style={{ width: '794px', height: '1123px', backgroundColor: 'white', color: '#111827', fontFamily: 'Inter, Arial, sans-serif', ['all' as any]: 'initial' }}
+            style={{ 
+              width: '794px', 
+              height: '1123px', 
+              backgroundColor: 'white', 
+              color: '#111827', 
+              fontFamily: 'sans-serif',
+              ['all' as any]: 'initial'
+            }}
           >
-            {/* Modelo baseado em components/pdf/index.tsx, com dados dinâmicos */}
-            <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
+            {/* Template baseado em components/pdf/page.tsx com dados dinâmicos */}
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               <div style={{ padding: '64px 48px 0 48px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                   <div>
-                    <p style={{ color: '#2563eb', fontWeight: 600, fontSize: 16 }}>Data: {new Date().toLocaleDateString('pt-BR')}</p>
+                    <p style={{ color: '#2563eb', fontWeight: '600', fontSize: '16px' }}>Data: {new Date().toLocaleDateString('pt-BR')}</p>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 0, marginRight: '64px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0', marginRight: '64px' }}>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 24, fontWeight: 'bold', lineHeight: 1 }}>
+                      <div style={{ fontSize: '24px', fontWeight: 'bold', lineHeight: '1' }}>
                         <span style={{ color: '#16a34a' }}>Orça</span>
                         <span style={{ color: '#2563eb' }}>norte</span>
                       </div>
                     </div>
-                    <div style={{ position: 'absolute', top: 0, right: '48px', width: 40, height: 100, backgroundColor: '#1e3a8a' }} />
+                    <div style={{ position: 'absolute', top: '0', right: '48px', width: '40px', height: '100px', backgroundColor: '#1e3a8a' }} />
                   </div>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 32 }}>
-                <div style={{ width: '55%', height: 24, backgroundColor: '#1e3a8a' }} />
-                <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', paddingLeft: 16, paddingRight: 48 }}>
-                  <h1 style={{ color: '#2563eb', fontSize: 22, fontWeight: 'normal', fontFamily: 'sans-serif', letterSpacing: '0.05em' }}>
-                    ORÇAMENTO #01234
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '32px' }}>
+                <div style={{ width: '55%', height: '24px', backgroundColor: '#1e3a8a' }} />
+                <div style={{ flex: '1', display: 'flex', justifyContent: 'flex-start', paddingLeft: '16px', paddingRight: '48px' }}>
+                  <h1 style={{ color: '#2563eb', fontSize: '22px', fontWeight: 'normal', fontFamily: 'sans-serif', letterSpacing: '0.05em' }}>
+                    ORÇAMENTO #{String(Date.now()).slice(-5)}
                   </h1>
                 </div>
               </div>
 
-              <div style={{ padding: '0 48px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <div style={{ marginBottom: 32 }}>
-                  <h3 style={{ color: '#2563eb', fontWeight: 'bold', fontSize: 16, marginBottom: 8 }}>A/C:</h3>
-                  <p style={{ fontWeight: 'bold', color: 'black', fontSize: 16, marginBottom: 2 }}>{session?.user?.name || 'Cliente'}</p>
-                  <p style={{ color: 'black', fontSize: 16, marginBottom: 2 }}>{session?.user?.email || ''}</p>
+              <div style={{ padding: '0 48px', flex: '1', display: 'flex', flexDirection: 'column' }}>
+                {/* Seção A/C */}
+                <div style={{ marginBottom: '32px' }}>
+                  <h3 style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '16px', marginBottom: '8px' }}>A/C:</h3>
+                  <p style={{ fontWeight: 'bold', color: 'black', fontSize: '16px', marginBottom: '2px' }}>
+                    {session?.user?.name || 'Cliente'}
+                  </p>
+                  <p style={{ color: 'black', fontSize: '16px', marginBottom: '2px' }}>
+                    (Telefone não informado)
+                  </p>
+                  <p style={{ color: 'black', fontSize: '16px' }}>
+                    {session?.user?.email || '(Email não informado)'}
+                  </p>
                 </div>
 
-                {/* Lista de itens por loja */}
-                <div style={{ flex: 1 }} />
-
-                {/* Total + separador + pagamentos/termos + rodapé idêntico ao modelo */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 64 }}>
-                  <div style={{ backgroundColor: '#1e3a8a', color: 'white', padding: '10px 40px', fontWeight: 'bold', fontSize: 20, letterSpacing: '0.05em' }}>
-                    TOTAL: R$ 0,00
-                  </div>
-                </div>
-
-                <div style={{ width: 128, height: 3, backgroundColor: '#1e3a8a', marginBottom: 16 }} />
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, marginBottom: 32 }}>
-                  <div>
-                    <h3 style={{ color: '#2563eb', fontWeight: 'bold', fontSize: 16, marginBottom: 6 }}>FORMA DE PAGAMENTO</h3>
-                    <p style={{ fontSize: 14, color: 'black', lineHeight: 1.625 }}>Pix com 10% de desconto</p>
-                    <p style={{ fontSize: 14, color: 'black', lineHeight: 1.625 }}>ou 2x no cartão de crédito</p>
-                  </div>
-                  <div>
-                    <h3 style={{ color: '#2563eb', fontWeight: 'bold', fontSize: 16, marginBottom: 6 }}>TERMOS E CONDIÇÕES</h3>
-                    <p style={{ fontSize: 14, color: 'black', lineHeight: 1.625 }}>Este orçamento é válido por 30 dias.</p>
-                  </div>
-                </div>
-
-                <div style={{ backgroundColor: '#1e3a8a', color: 'white', padding: '12px 48px', marginBottom: 88 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 14 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 40 }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span>📱</span>
-                        <span>(66) 9 9661-4628</span>
-                      </span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span>✉️</span>
-                        <span>orcanorte28@gmail.com</span>
-                      </span>
+                {/* Área para tabela de serviços - Itens agrupados por loja */}
+                <div style={{ flex: '1' }}>
+                  {Object.values(groupedForPdf).map((group, groupIdx) => (
+                    <div key={groupIdx} style={{ marginBottom: '16px' }}>
+                      <h4 style={{ color: '#1e3a8a', fontWeight: 'bold', fontSize: '14px', marginBottom: '8px' }}>
+                        {group.storeNome}
+                      </h4>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ backgroundColor: '#f3f4f6' }}>
+                            <th style={{ padding: '8px', border: '1px solid #e5e7eb', textAlign: 'left', fontSize: '12px' }}>Item</th>
+                            <th style={{ padding: '8px', border: '1px solid #e5e7eb', textAlign: 'left', fontSize: '12px' }}>Qtd</th>
+                            <th style={{ padding: '8px', border: '1px solid #e5e7eb', textAlign: 'left', fontSize: '12px' }}>Preço Unit.</th>
+                            <th style={{ padding: '8px', border: '1px solid #e5e7eb', textAlign: 'left', fontSize: '12px' }}>Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {group.items.map((item, itemIdx) => (
+                            <tr key={itemIdx}>
+                              <td style={{ padding: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }}>{item.productNome}</td>
+                              <td style={{ padding: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }}>{item.qty}</td>
+                              <td style={{ padding: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }}>R$ {item.precoUnit.toFixed(2).replace('.', ',')}</td>
+                              <td style={{ padding: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }}>R$ {(item.precoUnit * item.qty).toFixed(2).replace('.', ',')}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 40 }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span>🌐</span>
-                        <span>www.orcanorte.com.br</span>
-                      </span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span>📷</span>
-                        <span>@orcanorte</span>
-                      </span>
-                    </div>
+                  ))}
+                </div>
+
+                {/* Total */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '64px' }}>
+                  <div style={{ backgroundColor: '#1e3a8a', color: 'white', padding: '10px 40px', fontWeight: 'bold', fontSize: '20px', letterSpacing: '0.05em' }}>
+                    TOTAL: R$ {cartItems.reduce((acc, item) => acc + item.precoUnit * item.qty, 0).toFixed(2).replace('.', ',')}
+                  </div>
+                </div>
+
+                {/* Linha separadora */}
+                <div style={{ width: '128px', height: '3px', backgroundColor: '#1e3a8a', marginBottom: '16px' }} />
+
+                {/* Forma de pagamento e termos */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '80px', marginBottom: '32px' }}>
+                  <div>
+                    <h3 style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '16px', marginBottom: '6px' }}>
+                      FORMA DE PAGAMENTO
+                    </h3>
+                    <p style={{ fontSize: '14px', color: 'black', lineHeight: '1.625' }}>Pix com 10% de desconto</p>
+                    <p style={{ fontSize: '14px', color: 'black', lineHeight: '1.625' }}>ou 2x no cartão de crédito</p>
+                  </div>
+                  <div>
+                    <h3 style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '16px', marginBottom: '6px' }}>
+                      TERMOS E CONDIÇÕES
+                    </h3>
+                    <p style={{ fontSize: '14px', color: 'black', lineHeight: '1.625' }}>
+                      Este orçamento é válido por 30 dias.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ backgroundColor: '#1e3a8a', color: 'white', padding: '12px 48px', marginBottom: '88px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '40px' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span>📱</span>
+                      <span>(66) 9 9661-4628</span>
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span>✉️</span>
+                      <span>orcanorte28@gmail.com</span>
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '40px' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span>🌐</span>
+                      <span>www.orcanorte.com.br</span>
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span>📷</span>
+                      <span>@orcanorte</span>
+                    </span>
                   </div>
                 </div>
               </div>

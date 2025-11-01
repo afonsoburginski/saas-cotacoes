@@ -20,6 +20,7 @@ import { TypographyH3, TypographyH4, TypographyP, TypographySmall, TypographyMut
 import { ProductRowsSkeleton } from "./product-rows-skeleton"
 import { SuppliersSkeleton } from "./suppliers-skeleton"
 import { VirtualizedProductList } from "../virtualized-product-list"
+import { AdvertisementBanner } from "../advertisement-banner"
 import { useExplorarStore } from "@/stores/explorar-store"
 import { 
   Search, 
@@ -67,88 +68,13 @@ const ExplorarMobile = memo(function ExplorarMobile({
   // Random seed que muda a cada mount para forçar re-shuffle
   const [shuffleSeed] = useState(() => Math.random())
   
-  // Buscar prestadores de serviço
+  // Buscar prestadores de serviço usando hook (removido fetch manual duplicado)
   const [shuffledProviders, setShuffledProviders] = useState<any[]>([])
-  const fetchedProvidersOnceRef = useRef(false)
-  const warmedUpOnceRef = useRef(false)
   
-  useEffect(() => {
-    if (fetchedProvidersOnceRef.current) return
+  // Removido fetch manual - usar React Query ou hook específico se necessário
+  // Por enquanto, usar array vazio já que os prestadores aparecem na tab de Marketplace
 
-    let isMounted = true
-    const controller = new AbortController()
-
-    async function fetchWithRetry(url: string, attempts = 3, delayMs = 500): Promise<any> {
-      for (let attempt = 1; attempt <= attempts; attempt++) {
-        try {
-          const res = await fetch(url, { signal: controller.signal })
-          if (!res.ok) throw new Error(`HTTP ${res.status}`)
-          return await res.json()
-        } catch (err) {
-          if (controller.signal.aborted) throw err
-          if (attempt === attempts) throw err
-          await new Promise(r => setTimeout(r, delayMs * attempt))
-        }
-      }
-    }
-
-    fetchWithRetry('/api/service-providers?limit=15')
-      .then((data) => {
-        if (!isMounted) return
-        if (data?.data) {
-          setShuffledProviders(shuffleArray(data.data))
-          fetchedProvidersOnceRef.current = true
-        } else {
-          setShuffledProviders([])
-        }
-      })
-      .catch((err) => {
-        if (!controller.signal.aborted) {
-          console.warn('⚠️ Falha ao buscar prestadores (mobile):', err)
-          if (isMounted) setShuffledProviders([])
-        }
-      })
-
-    return () => {
-      isMounted = false
-      controller.abort()
-    }
-  }, [])
-
-  // Warm-up public endpoints to ensure data loads even when not logged in
-  useEffect(() => {
-    if (warmedUpOnceRef.current) return
-    warmedUpOnceRef.current = true
-
-    let isMounted = true
-    const controller = new AbortController()
-
-    async function fetchWithRetry(url: string, attempts = 3, delayMs = 400): Promise<void> {
-      for (let attempt = 1; attempt <= attempts; attempt++) {
-        try {
-          const res = await fetch(url, { signal: controller.signal })
-          if (!res.ok) throw new Error(`HTTP ${res.status}`)
-          return
-        } catch (err) {
-          if (controller.signal.aborted) return
-          if (attempt === attempts) {
-            console.warn('⚠️ Warm-up falhou:', url, err)
-            return
-          }
-          await new Promise(r => setTimeout(r, delayMs * attempt))
-        }
-      }
-    }
-
-    // Use the same filters as desktop defaults
-    fetchWithRetry('/api/products')
-    fetchWithRetry('/api/stores?status=ativo&businessType=comercio')
-
-    return () => {
-      isMounted = false
-      controller.abort()
-    }
-  }, [])
+  // Removido warm-up manual - React Query já faz isso automaticamente
 
   // Listen for supplier modal events from ProductCard - memoized
   const handleOpenSupplierModal = useCallback((event: CustomEvent) => {
@@ -233,7 +159,7 @@ const ExplorarMobile = memo(function ExplorarMobile({
   const searchValue = activeTab === "produtos" ? filters.search : supplierSearch
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA]">
+    <div className="min-h-screen bg-[#FAFAFA] overflow-x-hidden">
       {/* Search Section */}
       <div className="bg-[#0052FF] relative overflow-hidden">
         {/* Texture overlay */}
@@ -282,7 +208,7 @@ const ExplorarMobile = memo(function ExplorarMobile({
               className="relative px-4 py-3 text-sm text-gray-600 bg-transparent border-0 rounded-none shadow-none data-[state=active]:bg-transparent data-[state=active]:text-blue-600 data-[state=active]:shadow-none data-[state=active]:font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-transparent data-[state=active]:after:bg-blue-600 flex-1 font-montserrat"
             >
               <ShoppingBag className="w-4 h-4 mr-2" />
-              Fornecedores
+              Marketplace
             </TabsTrigger>
           </TabsList>
 
@@ -336,27 +262,43 @@ const ExplorarMobile = memo(function ExplorarMobile({
               ) : (
                 <div className="space-y-6">
                   {/* Group products by category - Netflix style rows (derivado dos próprios produtos) */}
-                  {Object.entries(productsByCategory).map(([categoria, categoryProducts]: [string, any[]]) => (
-                    <div key={categoria} className="space-y-3">
-                      <Link href={`/categoria/${encodeURIComponent(categoria)}`}>
-                        <div className="flex items-center justify-between px-4 cursor-pointer active:opacity-70 transition-opacity">
-                          <div className="flex items-center gap-2">
-                            <TypographyH4 className="text-lg text-gray-700 font-montserrat">{categoria}</TypographyH4>
-                            <FaArrowRightLong className="h-5 w-5 text-gray-700" />
+                  {Object.entries(productsByCategory).map(([categoria, categoryProducts]: [string, any[]], categoryIndex) => (
+                    <div key={categoria}>
+                      <div className="space-y-3">
+                        <Link href={`/categoria/${encodeURIComponent(categoria)}`}>
+                          <div className="flex items-center justify-between px-4 cursor-pointer active:opacity-70 transition-opacity">
+                            <div className="flex items-center gap-2">
+                              <TypographyH4 className="text-lg text-gray-700 font-montserrat">{categoria}</TypographyH4>
+                              <FaArrowRightLong className="h-5 w-5 text-gray-700" />
+                            </div>
+                            <TypographySmall className="text-gray-500 font-montserrat">
+                              {categoryProducts.length} itens
+                            </TypographySmall>
                           </div>
-                          <TypographySmall className="text-gray-500 font-montserrat">
-                            {categoryProducts.length} itens
-                          </TypographySmall>
-                        </div>
-                      </Link>
+                        </Link>
 
-                      {/* Horizontal Scrollable Row */}
-                      <div className="overflow-x-auto scrollbar-hide">
-                        <VirtualizedProductList 
-                          products={categoryProducts} 
-                          alwaysShowButtons={true}
-                        />
+                        {/* Horizontal Scrollable Row */}
+                        <div className="overflow-x-auto scrollbar-hide">
+                          <VirtualizedProductList 
+                            products={categoryProducts} 
+                            alwaysShowButtons={true}
+                          />
+                        </div>
                       </div>
+
+                      {/* Banner original na terceira linha (após 2 categorias) - SEM produtos */}
+                      {categoryIndex === 1 && (
+                        <div className="px-4 mt-6">
+                          <AdvertisementBanner showProducts={false} />
+                        </div>
+                      )}
+
+                      {/* Inserir banner a cada 4 categorias (estilo carrinho - full width, maior altura) - COM produtos (coleção) */}
+                      {(categoryIndex + 1) % 4 === 0 && categoryIndex !== 1 && (
+                        <div className="mt-6 -mx-4 overflow-x-hidden">
+                          <AdvertisementBanner height="h-[380px]" className="rounded-none border-x-0 border-b-2" showProducts={true} />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -510,6 +452,13 @@ const ExplorarMobile = memo(function ExplorarMobile({
                         )}
                       </div>
                       
+                      {/* Inserir banner após o primeiro fornecedor */}
+                      {index === 0 && (
+                        <div className="px-4 mt-6 mb-2">
+                          <AdvertisementBanner showProducts={false} />
+                        </div>
+                      )}
+
                       {/* Row de Prestadores */}
                       {showProviders && providersToShow.length > 0 && (
                         <div className="my-6 px-4">

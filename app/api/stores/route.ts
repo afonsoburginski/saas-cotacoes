@@ -2,8 +2,10 @@ import { NextResponse } from 'next/server'
 import { db } from '@/drizzle'
 import { stores, user as userTable } from '@/drizzle/schema'
 import { eq, desc, and } from 'drizzle-orm'
+import { apiCache } from '@/lib/api-cache'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 export async function GET(request: Request) {
   try {
@@ -11,7 +13,14 @@ export async function GET(request: Request) {
     const status = searchParams.get('status')
     const businessType = searchParams.get('businessType') // 'comercio' | 'servico'
     
-    console.log('🔍 /api/stores - Filtros:', { status, businessType })
+    // Cache key
+    const cacheKey = `stores:${status || ''}:${businessType || ''}`
+    
+    // Verificar cache primeiro
+    const cached = apiCache.get(cacheKey, 30000) // 30s TTL
+    if (cached) {
+      return NextResponse.json(cached)
+    }
     
     // Join com user para filtrar por businessType
     const query = db
@@ -49,11 +58,26 @@ export async function GET(request: Request) {
       conditions.push(eq(userTable.businessType, businessType))
     }
     
-    const result = conditions.length > 0
-      ? await query.where(and(...conditions)).orderBy(desc(stores.priorityScore))
-      : await query.orderBy(desc(stores.priorityScore))
-    
-    console.log('✅ Stores encontradas:', result.length)
+    // Timeout de 2 segundos para query
+    let result
+    try {
+      const finalQuery = conditions.length > 0
+        ? query.where(and(...conditions)).orderBy(desc(stores.priorityScore))
+        : query.orderBy(desc(stores.priorityScore))
+      
+      result = await Promise.race([
+        finalQuery,
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Query timeout')), 2000)
+        )
+      ])
+    } catch (queryError) {
+      // Timeout ou erro - retornar vazio silenciosamente
+      return NextResponse.json({
+        data: [],
+        total: 0,
+      }, { status: 200 })
+    }
     
     const formatted = result.map((s: any) => ({
       id: s.id.toString(),
@@ -74,15 +98,20 @@ export async function GET(request: Request) {
       slug: s.slug,
     }))
     
-    return NextResponse.json({
+    const response = {
       data: formatted,
       total: formatted.length
-    })
-  } catch (error) {
-    console.error('Error fetching stores:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch stores' },
-      { status: 500 }
-    )
+    }
+    
+    // Cachear resultado
+    apiCache.set(cacheKey, response)
+    
+    return NextResponse.json(response)
+  } catch (error: any) {
+    // SEMPRE retornar 200 - rota pública não pode quebrar
+    return NextResponse.json({
+      data: [],
+      total: 0,
+    }, { status: 200 })
   }
 }

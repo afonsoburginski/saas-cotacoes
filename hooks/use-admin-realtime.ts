@@ -20,19 +20,17 @@ export function useAdminRealtime() {
       try {
         setIsLoading(true)
         
-        // 1) Buscar stores rapidamente (somente a tabela principal)
-        const { data: baseStores, error: storesError } = await supabase
-          .from('stores')
-          .select('*')
-          .order('created_at', { ascending: false })
-
-        if (storesError) {
-          console.error('⚠️ Erro ao buscar stores:', storesError)
+        // 1) Buscar stores da API (com JOIN de publicidades)
+        const storesResponse = await fetch('/api/admin/stores')
+        if (!storesResponse.ok) {
+          console.error('⚠️ Erro ao buscar stores da API')
           adminStore.setStores([])
         } else {
-          const stores = baseStores || []
+          const storesData = await storesResponse.json()
+          const stores = storesData.data || []
+          
           // 2) Buscar business_type dos usuários relacionados em background (não bloqueia render)
-          const userIds = Array.from(new Set(stores.map((s: any) => s.user_id).filter(Boolean))) as string[]
+          const userIds = Array.from(new Set(stores.map((s: any) => s.user_id || s.userId).filter(Boolean))) as string[]
           adminStore.setStores(stores as any)
           if (userIds.length > 0) {
             ;(async () => {
@@ -48,7 +46,7 @@ export function useAdminRealtime() {
                   }, {} as Record<string, string | undefined>)
                   adminStore.setStores((stores as any).map((s: any) => ({
                     ...s,
-                    businessType: userIdToType[s.user_id] || s.businessType,
+                    businessType: userIdToType[s.user_id || s.userId] || s.businessType,
                   })))
                 }
               } catch (e) {
@@ -84,16 +82,19 @@ export function useAdminRealtime() {
         },
         async (payload: any) => {
         console.log('New store added:', payload.new)
-        adminStore.addStore(payload.new as any)
+        // Recarregar stores da API para ter dados de publicidade atualizados
+        try {
+          const res = await fetch('/api/admin/stores')
+          const data = await res.json()
+          adminStore.setStores(data.data || [])
           
           // Update stats
-          try {
-            const res = await fetch('/api/admin/stats')
-            const data = await res.json()
-            adminStore.setStats(data.stats)
-          } catch (err) {
-            console.error('Error updating stats:', err)
-          }
+          const statsRes = await fetch('/api/admin/stats')
+          const statsData = await statsRes.json()
+          adminStore.setStats(statsData.stats)
+        } catch (err) {
+          console.error('Error updating stores:', err)
+        }
         }
       )
       .on(
@@ -105,15 +106,18 @@ export function useAdminRealtime() {
         },
         async (payload: any) => {
           console.log('Store updated:', payload.new)
-          adminStore.updateStore((payload.new as any).id, payload.new as any)
-          
-          // Update stats
+          // Recarregar stores da API para ter dados de publicidade atualizados
           try {
-            const res = await fetch('/api/admin/stats')
+            const res = await fetch('/api/admin/stores')
             const data = await res.json()
-            adminStore.setStats(data.stats)
+            adminStore.setStores(data.data || [])
+            
+            // Update stats
+            const statsRes = await fetch('/api/admin/stats')
+            const statsData = await statsRes.json()
+            adminStore.setStats(statsData.stats)
           } catch (err) {
-            console.error('Error updating stats:', err)
+            console.error('Error updating stores:', err)
           }
         }
       )
@@ -135,6 +139,25 @@ export function useAdminRealtime() {
             adminStore.setStats(data.stats)
           } catch (err) {
             console.error('Error updating stats:', err)
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'store_advertisements',
+        },
+        async (payload: any) => {
+          console.log('Advertisement changed:', payload)
+          // Recarregar stores da API para ter dados de publicidade atualizados
+          try {
+            const res = await fetch('/api/admin/stores')
+            const data = await res.json()
+            adminStore.setStores(data.data || [])
+          } catch (err) {
+            console.error('Error updating stores after advertisement change:', err)
           }
         }
       )

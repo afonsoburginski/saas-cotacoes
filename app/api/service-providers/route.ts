@@ -2,51 +2,78 @@ import { NextResponse } from 'next/server'
 import { db } from '@/drizzle'
 import { stores, user as userTable } from '@/drizzle/schema'
 import { eq, and } from 'drizzle-orm'
+import { apiCache } from '@/lib/api-cache'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get('limit') || '10')
     
-    console.log('🔍 API: Buscando prestadores de serviço...')
+    // Cache key
+    const cacheKey = `service-providers:${limit}`
+    
+    // Verificar cache primeiro
+    const cached = apiCache.get(cacheKey, 30000) // 30s TTL
+    if (cached) {
+      return NextResponse.json(cached)
+    }
     
     // Buscar users com businessType='servico' e juntar com stores
-    const serviceProviders = await db
-      .select({
-        id: stores.id,
-        nome: stores.nome,
-        rating: stores.rating,
-        plano: stores.plano,
-        status: stores.status,
-        slug: stores.slug,
-        userId: stores.userId,
-        logo: stores.logo,
-        coverImage: stores.coverImage,
-      })
-      .from(stores)
-      .innerJoin(userTable, eq(stores.userId, userTable.id))
-      .where(
-        and(
-          eq(userTable.businessType, 'servico'),
-          eq(stores.status, 'approved')
+    // Timeout de 2 segundos para query
+    let serviceProviders
+    try {
+      serviceProviders = await Promise.race([
+        db
+          .select({
+            id: stores.id,
+            nome: stores.nome,
+            rating: stores.rating,
+            plano: stores.plano,
+            status: stores.status,
+            slug: stores.slug,
+            userId: stores.userId,
+            logo: stores.logo,
+            coverImage: stores.coverImage,
+          })
+          .from(stores)
+          .innerJoin(userTable, eq(stores.userId, userTable.id))
+          .where(
+            and(
+              eq(userTable.businessType, 'servico'),
+              eq(stores.status, 'approved')
+            )
+          )
+          .limit(limit),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Query timeout')), 2000)
         )
-      )
-      .limit(limit)
+      ])
+    } catch (queryError) {
+      // Timeout ou erro - retornar vazio silenciosamente
+      return NextResponse.json({
+        data: [],
+        total: 0,
+      }, { status: 200 })
+    }
     
-    console.log('✅ API: Prestadores encontrados:', serviceProviders.length)
-    
-    return NextResponse.json({
+    const response = {
       data: serviceProviders,
       total: serviceProviders.length
-    })
-  } catch (error) {
-    console.error('Error fetching service providers:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch service providers' },
-      { status: 500 }
-    )
+    }
+    
+    // Cachear resultado
+    apiCache.set(cacheKey, response)
+    
+    return NextResponse.json(response)
+  } catch (error: any) {
+    // SEMPRE retornar 200 - rota pública não pode quebrar
+    return NextResponse.json({
+      data: [],
+      total: 0,
+    }, { status: 200 })
   }
 }
 

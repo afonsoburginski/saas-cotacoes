@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server'
 import { db } from '@/drizzle'
 import { products, stores } from '@/drizzle/schema'
 import { eq, and, like, or, sql } from 'drizzle-orm'
+import { apiCache } from '@/lib/api-cache'
+
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 export async function GET(request: Request) {
   try {
@@ -12,6 +16,18 @@ export async function GET(request: Request) {
     const loja = searchParams.get('loja')
     const storeId = searchParams.get('storeId')
     const includeInactive = searchParams.get('includeInactive') === 'true'
+    const destacado = searchParams.get('destacado') === 'true'
+    
+    // Cache key baseado nos parâmetros
+    const cacheKey = `products:${search || ''}:${categoria || ''}:${loja || ''}:${storeId || ''}:${includeInactive}:${destacado}`
+    
+    // Verificar cache primeiro (apenas para rotas públicas sem busca complexa)
+    if (!search && !includeInactive) {
+      const cached = apiCache.get(cacheKey, 30000) // 30s TTL
+      if (cached) {
+        return NextResponse.json(cached)
+      }
+    }
     
     let query = db
       .select({
@@ -43,6 +59,10 @@ export async function GET(request: Request) {
       conditions.push(eq(products.ativo, true))
     }
     
+    if (destacado) {
+      conditions.push(eq(products.destacado, true))
+    }
+    
     if (search) {
       conditions.push(
         or(
@@ -65,7 +85,22 @@ export async function GET(request: Request) {
       query = query.where(and(...conditions)) as any
     }
     
-    const result = await query
+    // Timeout de 2 segundos para query - rotas públicas precisam ser rápidas
+    let result
+    try {
+      result = await Promise.race([
+        query,
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Query timeout')), 2000)
+        )
+      ])
+    } catch (queryError) {
+      // Timeout ou erro na query - retornar vazio silenciosamente
+      return NextResponse.json({
+        data: [],
+        total: 0,
+      }, { status: 200 })
+    }
     
     // Converter para formato esperado
     const formatted = result.map(p => ({
@@ -79,16 +114,23 @@ export async function GET(request: Request) {
       dimensoes: p.dimensoes as any,
     }))
     
-    return NextResponse.json({
+    const response = {
       data: formatted,
       total: formatted.length
-    })
-  } catch (error) {
-    console.error('Error fetching products:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch products' },
-      { status: 500 }
-    )
+    }
+    
+    // Cachear apenas para rotas públicas simples
+    if (!search && !includeInactive) {
+      apiCache.set(cacheKey, response)
+    }
+    
+    return NextResponse.json(response)
+  } catch (error: any) {
+    // SEMPRE retornar 200 com dados válidos - rota pública não pode quebrar
+    return NextResponse.json({
+      data: [],
+      total: 0,
+    }, { status: 200 })
   }
 }
 

@@ -5,7 +5,7 @@ import { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { CheckCircle, Clock, AlertCircle, Star, Package, TrendingUp, Wrench, Edit, Eye, MoreHorizontal } from "lucide-react"
+import { CheckCircle, Clock, AlertCircle, Star, Package, TrendingUp, Wrench, Edit, Eye, MoreHorizontal, Megaphone } from "lucide-react"
 import { DataTableColumnHeader } from "./data-table-column-header"
 import { useAdminStore } from "@/stores/admin-store"
 import {
@@ -58,6 +58,8 @@ export type Store = {
   createdAt: string
   updatedAt: string
   businessType?: 'comercio' | 'servico'
+  hasActiveAdvertisement?: boolean
+  activeAdvertisementImagesCount?: number
 }
 
 const getStatusBadge = (status: string) => {
@@ -269,6 +271,35 @@ export const columns: ColumnDef<Store>[] = [
     ),
     cell: ({ row }) => {
       return getStatusBadge(row.original.status)
+    },
+  },
+  {
+    accessorKey: "hasActiveAdvertisement",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Publicidade" />
+    ),
+    cell: ({ row }) => {
+      const store = row.original
+      // Se tem publicidade ativa e tem imagens
+      if (store.hasActiveAdvertisement && store.activeAdvertisementImagesCount && store.activeAdvertisementImagesCount > 0) {
+        return (
+          <div className="flex items-center gap-1.5">
+            <Megaphone className="w-3.5 h-3.5 text-green-600" />
+            <Badge 
+              variant="outline" 
+              className="text-green-600 border-green-200 bg-green-50"
+            >
+              {store.activeAdvertisementImagesCount} ativa{store.activeAdvertisementImagesCount !== 1 ? 's' : ''}
+            </Badge>
+          </div>
+        )
+      }
+      return (
+        <div className="flex items-center gap-1.5">
+          <Megaphone className="w-3.5 h-3.5 text-gray-300" />
+          <span className="text-xs text-gray-400">Sem publicidade</span>
+        </div>
+      )
     },
   },
   {

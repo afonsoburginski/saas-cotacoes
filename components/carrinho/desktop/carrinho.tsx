@@ -8,6 +8,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { CartGroupByStore } from "@/components/features/cart-group-by-store"
 import type { CartItem } from "@/stores/cart-store"
+import { AdvertisementBanner } from "@/components/explorar/advertisement-banner"
 
 interface CarrinhoDesktopProps {
   cartItems: CartItem[]
@@ -91,7 +92,10 @@ export function CarrinhoDesktop({
           ) : (
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
               {/* Cart Items - Mais Espaço */}
-              <div className="xl:col-span-3">
+              <div className="xl:col-span-3 space-y-6">
+                {/* Banner de Anúncios */}
+                <AdvertisementBanner />
+                
                 <CartGroupByStore 
                   cartItems={cartItems} 
                   onUpdateQuantity={onUpdateQuantity} 

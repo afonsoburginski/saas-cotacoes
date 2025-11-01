@@ -6,6 +6,24 @@ import type { Session } from 'better-auth/types'
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
+  // ⚡ OTIMIZAÇÃO: Verificar rotas de API públicas PRIMEIRO (mais rápido)
+  const publicApiPaths = [
+    '/api/auth', 
+    '/api/webhooks', 
+    '/api/storage',
+    '/api/products',
+    '/api/services',
+    '/api/stores',
+    '/api/categories',
+    '/api/service-providers',
+    '/api/advertisements'
+  ]
+  
+  // Se for API pública, retornar IMEDIATAMENTE sem fazer nada mais
+  if (publicApiPaths.some(p => pathname.startsWith(p))) {
+    return NextResponse.next()
+  }
+
   // Permitir sitemap.xml e robots.txt sem autenticação
   if (pathname.includes('/sitemap.xml') || pathname.includes('/robots.txt')) {
     return NextResponse.next()
@@ -18,19 +36,9 @@ export async function middleware(request: NextRequest) {
     '/categoria',
     '/fornecedor',
     '/comparar',
+    '/carrinho',
     '/subscription/expired',
     '/admin',
-  ]
-  
-  const publicApiPaths = [
-    '/api/auth', 
-    '/api/webhooks', 
-    '/api/storage',
-    '/api/products',
-    '/api/services',
-    '/api/stores',
-    '/api/categories',
-    '/api/service-providers'
   ]
 
   // Permitir rotas públicas específicas de checkout e loja
@@ -44,10 +52,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Permitir rotas públicas
+  // Permitir rotas públicas - retornar IMEDIATAMENTE sem verificação de sessão
   if (
-    publicPaths.some(p => pathname === p || pathname.startsWith(`${p}/`)) ||
-    publicApiPaths.some(p => pathname.startsWith(p))
+    publicPaths.some(p => pathname === p || pathname.startsWith(`${p}/`))
   ) {
     return NextResponse.next()
   }
@@ -62,7 +69,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // 2. Verificar sessão usando Better Auth diretamente
+  // 2. Verificar sessão APENAS para rotas protegidas
+  // (rotas públicas já foram tratadas acima)
   try {
     const { data: session } = await betterFetch<Session>(
       '/api/auth/get-session',
@@ -71,6 +79,8 @@ export async function middleware(request: NextRequest) {
         headers: {
           cookie: request.headers.get('cookie') || '',
         },
+        // Timeout rápido para não travar
+        signal: AbortSignal.timeout(2000),
       }
     )
 
@@ -80,12 +90,12 @@ export async function middleware(request: NextRequest) {
     }
 
     // Sessão válida - permite continuar
-    // As verificações de role e assinatura serão feitas nos layouts específicos
     return NextResponse.next()
     
   } catch (error) {
-    console.error('Middleware auth error:', error)
-    return NextResponse.redirect(new URL('/', request.url))
+    // Em caso de erro (timeout, etc), permitir continuar (melhor que bloquear)
+    // O layout vai fazer a verificação adequada
+    return NextResponse.next()
   }
 }
 

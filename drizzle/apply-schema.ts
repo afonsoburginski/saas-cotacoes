@@ -324,6 +324,26 @@ async function applySchema() {
       )
     `
     
+    await client`
+      CREATE TABLE IF NOT EXISTS "store_advertisements" (
+        "id" serial PRIMARY KEY NOT NULL,
+        "store_id" integer NOT NULL REFERENCES "stores"("id"),
+        "images" jsonb NOT NULL DEFAULT '[]',
+        "start_date" timestamp,
+        "end_date" timestamp,
+        "active" boolean DEFAULT true,
+        "link" text,
+        "created_at" timestamp DEFAULT now(),
+        "updated_at" timestamp DEFAULT now()
+      )
+    `
+    
+    // Adicionar coluna link se não existir (migration)
+    await client`
+      ALTER TABLE "store_advertisements" 
+      ADD COLUMN IF NOT EXISTS "link" text
+    `
+    
     console.log('✅ All tables created successfully!')
   } catch (error) {
     console.error('❌ Error applying schema:', error)

@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TypographyH3, TypographyH4, TypographyP, TypographySmall, TypographyMuted } from "@/components/ui/typography"
 import { ProductsGridSkeleton } from "./products-grid-skeleton"
+import { AdvertisementBanner } from "../advertisement-banner"
 import { useExplorarStore } from "@/stores/explorar-store"
 import { 
   Sparkles, 
@@ -74,56 +75,8 @@ const ExplorarDesktop = memo(function ExplorarDesktop({
   // Random seed que muda a cada mount para forçar re-shuffle
   const [shuffleSeed] = useState(() => Math.random())
   
-  // Embaralhar prestadores (buscar do banco)
+  // Removido fetch manual - usar dados das stores já carregadas pelo React Query
   const [shuffledProviders, setShuffledProviders] = useState<any[]>([])
-  const fetchedProvidersOnceRef = useRef(false)
-  
-  useEffect(() => {
-    if (fetchedProvidersOnceRef.current) return
-
-    let isMounted = true
-    const controller = new AbortController()
-
-    console.log('🔍 Buscando prestadores de serviço...')
-
-    async function fetchWithRetry(url: string, attempts = 3, delayMs = 500): Promise<any> {
-      for (let attempt = 1; attempt <= attempts; attempt++) {
-        try {
-          const res = await fetch(url, { signal: controller.signal })
-          if (!res.ok) throw new Error(`HTTP ${res.status}`)
-          return await res.json()
-        } catch (err) {
-          if (controller.signal.aborted) throw err
-          if (attempt === attempts) throw err
-          await new Promise(r => setTimeout(r, delayMs * attempt))
-        }
-      }
-    }
-
-    fetchWithRetry('/api/service-providers?limit=15')
-      .then((data) => {
-        console.log('📦 Prestadores recebidos:', data)
-        if (!isMounted) return
-        if (data?.data) {
-          setShuffledProviders(shuffleArray(data.data))
-          console.log('✅ Prestadores embaralhados:', data.data.length)
-          fetchedProvidersOnceRef.current = true
-        } else {
-          setShuffledProviders([])
-        }
-      })
-      .catch((err) => {
-        if (!controller.signal.aborted) {
-          console.warn('⚠️ Falha ao buscar prestadores (será ignorado):', err)
-          if (isMounted) setShuffledProviders([])
-        }
-      })
-
-    return () => {
-      isMounted = false
-      controller.abort()
-    }
-  }, [])
 
   // Listen for supplier modal events from ProductCard - memoized
   const handleOpenSupplierModal = useCallback((event: CustomEvent) => {
@@ -423,37 +376,53 @@ const ExplorarDesktop = memo(function ExplorarDesktop({
               </div>
             ) : (
               <div className="space-y-8">
-                {Object.entries(productsByCategory).map(([categoria, categoryProducts]) => {
+                {Object.entries(productsByCategory).map(([categoria, categoryProducts], categoryIndex) => {
                   if (!categoryProducts.length) return null
                   
                   return (
-                    <div key={categoria} className="space-y-4">
-                      {/* Category Header */}
-                      <div className="flex items-center justify-between">
-                        <Link 
-                          href={`/categoria/${encodeURIComponent(categoria)}`}
-                          className="flex items-center gap-2 group hover:text-[#0052FF] transition-colors"
-                        >
-                          <TypographyH3 className="font-montserrat group-hover:text-[#0052FF] transition-colors">
-                            {categoria}
-                          </TypographyH3>
-                          <FaArrowRightLong className="h-4 w-4 text-gray-400 group-hover:text-[#0052FF] group-hover:translate-x-1 transition-all" />
-                        </Link>
-                        <TypographySmall className="text-gray-500 font-montserrat">
-                          {categoryProducts.length} produtos
-                        </TypographySmall>
-                      </div>
-                      
-                      {/* Horizontal Scrollable Row */}
-                      <HorizontalScrollContainer>
-                        <div className="flex gap-4 pb-2">
-                          {categoryProducts.map((product) => (
-                            <div key={product.id} className="flex-none w-[220px]">
-                              <ProductCardAdaptive product={product} alwaysShowButtons={false} />
-                            </div>
-                          ))}
+                    <div key={categoria}>
+                      <div className="space-y-4">
+                        {/* Category Header */}
+                        <div className="flex items-center justify-between">
+                          <Link 
+                            href={`/categoria/${encodeURIComponent(categoria)}`}
+                            className="flex items-center gap-2 group hover:text-[#0052FF] transition-colors"
+                          >
+                            <TypographyH3 className="font-montserrat group-hover:text-[#0052FF] transition-colors">
+                              {categoria}
+                            </TypographyH3>
+                            <FaArrowRightLong className="h-4 w-4 text-gray-400 group-hover:text-[#0052FF] group-hover:translate-x-1 transition-all" />
+                          </Link>
+                          <TypographySmall className="text-gray-500 font-montserrat">
+                            {categoryProducts.length} produtos
+                          </TypographySmall>
                         </div>
-                      </HorizontalScrollContainer>
+                        
+                        {/* Horizontal Scrollable Row */}
+                        <HorizontalScrollContainer>
+                          <div className="flex gap-4 pb-2">
+                            {categoryProducts.map((product) => (
+                              <div key={product.id} className="flex-none w-[220px]">
+                                <ProductCardAdaptive product={product} alwaysShowButtons={false} />
+                              </div>
+                            ))}
+                          </div>
+                        </HorizontalScrollContainer>
+                      </div>
+
+                      {/* Banner original na terceira linha (após 2 categorias) - SEM produtos */}
+                      {categoryIndex === 1 && (
+                        <div className="mt-8">
+                          <AdvertisementBanner showProducts={false} />
+                        </div>
+                      )}
+
+                      {/* Inserir banner a cada 4 categorias (estilo carrinho - full width, maior altura) - COM produtos (coleção) */}
+                      {(categoryIndex + 1) % 4 === 0 && categoryIndex !== 1 && (
+                        <div className="mt-8">
+                          <AdvertisementBanner height="h-[280px]" showProducts={true} />
+                        </div>
+                      )}
                     </div>
                   )
                 })}

@@ -34,12 +34,25 @@ const ExplorarAdaptive = memo(function ExplorarAdaptive() {
   })
   const { data: categoriesData } = useCategories()
 
-  const products = productsData?.data || []
-  const stores = storesData?.data || []
-  const categorias = categoriesData?.data || []
+  // SEMPRE garantir que os dados sejam arrays, mesmo que vazios
+  const products = useMemo(() => {
+    return Array.isArray(productsData?.data) ? productsData.data : []
+  }, [productsData])
+  
+  const stores = useMemo(() => {
+    return Array.isArray(storesData?.data) ? storesData.data : []
+  }, [storesData])
+  
+  const categorias = useMemo(() => {
+    return Array.isArray(categoriesData?.data) ? categoriesData.data : []
+  }, [categoriesData])
+  
   const lojas = useMemo(() => {
     return Array.from(new Set(products.map((p) => p.storeNome))).sort()
   }, [products])
+  
+  // Loading apenas no primeiro fetch inicial, não em refetches
+  const isLoading = (isLoadingProducts && !productsData) || (isLoadingStores && !storesData)
 
   const filteredProducts = useMemo(() => {
     if (!products.length) return []
@@ -82,7 +95,7 @@ const ExplorarAdaptive = memo(function ExplorarAdaptive() {
           categorias={categorias}
           lojas={lojas}
           stores={stores}
-          isLoading={isLoadingProducts || isLoadingStores}
+          isLoading={isLoading}
         />
       </div>
       
@@ -95,7 +108,7 @@ const ExplorarAdaptive = memo(function ExplorarAdaptive() {
           categorias={categorias}
           lojas={lojas}
           stores={stores}
-          isLoading={isLoadingProducts || isLoadingStores}
+          isLoading={isLoading}
         />
       </div>
     </>

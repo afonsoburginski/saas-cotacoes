@@ -48,7 +48,7 @@ import {
   ContextMenuRadioGroup,
   ContextMenuRadioItem,
 } from "@/components/ui/context-menu"
-import { CheckCircle, Clock, AlertCircle, Eye, Edit, Check } from "lucide-react"
+import { CheckCircle, Clock, AlertCircle, Eye, Edit, Check, Megaphone } from "lucide-react"
 import { useAdminStore } from "@/stores/admin-store"
 
 interface DataTableProps<TData, TValue> {
@@ -58,6 +58,7 @@ interface DataTableProps<TData, TValue> {
   onApprove?: (store: TData) => void
   onSuspend?: (store: TData) => void
   onBlock?: (store: TData) => void
+  onManageAdvertisement?: (store: TData) => void
 }
 
 export function StoresDataTable<TData, TValue>({
@@ -67,6 +68,7 @@ export function StoresDataTable<TData, TValue>({
   onApprove,
   onSuspend,
   onBlock,
+  onManageAdvertisement,
 }: DataTableProps<TData, TValue>) {
   const [bump, setBump] = React.useState(0)
   React.useEffect(() => {
@@ -153,6 +155,10 @@ export function StoresDataTable<TData, TValue>({
                     <ContextMenuItem onClick={() => onViewDetails?.(row.original)}>
                       <Eye className="mr-2 h-4 w-4" />
                       Ver detalhes
+                    </ContextMenuItem>
+                    <ContextMenuItem onClick={() => onManageAdvertisement?.(row.original)}>
+                      <Megaphone className="mr-2 h-4 w-4" />
+                      Gerenciar Publicidade
                     </ContextMenuItem>
                   </ContextMenuGroup>
                   <ContextMenuSeparator />

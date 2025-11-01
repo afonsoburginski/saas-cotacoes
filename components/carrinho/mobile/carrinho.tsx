@@ -3,10 +3,11 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Trash2, Download, ListPlus, Package, ShoppingBag } from "lucide-react"
+import { Trash2, Download, ListPlus, Package, ShoppingBag, FileText } from "lucide-react"
 import Link from "next/link"
 import { CartGroupByStore } from "@/components/features/cart-group-by-store"
 import type { CartItem } from "@/stores/cart-store"
+import { AdvertisementBanner } from "@/components/explorar/advertisement-banner"
 
 interface CarrinhoMobileProps {
   cartItems: CartItem[]
@@ -28,7 +29,7 @@ export function CarrinhoMobile({
   stores
 }: CarrinhoMobileProps) {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col overflow-x-hidden">
       {/* Header Fixo */}
       <div className="sticky top-0 bg-white border-b border-gray-200 z-10 px-4 py-4">
         <div className="flex items-center justify-between">
@@ -45,19 +46,20 @@ export function CarrinhoMobile({
           </div>
           {cartItems.length > 0 && (
             <Button 
-              variant="ghost" 
+              variant="outline" 
               size="sm"
-              onClick={onClearCart} 
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              onClick={onGenerateList} 
+              className="text-white hover:text-[#0052FF]/80 hover:bg-[#0052FF]/10 hover:border-neutral-300 bg-blue-600"
+              title="Gerar Orçamento"
             >
-              <Trash2 className="h-4 w-4" />
+              <FileText className="h-5 w-5" />
             </Button>
           )}
         </div>
       </div>
 
       {/* Conteúdo */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
         {cartItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-6">
             <div className="rounded-full bg-gray-100 p-6 mb-4">
@@ -77,16 +79,23 @@ export function CarrinhoMobile({
             </Button>
           </div>
         ) : (
-          <div className="pb-24">
+          <div className="pb-24 overflow-x-hidden">
+            {/* Banner de Anúncios - Full Width, Maior Altura, Ocupa Bordas, Colado no Topo */}
+            <div className="-mx-4 overflow-x-hidden">
+              <AdvertisementBanner height="h-[280px]" className="rounded-none border-x-0 border-t-0 border-b-2" />
+            </div>
+            
             {/* Cart Items - Full Width */}
-            <CartGroupByStore 
-              cartItems={cartItems} 
-              onUpdateQuantity={onUpdateQuantity} 
-              onRemoveItem={onRemoveItem} 
-              onGeneratePDF={onGeneratePDF}
-              onGenerateList={onGenerateList}
-              stores={stores}
-            />
+            <div className="px-4 space-y-4 mt-4">
+              <CartGroupByStore 
+                cartItems={cartItems} 
+                onUpdateQuantity={onUpdateQuantity} 
+                onRemoveItem={onRemoveItem} 
+                onGeneratePDF={onGeneratePDF}
+                onGenerateList={onGenerateList}
+                stores={stores}
+              />
+            </div>
           </div>
         )}
       </div>

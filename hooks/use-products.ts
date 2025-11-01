@@ -14,6 +14,7 @@ interface UseProductsParams {
   loja?: string
   storeId?: string
   includeInactive?: boolean
+  destacado?: boolean
 }
 
 export function useProducts(params?: UseProductsParams) {
@@ -25,6 +26,7 @@ export function useProducts(params?: UseProductsParams) {
   if (params?.loja) searchParams.set("loja", params.loja)
   if (params?.storeId) searchParams.set("storeId", params.storeId)
   if (params?.includeInactive) searchParams.set("includeInactive", "true")
+  if (params?.destacado) searchParams.set("destacado", "true")
   
   // 🔴 REALTIME: Ouvir mudanças em produtos
   useEffect(() => {
@@ -40,13 +42,27 @@ export function useProducts(params?: UseProductsParams) {
   return useQuery({
     queryKey: ["products", params],
     queryFn: async () => {
-      const res = await fetch(`/api/products?${searchParams.toString()}`)
-      if (!res.ok) throw new Error("Failed to fetch products")
-      return res.json() as Promise<ProductsResponse>
+      try {
+        const res = await fetch(`/api/products?${searchParams.toString()}`)
+        if (!res.ok) {
+          // Retornar array vazio ao invés de lançar erro
+          return { data: [], total: 0 } as ProductsResponse
+        }
+        const json = await res.json()
+        return json as ProductsResponse
+      } catch (error) {
+        // Sempre retornar dados, mesmo com erro
+        return { data: [], total: 0 } as ProductsResponse
+      }
     },
-    staleTime: 1000 * 60 * 5, // 5 minutos de cache
-    gcTime: 1000 * 60 * 10, // 10 minutos no cache
-    refetchOnWindowFocus: false, // Não recarregar ao focar janela
+    staleTime: 1000 * 30, // 30 segundos de cache (reduzido para APIs públicas)
+    gcTime: 1000 * 60 * 5, // 5 minutos no cache
+    refetchOnWindowFocus: true, // Recarregar ao focar janela para garantir dados atualizados
+    refetchOnMount: true, // Sempre refetch ao montar componente
+    retry: 2, // Retry 2 vezes
+    retryDelay: 1000, // 1 segundo entre retries
+    // Removido refetchInterval - estava causando muitas requisições repetidas
+    // O refetchOnWindowFocus e refetchOnMount são suficientes
   })
 }
 
