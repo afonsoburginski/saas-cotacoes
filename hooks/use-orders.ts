@@ -83,15 +83,18 @@ export function useOrders(params?: UseOrdersParams) {
     queryKey: ["orders", { storeId }],
     queryFn: async () => {
       console.log('🔄 useOrders - Fazendo fetch para storeId:', storeId)
-      const res = await fetch('/api/orders')
+      const res = await fetch(`/api/orders?storeId=${encodeURIComponent(storeId || '')}`)
       if (!res.ok) throw new Error("Failed to fetch orders")
       const json = await res.json()
       console.log('✅ useOrders - Dados recebidos:', json.data?.length || 0, 'pedidos')
       return json.data as Order[]
     },
     enabled: !!storeId,
-    staleTime: 1000 * 60 * 1, // 1 minute stale time
-    refetchOnWindowFocus: true, // Forçar refetch quando a janela ganha foco
+    // 🚀 Cache otimizado - dados ficam frescos por 3 minutos
+    staleTime: 3 * 60 * 1000, // 3 minutos
+    gcTime: 10 * 60 * 1000, // 10 minutos
+    refetchOnWindowFocus: false, // Realtime já atualiza automaticamente
+    refetchOnMount: false, // Não refetch ao montar se tem cache válido
   })
 }
 
@@ -104,8 +107,12 @@ export function useOrderItems(orderId: number) {
       const json = await res.json()
       return json.data as OrderItem[]
     },
-    enabled: !!orderId,
-    staleTime: 1000 * 60 * 5, // 5 minutes stale time
+    enabled: !!orderId && orderId > 0,
+    // 🚀 Cache longo pois itens de pedido raramente mudam
+    staleTime: 10 * 60 * 1000, // 10 minutos
+    gcTime: 30 * 60 * 1000, // 30 minutos
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   })
 }
 

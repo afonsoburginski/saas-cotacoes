@@ -9,7 +9,7 @@ interface CarrinhoAdaptiveProps {
   onUpdateQuantity: (itemId: string, qty: number) => void
   onRemoveItem: (itemId: string) => void
   onClearCart: () => void
-  onGeneratePDF: () => void
+  onGeneratePDF?: () => void
   onGenerateList: () => void
   stores?: any[]
 }

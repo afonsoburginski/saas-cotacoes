@@ -100,7 +100,7 @@ export function Hero() {
                 {/* CTA */}
                 <Button 
                   onClick={() => setAuthDialogOpen(true)}
-                  className="rounded-full bg-[#22C55E] text-white px-8 py-3 text-base hover:bg-[#22C55E]/90 font-semibold mb-6"
+                  className="rounded-full bg-[#22C55E] text-white px-8 py-3 text-base hover:bg-[#22C55E]/90 font-semibold mb-6 cursor-pointer"
                 >
                   Iniciar Agora
                 </Button>

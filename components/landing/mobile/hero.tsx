@@ -31,7 +31,7 @@ export function HeroMobile() {
           {/* CTA */}
           <Button 
             onClick={() => setAuthDialogOpen(true)}
-            className="w-full rounded-full bg-[#22C55E] border-0 text-white px-6 py-3.5 text-sm hover:bg-[#22C55E]/90 font-semibold shadow-lg mb-3 active:scale-95 transition-transform"
+            className="w-full rounded-full bg-[#22C55E] border-0 text-white px-6 py-3.5 text-sm hover:bg-[#22C55E]/90 font-semibold shadow-lg mb-3 active:scale-95 transition-transform cursor-pointer"
           >
             Iniciar Agora
           </Button>

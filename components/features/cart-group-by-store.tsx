@@ -231,7 +231,7 @@ export function CartGroupByStore({ cartItems, onUpdateQuantity, onRemoveItem, on
       </div>
 
       {/* Action Buttons - Mobile Only - Below Summary */}
-      {onGenerateList && onGeneratePDF && (
+      {onGenerateList && (
         <div className="px-4 py-4 md:hidden space-y-2">
           <Button 
             onClick={onGenerateList} 
@@ -241,7 +241,7 @@ export function CartGroupByStore({ cartItems, onUpdateQuantity, onRemoveItem, on
             <ListPlus className="h-4 w-4 mr-2" />
             Gerar Orçamento
           </Button>
-          
+          {onGeneratePDF && (
           <Button 
             onClick={onGeneratePDF} 
             variant="outline"
@@ -251,6 +251,7 @@ export function CartGroupByStore({ cartItems, onUpdateQuantity, onRemoveItem, on
             <Download className="h-4 w-4 mr-2" />
             Baixar PDF
           </Button>
+          )}
         </div>
       )}
     </div>

@@ -1,10 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { memo, useMemo } from "react"
+import { memo, useMemo, useEffect } from "react"
 import { Package, CreditCard, BarChart3, Settings } from "lucide-react"
 import { useStoreSlug } from "@/hooks/use-store-slug"
+import { useStoreDataStore } from "@/stores/store-data-store"
 import { usePendingOrdersCount, useMarkOrdersAsSeen } from "@/hooks/use-pending-quotes"
+import { usePrefetchNavigation } from "@/hooks/use-prefetch-navigation"
 import { NavMain } from "./nav-main"
 import { NavUser } from "./nav-user"
 import { NavAdmin } from "./nav-admin"
@@ -24,14 +26,29 @@ import { usePathname } from "next/navigation"
 import { useSession } from "@/lib/auth-client"
 
 export const LojaSidebar = memo(function LojaSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  // 🚀 Usar dados do Zustand como fallback instantâneo
+  const { storeData } = useStoreDataStore()
   const { data: storeSlug } = useStoreSlug()
+  const effectiveStoreData = storeSlug || storeData
+  
   const { open } = useSidebar()
   const pathname = usePathname()
   const { data: pendingCount = 0 } = usePendingOrdersCount()
   const markAsSeen = useMarkOrdersAsSeen()
   const { data: session } = useSession()
+  const { prefetchOrders, prefetchProducts } = usePrefetchNavigation()
   
-  const slug = storeSlug?.slug
+  const slug = effectiveStoreData?.slug
+  const storeId = effectiveStoreData?.id?.toString()
+  
+  // 🚀 Prefetch de dados ao montar o sidebar (navegação instantânea)
+  useEffect(() => {
+    if (storeId) {
+      // Prefetch em background para navegação instantânea
+      prefetchOrders(storeId)
+      prefetchProducts(storeId)
+    }
+  }, [storeId, prefetchOrders, prefetchProducts])
   
   // Emails permitidos para acesso admin
   const allowedEmails = ['afonsoburginski@gmail.com', 'orcanorte28@gmail.com']

@@ -14,7 +14,7 @@ interface CarrinhoMobileProps {
   onUpdateQuantity: (itemId: string, qty: number) => void
   onRemoveItem: (itemId: string) => void
   onClearCart: () => void
-  onGeneratePDF: () => void
+  onGeneratePDF?: () => void
   onGenerateList: () => void
   stores?: any[]
 }
@@ -91,7 +91,6 @@ export function CarrinhoMobile({
                 cartItems={cartItems} 
                 onUpdateQuantity={onUpdateQuantity} 
                 onRemoveItem={onRemoveItem} 
-                onGeneratePDF={onGeneratePDF}
                 onGenerateList={onGenerateList}
                 stores={stores}
               />

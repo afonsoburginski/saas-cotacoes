@@ -42,14 +42,14 @@ export function CTASectionMobile() {
         <Button 
           onClick={() => setAuthDialogOpen(true)}
           size="lg"
-          className="w-full bg-[#22C55E] text-white hover:bg-[#22C55E]/90 font-semibold py-4 text-sm rounded-full border-0 active:scale-95 transition-transform mb-6"
+          className="w-full bg-[#22C55E] text-white hover:bg-[#22C55E]/90 font-semibold py-4 text-sm rounded-full border-0 active:scale-95 transition-transform mb-6 cursor-pointer"
         >
           Ver Planos e Começar
           <ArrowRight className="ml-2 w-4 h-4" />
         </Button>
         
         {/* Benefits */}
-        <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-white/70 mb-8 font-montserrat">
+        <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-white/70 mb-4 font-montserrat">
           <div className="flex items-center gap-1.5">
             <div className="w-1 h-1 bg-[#22C55E] rounded-full"></div>
             <span className="text-xs">A partir de R$ 99</span>
@@ -62,6 +62,17 @@ export function CTASectionMobile() {
             <div className="w-1 h-1 bg-[#22C55E] rounded-full"></div>
             <span className="text-xs">Cancele quando quiser</span>
           </div>
+        </div>
+
+        {/* Link para consumidores */}
+        <div className="mb-8">
+          <Link
+            href="/explorar"
+            prefetch={true}
+            className="text-white/60 hover:text-white text-xs font-montserrat underline underline-offset-4 transition-colors cursor-pointer"
+          >
+            Já é cliente? Buscar produtos →
+          </Link>
         </div>
 
         {/* Footer */}

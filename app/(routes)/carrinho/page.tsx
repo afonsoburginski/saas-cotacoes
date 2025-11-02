@@ -7,8 +7,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useListsStore } from "@/stores/lists-store"
 import { useRouter } from "next/navigation"
 import { useStores } from "@/hooks/use-stores"
-import jsPDF from "jspdf"
-import html2canvas from "html2canvas"
+  // PDF removido desta página (cart)
 import { PageBackground } from "@/components/layout/page-background"
 import { CarrinhoAdaptive } from "@/components/carrinho"
 import { LoginRequiredDialog } from "@/components/explorar/login-required-dialog"
@@ -37,8 +36,9 @@ import {
   const [customerPhone, setCustomerPhone] = useState("")
   const { data: storesData } = useStores()
   const stores = storesData?.data || []
+  // PDF removido desta página (geração acontece nas listas)
   const pdfRef = useRef<HTMLDivElement | null>(null)
-  const [renderPdfDOM, setRenderPdfDOM] = useState(false)
+  const [orderNumber] = useState<number | null>(null)
   
   console.log("🛒 [Zustand] Carrinho carregado com", cartItems.length, "itens:", cartItems)
 
@@ -55,93 +55,7 @@ import {
 
   const totalItems = useMemo(() => cartItems.reduce((acc, it) => acc + it.qty, 0), [cartItems])
 
-  const generatePDF = async () => {
-    if (cartItems.length === 0) return
-    // Render DOM escondido com o template idêntico ao modelo
-    setRenderPdfDOM(true)
-    // aguarda layout
-    await new Promise((r) => requestAnimationFrame(() => r(null)))
-    const el = pdfRef.current
-    if (!el) return
-
-    // Captura com html2canvas para manter o layout 1:1 (A4)
-    const canvas = await html2canvas(el, { 
-      scale: 2, 
-      useCORS: true, 
-      backgroundColor: '#ffffff',
-      onclone: (doc) => {
-        // Garante fundo branco e remove backgrounds com oklch do clone
-        try {
-          doc.body.style.background = '#ffffff'
-          // Isola estilos externos no root do PDF
-          const root = doc.getElementById('pdf-root') as HTMLElement | null
-          if (root) {
-            ;(root.style as any).setProperty('all', 'initial')
-            root.style.backgroundColor = '#ffffff'
-            root.style.color = '#111827'
-            root.style.fontFamily = 'Inter, Arial, sans-serif'
-          }
-          const all = Array.from((root || doc).querySelectorAll('*')) as HTMLElement[]
-          for (const node of all) {
-            const cs = doc.defaultView?.getComputedStyle(node)
-            const bg = cs?.background || ''
-            const bgc = cs?.backgroundColor || ''
-            const bgi = cs?.backgroundImage || ''
-            if (bg.includes('oklch') || bgc.includes('oklch') || bgi.includes('oklch')) {
-              node.style.background = 'transparent'
-              node.style.backgroundColor = 'transparent'
-              node.style.backgroundImage = 'none'
-            }
-            // Também neutraliza gradientes
-            if ((bgi || '').includes('gradient(')) {
-              node.style.backgroundImage = 'none'
-            }
-            const col = cs?.color || ''
-            if (col.includes('oklch')) {
-              node.style.color = '#111827'
-            }
-          }
-        } catch {}
-      }
-    })
-    // Usa JPEG para evitar erros de assinatura PNG e reduzir tamanho
-    const imgData = canvas.toDataURL('image/jpeg', 0.95)
-    const pdf = new jsPDF('p', 'mm', 'a4')
-    const pageWidth = 210
-    const pageHeight = 297
-    const cWidth = Math.max(1, canvas.width)
-    const cHeight = Math.max(1, canvas.height)
-    // escala para caber na página usando largura
-    let imgWidth = pageWidth
-    let imgHeight = (cHeight * imgWidth) / cWidth
-    // se exceder altura, ajusta pela altura
-    if (!isFinite(imgHeight) || imgHeight <= 0 || imgHeight > pageHeight) {
-      imgHeight = pageHeight
-      imgWidth = (cWidth * imgHeight) / cHeight
-    }
-    pdf.addImage(imgData, 'JPEG', 0, 0, Number(imgWidth), Number(imgHeight))
-    pdf.save(`Orcamento_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`)
-    setRenderPdfDOM(false)
-  }
-
-  const handleGenerateQuote = () => {
-    console.log("🧾 Gerando orçamento com", cartItems.length, "itens")
-    if (cartItems.length === 0) {
-      toast({
-        title: "⚠️ Carrinho vazio",
-        description: "Adicione produtos ao carrinho antes de gerar um orçamento.",
-        variant: "destructive"
-      })
-      return
-    }
-    
-    generatePDF()
-    
-    toast({
-      title: "📄 PDF gerado!",
-      description: `Orçamento PDF com ${cartItems.length} produtos foi baixado.`,
-    })
-  }
+  // Removido: geração de PDF no carrinho (fluxo agora: criar orçamento -> ver na lista e baixar PDF lá)
 
   const handleSendQuote = async () => {
     if (cartItems.length === 0) {
@@ -282,10 +196,26 @@ import {
 
         const result = await res.json()
         console.log('✅ Pedido criado com sucesso:', result)
+        try {
+          const createdId = result?.data?.id ?? result?.id
+          if (createdId && typeof window !== 'undefined' && !localStorage.getItem('lastCreatedOrderId')) {
+            localStorage.setItem('lastCreatedOrderId', String(createdId))
+          }
+        } catch {}
         return result
       })
 
-      await Promise.all(orderPromises)
+      const orderResults = await Promise.all(orderPromises)
+
+      try {
+        const createdIds = orderResults
+          .map((r: any) => (r?.data?.id ?? r?.id))
+          .filter((v: any) => typeof v === 'number') as number[]
+        if (createdIds.length && typeof window !== 'undefined') {
+          const maxId = Math.max(...createdIds)
+          window.localStorage.setItem('lastCreatedOrderId', String(maxId))
+        }
+      } catch {}
 
       // Criar lista local também
       const listName = `Orçamento - ${new Date().toLocaleDateString('pt-BR')}`
@@ -317,146 +247,175 @@ import {
   return (
     <>
       <PageBackground />
-      {/* DOM oculto para render do PDF - Template idêntico ao components/pdf/page.tsx */}
-      {renderPdfDOM && (
-        <div style={{ position: 'fixed', left: -99999, top: 0, width: '794px', height: '1123px', overflow: 'hidden', visibility: 'hidden' }}>
+      
+      {/* Loading de PDF removido nesta página */}
+      
+      {/* PDF removido no carrinho */}
+      {false && (
+        <div style={{ position: 'fixed', left: '-99999px', top: '0' }}>
           <div
             id="pdf-root"
             ref={pdfRef}
             style={{ 
               width: '794px', 
               height: '1123px', 
-              backgroundColor: 'white', 
-              color: '#111827', 
-              fontFamily: 'sans-serif',
-              ['all' as any]: 'initial'
+              backgroundColor: '#ffffff', 
+              color: '#000000', 
+              fontFamily: 'Arial, sans-serif',
+              margin: '0',
+              padding: '0',
+              position: 'relative'
             }}
           >
-            {/* Template baseado em components/pdf/page.tsx com dados dinâmicos */}
+            {/* Template baseado em components/pdf/page.tsx */}
             <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ padding: '64px 48px 0 48px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+              {/* Header */}
+              <div style={{ padding: '32px 48px 0 48px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <div>
-                    <p style={{ color: '#2563eb', fontWeight: '600', fontSize: '16px' }}>Data: {new Date().toLocaleDateString('pt-BR')}</p>
+                    <p style={{ color: '#2563eb', fontWeight: '600', fontSize: '16px', margin: '0' }}>Data: {new Date().toLocaleDateString('pt-BR')}</p>
+                    <div style={{ marginTop: '8px' }}>
+                      <h3 style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '14px', margin: '0 0 4px 0' }}>Cliente:</h3>
+                      <p style={{ fontWeight: 'bold', color: 'black', fontSize: '14px', margin: '0 0 2px 0' }}>{session?.user?.name || 'Cliente'}</p>
+                      {(session?.user as any)?.phone && (
+                        <p style={{ color: 'black', fontSize: '14px', margin: '0 0 2px 0' }}>{(session?.user as any)?.phone}</p>
+                      )}
+                      <p style={{ color: 'black', fontSize: '14px', margin: '0' }}>{(session?.user as any)?.address || 'Endereço não informado'}</p>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0', marginRight: '64px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0', marginRight: '64px' }}>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '24px', fontWeight: 'bold', lineHeight: '1' }}>
-                        <span style={{ color: '#16a34a' }}>Orça</span>
-                        <span style={{ color: '#2563eb' }}>norte</span>
-                      </div>
+                      <img 
+                        src="/logo-pdf.png" 
+                        alt="Orçanorte" 
+                        style={{ height: '80px', width: 'auto', display: 'block' }}
+                      />
                     </div>
                     <div style={{ position: 'absolute', top: '0', right: '48px', width: '40px', height: '100px', backgroundColor: '#1e3a8a' }} />
                   </div>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '32px' }}>
+              {/* Barra com ORÇAMENTO */}
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px', height: '24px' }}>
                 <div style={{ width: '55%', height: '24px', backgroundColor: '#1e3a8a' }} />
-                <div style={{ flex: '1', display: 'flex', justifyContent: 'flex-start', paddingLeft: '16px', paddingRight: '48px' }}>
-                  <h1 style={{ color: '#2563eb', fontSize: '22px', fontWeight: 'normal', fontFamily: 'sans-serif', letterSpacing: '0.05em' }}>
-                    ORÇAMENTO #{String(Date.now()).slice(-5)}
+                <div style={{ flex: '1', display: 'flex', alignItems: 'center', paddingLeft: '16px', paddingRight: '48px', height: '24px' }}>
+                  <h1 style={{ color: '#2563eb', fontSize: '22px', fontWeight: 'normal', letterSpacing: '0.05em', margin: '0', lineHeight: '1', transform: 'translateY(-8px)' }}>
+                    ORÇAMENTO #{orderNumber ?? String(Date.now()).slice(-5)}
                   </h1>
                 </div>
               </div>
 
-              <div style={{ padding: '0 48px', flex: '1', display: 'flex', flexDirection: 'column' }}>
-                {/* Seção A/C */}
-                <div style={{ marginBottom: '32px' }}>
-                  <h3 style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '16px', marginBottom: '8px' }}>A/C:</h3>
-                  <p style={{ fontWeight: 'bold', color: 'black', fontSize: '16px', marginBottom: '2px' }}>
-                    {session?.user?.name || 'Cliente'}
-                  </p>
-                  <p style={{ color: 'black', fontSize: '16px', marginBottom: '2px' }}>
-                    (Telefone não informado)
-                  </p>
-                  <p style={{ color: 'black', fontSize: '16px' }}>
-                    {session?.user?.email || '(Email não informado)'}
-                  </p>
-                </div>
+              {/* Conteúdo principal */}
+              <div style={{ padding: '0 48px', flex: '1', display: 'flex', flexDirection: 'column', paddingBottom: '220px' }}>
 
-                {/* Área para tabela de serviços - Itens agrupados por loja */}
-                <div style={{ flex: '1' }}>
-                  {Object.values(groupedForPdf).map((group, groupIdx) => (
-                    <div key={groupIdx} style={{ marginBottom: '16px' }}>
-                      <h4 style={{ color: '#1e3a8a', fontWeight: 'bold', fontSize: '14px', marginBottom: '8px' }}>
-                        {group.storeNome}
-                      </h4>
-                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                {/* Seção de Fornecedores - TODAS as empresas separadamente */}
+                <div style={{ marginTop: '8px' }}>
+                  {Object.entries(groupedForPdf).map(([storeId, group], groupIdx) => {
+                    const store = stores.find(s => s.id.toString() === storeId)
+                    const tipoRaw = (store as any)?.tipo || (store as any)?.businessType || ''
+                    const tipo = typeof tipoRaw === 'string' ? tipoRaw.toLowerCase() : ''
+                    const isServico = group.items.some((it: any) => it.tipo === 'service' || !!it.serviceId) || tipo.includes('serv') || tipo === 'prestador'
+                    return (
+                      <div key={storeId} style={{ marginBottom: '16px' }}>
+                        {/* Título e informações da Loja - MESMO FORMATO do Prestador */}
+                        <h3 style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '16px', marginBottom: '8px', marginTop: groupIdx > 0 ? '16px' : '0' }}>
+                          {isServico ? 'Prestador:' : 'Comércio:'}
+                        </h3>
+                        <p style={{ fontWeight: 'bold', color: 'black', fontSize: '16px', marginBottom: '2px', marginTop: '0' }}>
+                          {group.storeNome}
+                        </p>
+                        {(store as any)?.telefone && (
+                          <p style={{ color: 'black', fontSize: '16px', marginBottom: '2px', marginTop: '0' }}>
+                            {(store as any).telefone}
+                          </p>
+                        )}
+                        {(store as any)?.endereco && (
+                          <p style={{ color: 'black', fontSize: '16px', marginBottom: '14px', marginTop: '0' }}>
+                            {(store as any).endereco}
+                          </p>
+                        )}
+
+                        {/* Tabela de produtos desta loja */}
+                        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '16px' }}>
                         <thead>
                           <tr style={{ backgroundColor: '#f3f4f6' }}>
-                            <th style={{ padding: '8px', border: '1px solid #e5e7eb', textAlign: 'left', fontSize: '12px' }}>Item</th>
-                            <th style={{ padding: '8px', border: '1px solid #e5e7eb', textAlign: 'left', fontSize: '12px' }}>Qtd</th>
-                            <th style={{ padding: '8px', border: '1px solid #e5e7eb', textAlign: 'left', fontSize: '12px' }}>Preço Unit.</th>
-                            <th style={{ padding: '8px', border: '1px solid #e5e7eb', textAlign: 'left', fontSize: '12px' }}>Total</th>
+                              <th style={{ paddingTop: '0px', paddingBottom: '6px', paddingLeft: '8px', paddingRight: '8px', border: '1px solid #e5e7eb', textAlign: 'left', fontSize: '12px', fontWeight: 'bold', lineHeight: '11px', verticalAlign: 'top', transform: 'translateY(-1px)' }}>Item</th>
+                              <th style={{ paddingTop: '0px', paddingBottom: '6px', paddingLeft: '8px', paddingRight: '8px', border: '1px solid #e5e7eb', textAlign: 'left', fontSize: '12px', fontWeight: 'bold', lineHeight: '11px', verticalAlign: 'top', width: '80px', transform: 'translateY(-1px)' }}>Qtd</th>
                           </tr>
                         </thead>
                         <tbody>
                           {group.items.map((item, itemIdx) => (
                             <tr key={itemIdx}>
-                              <td style={{ padding: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }}>{item.productNome}</td>
-                              <td style={{ padding: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }}>{item.qty}</td>
-                              <td style={{ padding: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }}>R$ {item.precoUnit.toFixed(2).replace('.', ',')}</td>
-                              <td style={{ padding: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }}>R$ {(item.precoUnit * item.qty).toFixed(2).replace('.', ',')}</td>
+                                <td style={{ paddingTop: '0px', paddingBottom: '6px', paddingLeft: '8px', paddingRight: '8px', border: '1px solid #e5e7eb', fontSize: '12px', lineHeight: '11px', verticalAlign: 'top', transform: 'translateY(-1px)' }}>{item.productNome}</td>
+                                <td style={{ paddingTop: '0px', paddingBottom: '6px', paddingLeft: '8px', paddingRight: '8px', border: '1px solid #e5e7eb', fontSize: '12px', lineHeight: '11px', verticalAlign: 'top', transform: 'translateY(-1px)' }}>{item.qty}</td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
 
-                {/* Total */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '64px' }}>
-                  <div style={{ backgroundColor: '#1e3a8a', color: 'white', padding: '10px 40px', fontWeight: 'bold', fontSize: '20px', letterSpacing: '0.05em' }}>
-                    TOTAL: R$ {cartItems.reduce((acc, item) => acc + item.precoUnit * item.qty, 0).toFixed(2).replace('.', ',')}
+                {/* Área inferior fixa de largura total */}
+                <div style={{ position: 'absolute', left: '0', right: '0', bottom: '0', width: '100%' }}>
+                  {/* Bloco interno alinhado ao conteúdo */}
+                  <div style={{ paddingLeft: '48px', paddingRight: '48px' }}>
+                    {/* Status do Orçamento */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+                      <div style={{ backgroundColor: '#1e3a8a', color: 'white', paddingTop: '0px', paddingBottom: '12px', paddingLeft: '40px', paddingRight: '40px', fontWeight: 'bold', fontSize: '20px', letterSpacing: '0.05em', lineHeight: '20px' }}>
+                        ORÇAMENTO ENVIADO
                   </div>
                 </div>
 
                 {/* Linha separadora */}
-                <div style={{ width: '128px', height: '3px', backgroundColor: '#1e3a8a', marginBottom: '16px' }} />
+                    <div style={{ width: '128px', height: '3px', backgroundColor: '#1e3a8a', marginBottom: '12px' }} />
 
                 {/* Forma de pagamento e termos */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '80px', marginBottom: '32px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '80px', marginBottom: '12px' }}>
                   <div>
-                    <h3 style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '16px', marginBottom: '6px' }}>
+                        <h3 style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '16px', marginBottom: '6px', marginTop: '0' }}>
                       FORMA DE PAGAMENTO
                     </h3>
-                    <p style={{ fontSize: '14px', color: 'black', lineHeight: '1.625' }}>Pix com 10% de desconto</p>
-                    <p style={{ fontSize: '14px', color: 'black', lineHeight: '1.625' }}>ou 2x no cartão de crédito</p>
+                        <p style={{ fontSize: '14px', color: 'black', margin: '0 0 4px 0' }}>Pix com 10% de desconto</p>
+                        <p style={{ fontSize: '14px', color: 'black', margin: '0' }}>ou 2x no cartão de crédito</p>
                   </div>
                   <div>
-                    <h3 style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '16px', marginBottom: '6px' }}>
+                        <h3 style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '16px', marginBottom: '6px', marginTop: '0' }}>
                       TERMOS E CONDIÇÕES
                     </h3>
-                    <p style={{ fontSize: '14px', color: 'black', lineHeight: '1.625' }}>
+                        <p style={{ fontSize: '14px', color: 'black', margin: '0' }}>
                       Este orçamento é válido por 30 dias.
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div style={{ backgroundColor: '#1e3a8a', color: 'white', padding: '12px 48px', marginBottom: '88px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '14px' }}>
+                  {/* Footer de largura total */}
+                  <div style={{ backgroundColor: '#1e3a8a', color: 'white', paddingTop: '6px', paddingBottom: '14px', width: '100%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '14px', lineHeight: '16px', paddingLeft: '48px', paddingRight: '48px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '40px' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span>📱</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          <span>☎</span>
                       <span>(66) 9 9661-4628</span>
                     </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span>✉️</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          <span>✉</span>
                       <span>orcanorte28@gmail.com</span>
                     </span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '40px' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span>🌐</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          <span>●</span>
                       <span>www.orcanorte.com.br</span>
                     </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span>📷</span>
-                      <span>@orcanorte</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                          <span>@</span>
+                          <span>orcanorte</span>
                     </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -469,7 +428,6 @@ import {
         onUpdateQuantity={updateQuantity}
         onRemoveItem={removeFromCart}
         onClearCart={clearCart}
-        onGeneratePDF={handleGenerateQuote}
         onGenerateList={handleSendQuote}
         stores={stores}
       />

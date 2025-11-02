@@ -34,8 +34,11 @@ export default function CatalogoPage({ params }: CatalogoPageProps) {
   const { slug } = params
   const { data: session } = useSession()
   const queryClient = useQueryClient()
+  
+  // 🚀 Usar hook otimizado com cache (já disponível instantaneamente)
   const { data: storeSlugData } = useStoreSlug()
-  const [storeId, setStoreId] = useState<string | null>(null)
+  const storeId = storeSlugData?.id?.toString()
+  
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [activeTab, setActiveTab] = useState<'produtos' | 'servicos'>('produtos')
   
@@ -53,35 +56,18 @@ export default function CatalogoPage({ params }: CatalogoPageProps) {
     localStorage.setItem('catalogo_active_tab', tab)
   }
   
-  // Buscar storeId do usuário
+  // Verificar pagamento confirmado
   useEffect(() => {
-    async function fetchStore() {
-      if (session?.user?.id) {
-        const res = await fetch(`/api/user/store`)
-        if (res.ok) {
-          const data = await res.json()
-          if (data.storeId) {
-            setStoreId(data.storeId?.toString())
-            
-            // Verificar se acabou de pagar
-            const paymentConfirmed = localStorage.getItem('payment_confirmed')
-            if (paymentConfirmed === 'true') {
-              localStorage.removeItem('payment_confirmed')
-              setTimeout(() => setShowSuccessDialog(true), 1000)
-            }
-          } else {
-            // Se não tem store ainda, usar ID temporário ou criar
-            console.log('Store não encontrada, pode ser nova conta')
-            // Definir storeId como '0' para não mostrar produtos de outras lojas
-            setStoreId('0')
-          }
-        }
+    if (storeId) {
+      const paymentConfirmed = localStorage.getItem('payment_confirmed')
+      if (paymentConfirmed === 'true') {
+        localStorage.removeItem('payment_confirmed')
+        setTimeout(() => setShowSuccessDialog(true), 1000)
       }
     }
-    fetchStore()
-  }, [session?.user?.id])
+  }, [storeId])
   
-  // 🚀 Buscar dados com hooks otimizados
+  // 🚀 Buscar dados com hooks otimizados (cache automático)
   const { data: productsData, isLoading: isLoadingProducts } = useProducts({ 
     storeId: storeId || undefined,
     includeInactive: true
@@ -94,7 +80,14 @@ export default function CatalogoPage({ params }: CatalogoPageProps) {
 
   const products = productsData?.data || []
   const services = servicesData?.data || []
-  const isLoading = isLoadingProducts || isLoadingServices || !storeId
+  
+  // 🚀 Não mostrar loading se já tem dados em cache
+  const hasProducts = products.length > 0
+  const hasServices = services.length > 0
+  const hasCachedData = hasProducts || hasServices
+  
+  // Só mostrar skeleton se realmente está carregando E não tem dados em cache
+  const isLoading = (isLoadingProducts || isLoadingServices) && !hasCachedData
   
   // 🔴 REALTIME para catálogo da loja
   useEffect(() => {
@@ -265,13 +258,17 @@ export default function CatalogoPage({ params }: CatalogoPageProps) {
             </Card>
           </div>
 
-          {/* Tabela de Catálogo (Produtos e Serviços) */}
-          <ProductTable 
-            storeId={storeId}
-            isLoading={isLoading}
-            activeTab={activeTab}
-            onTabChange={handleTabChange}
-          />
+          {/* Tabela de Catálogo (Produtos e Serviços) - só renderiza com storeId válido */}
+          {storeId ? (
+            <ProductTable 
+              storeId={storeId}
+              isLoading={isLoading}
+              activeTab={activeTab}
+              onTabChange={handleTabChange}
+            />
+          ) : (
+            <div className="text-center py-8 text-gray-500">Carregando catálogo...</div>
+          )}
         </>
       )}
 

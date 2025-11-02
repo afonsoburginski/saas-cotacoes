@@ -7,6 +7,7 @@ import { useEffect, useState } from "react"
 import { useSession } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
 import { useStoreSlug } from "@/hooks/use-store-slug"
+import { useStoreDataStore } from "@/stores/store-data-store"
 import Image from "next/image"
 import Link from "next/link"
 
@@ -14,14 +15,19 @@ export function LandingTopbar() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [authDialogOpen, setAuthDialogOpen] = useState(false)
   const { data: session } = useSession()
+  
+  // 🚀 Usar dados do Zustand como fallback instantâneo
+  const { storeData } = useStoreDataStore()
   const { data: storeSlug, isLoading: isLoadingSlug } = useStoreSlug()
+  const effectiveStoreData = storeSlug || storeData
+  
   const router = useRouter()
   
   const user = session?.user
   const userRole = (user as any)?.role
   const isFornecedor = userRole === 'fornecedor' || userRole === 'loja'
   const displayInitials = ((user?.name || "U").trim().split(/\s+/).map((n) => n.charAt(0)).slice(0, 2).join("") || "U").toUpperCase()
-  const slug = storeSlug?.slug
+  const slug = effectiveStoreData?.slug
 
   useEffect(() => {
     const handleScroll = () => {
@@ -64,50 +70,65 @@ export function LandingTopbar() {
             <Button
               asChild
               variant="outline"
-              className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-200 px-3 sm:px-4 text-sm sm:text-base h-9 sm:h-10"
+              className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-200 px-3 sm:px-4 text-sm sm:text-base h-9 sm:h-10 cursor-pointer"
             >
-              <Link href="/explorar">Explorar Produtos</Link>
+              <Link href="/explorar" prefetch={true}>Explorar Produtos</Link>
             </Button>
 
             {!user || !isFornecedor ? (
               <Button
                 onClick={() => setAuthDialogOpen(true)}
-                className="bg-[#22C55E] text-white hover:bg-[#22C55E]/90 transition-all duration-200 px-4 sm:px-6 text-sm sm:text-base h-9 sm:h-10"
+                className="bg-[#22C55E] text-white hover:bg-[#22C55E]/90 transition-all duration-200 px-4 sm:px-6 text-sm sm:text-base h-9 sm:h-10 cursor-pointer"
               >
                 Entrar
               </Button>
             ) : null}
 
             {isFornecedor && (
-              <Button
-                onClick={async () => {
-                  if (isLoadingSlug) return
-                  if (slug) {
-                    router.push(`/loja/${slug}`)
-                    return
-                  }
-                  // Slug ainda não carregou: tentar buscar diretamente
-                  try {
-                    const res = await fetch('/api/user/store')
-                    if (res.ok) {
-                      const data = await res.json()
-                      if (data?.slug) {
-                        router.push(`/loja/${data.slug}`)
-                        return
+              slug ? (
+                <Button
+                  asChild
+                  className="bg-[#22C55E] text-white hover:bg-[#22C55E]/90 transition-all duration-200 h-9 sm:h-10 gap-2 px-4 sm:px-6 cursor-pointer"
+                >
+                  <Link href={`/loja/${slug}`} prefetch={true}>
+                    <Avatar className="h-6 w-6">
+                      <AvatarFallback className="bg-white text-[#22C55E] font-semibold text-xs">
+                        {displayInitials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm sm:text-base">Entrar na Loja</span>
+                  </Link>
+                </Button>
+              ) : (
+                <Button
+                  onClick={async () => {
+                    if (isLoadingSlug) return
+                    // Slug ainda não carregou: tentar buscar diretamente
+                    try {
+                      const res = await fetch('/api/user/store')
+                      if (res.ok) {
+                        const data = await res.json()
+                        if (data?.slug) {
+                          router.push(`/loja/${data.slug}`)
+                          return
+                        }
                       }
-                    }
-                  } catch {}
-                  router.push('/loja/loading')
-                }}
-                className="bg-[#22C55E] text-white hover:bg-[#22C55E]/90 transition-all duration-200 h-9 sm:h-10 gap-2 px-4 sm:px-6"
-              >
-                <Avatar className="h-6 w-6">
-                  <AvatarFallback className="bg-white text-[#22C55E] font-semibold text-xs">
-                    {displayInitials}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="text-sm sm:text-base">Entrar na Loja</span>
-              </Button>
+                    } catch {}
+                    router.push('/loja/loading')
+                  }}
+                  disabled={isLoadingSlug}
+                  className="bg-[#22C55E] text-white hover:bg-[#22C55E]/90 transition-all duration-200 h-9 sm:h-10 gap-2 px-4 sm:px-6 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Avatar className="h-6 w-6">
+                    <AvatarFallback className="bg-white text-[#22C55E] font-semibold text-xs">
+                      {displayInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm sm:text-base">
+                    {isLoadingSlug ? 'Carregando...' : 'Entrar na Loja'}
+                  </span>
+                </Button>
+              )
             )}
           </div>
         </div>

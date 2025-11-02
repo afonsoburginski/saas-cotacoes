@@ -46,6 +46,7 @@ export const NavAdmin = React.memo(function NavAdmin({ items }: NavAdminProps) {
                 <SidebarMenuButton asChild isActive={item.isActive} tooltip={item.title}>
                   <Link 
                     href={item.url}
+                    prefetch={true}
                     onClick={handleClick(item.onClick)}
                   >
                     {item.icon && <item.icon />}

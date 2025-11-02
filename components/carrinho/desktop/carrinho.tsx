@@ -15,7 +15,7 @@ interface CarrinhoDesktopProps {
   onUpdateQuantity: (itemId: string, qty: number) => void
   onRemoveItem: (itemId: string) => void
   onClearCart: () => void
-  onGeneratePDF: () => void
+  onGeneratePDF?: () => void
   onGenerateList: () => void
   stores?: any[]
 }
@@ -123,6 +123,7 @@ export function CarrinhoDesktop({
                         Gerar Orçamento
                       </Button>
                       
+                      {onGeneratePDF && (
                       <Button 
                         onClick={onGeneratePDF} 
                         size="lg"
@@ -132,6 +133,7 @@ export function CarrinhoDesktop({
                         <Download className="h-4 w-4 mr-2" />
                         Baixar PDF
                       </Button>
+                      )}
                     </CardContent>
                   </Card>
 

@@ -40,6 +40,7 @@ export const NavMain = React.memo(function NavMain({ items }: NavMainProps) {
               <SidebarMenuButton asChild isActive={item.isActive} tooltip={item.title}>
                 <Link 
                   href={item.url}
+                  prefetch={true}
                   onClick={handleClick(item.onClick)}
                 >
                   {item.icon && <item.icon />}

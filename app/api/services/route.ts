@@ -51,6 +51,12 @@ export async function GET(request: Request) {
       conditions.push(eq(services.categoria, categoria))
     }
     
+    // CRÍTICO: Se includeInactive=true (contexto de catálogo), storeId é OBRIGATÓRIO
+    if (includeInactive && !storeId) {
+      console.error('❌ Tentativa de buscar serviços com includeInactive sem storeId - BLOQUEADO')
+      return NextResponse.json({ data: [], total: 0 }, { status: 200 })
+    }
+    
     if (storeId) {
       conditions.push(eq(services.storeId, parseInt(storeId)))
     }

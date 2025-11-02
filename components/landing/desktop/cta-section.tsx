@@ -106,7 +106,7 @@ export function CTASection() {
               <Button 
                 onClick={() => setAuthDialogOpen(true)}
                 size="lg"
-                className="bg-[#22C55E] text-white hover:bg-[#22C55E]/90 font-semibold px-10 py-6 text-lg rounded-full shadow-xl hover:shadow-2xl transition-all duration-300"
+                className="bg-[#22C55E] text-white hover:bg-[#22C55E]/90 font-semibold px-10 py-6 text-lg rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 cursor-pointer"
               >
                 Ver Planos e Começar
                 <ArrowRight className="ml-2 w-5 h-5" />
@@ -133,7 +133,8 @@ export function CTASection() {
           <div className="mt-6">
             <Link
               href="/explorar"
-              className="text-white/60 hover:text-white text-sm font-montserrat underline underline-offset-4 transition-colors"
+              prefetch={true}
+              className="text-white/60 hover:text-white text-sm font-montserrat underline underline-offset-4 transition-colors cursor-pointer"
             >
               Já é cliente? Buscar produtos →
             </Link>

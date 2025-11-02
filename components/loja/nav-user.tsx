@@ -4,6 +4,7 @@ import { LogOut, User as UserIcon } from "lucide-react"
 import { useSession, signOut } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
 import { useStoreSlug } from "@/hooks/use-store-slug"
+import { useStoreDataStore } from "@/stores/store-data-store"
 import { useMemo, useCallback, memo } from "react"
 import {
   Avatar,
@@ -28,7 +29,13 @@ export const NavUser = memo(function NavUser() {
   const { isMobile } = useSidebar()
   const { data: session } = useSession()
   const router = useRouter()
+  
+  // 🚀 Usar dados do Zustand (cache persistente) como fallback imediato
+  const { storeData } = useStoreDataStore()
   const { data: storeSlug } = useStoreSlug()
+  
+  // 🚀 Preferir dados do React Query, mas usar Zustand como fallback instantâneo
+  const effectiveStoreData = storeSlug || storeData
   
   // 🚀 Memoizar valores derivados para evitar recálculos
   const user = useMemo(() => session?.user, [session?.user])
@@ -37,9 +44,9 @@ export const NavUser = memo(function NavUser() {
     return ((user?.name || "U").trim().split(/\s+/).map((n) => n.charAt(0)).slice(0, 2).join("") || "U").toUpperCase()
   }, [user?.name])
   
-  const slug = useMemo(() => storeSlug?.slug, [storeSlug?.slug])
-  const storeLogo = useMemo(() => storeSlug?.logo, [storeSlug?.logo])
-  const storeName = useMemo(() => storeSlug?.storeName, [storeSlug?.storeName])
+  const slug = useMemo(() => effectiveStoreData?.slug, [effectiveStoreData?.slug])
+  const storeLogo = useMemo(() => effectiveStoreData?.logo, [effectiveStoreData?.logo])
+  const storeName = useMemo(() => effectiveStoreData?.storeName, [effectiveStoreData?.storeName])
   
   const displayName = useMemo(() => storeName || user?.name, [storeName, user?.name])
   const displayEmail = useMemo(() => user?.email, [user?.email])
@@ -50,23 +57,13 @@ export const NavUser = memo(function NavUser() {
     router.push('/')
   }, [router])
   
-  const handleProfileClick = useCallback(async () => {
+  const handleProfileClick = useCallback(() => {
+    // 🚀 Usar slug do cache (já disponível instantaneamente)
     if (slug) {
       router.push(`/loja/${slug}/perfil`)
-      return
+    } else {
+      router.push('/loja/loading')
     }
-    // Tentar obter o slug diretamente antes de cair no loading
-    try {
-      const res = await fetch('/api/user/store')
-      if (res.ok) {
-        const data = await res.json()
-        if (data?.slug) {
-          router.push(`/loja/${data.slug}/perfil`)
-          return
-        }
-      }
-    } catch {}
-    router.push('/loja/loading')
   }, [router, slug])
 
   return (

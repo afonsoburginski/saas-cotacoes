@@ -17,22 +17,28 @@ export async function GET(request: NextRequest) {
 
     console.log('👤 Usuário autenticado:', session.user.email)
 
-    // Buscar storeId do usuário
-    const userRes = await fetch(`${request.nextUrl.origin}/api/user/store`, {
-      headers: request.headers
-    })
-
-    if (!userRes.ok) {
-      console.log('❌ Store não encontrada para o usuário')
-      return NextResponse.json({ error: "Store not found" }, { status: 404 })
-    }
-
-    const userData = await userRes.json()
-    const storeId = userData.storeId
-
-    if (!storeId) {
-      console.log('❌ StoreId não encontrado')
-      return NextResponse.json({ error: "Store not found" }, { status: 404 })
+    // Buscar storeId: prioriza query param para evitar round-trip extra
+    const paramStoreId = request.nextUrl.searchParams.get('storeId')
+    let storeId: number | null = null
+    if (paramStoreId && paramStoreId.trim() !== '' && !Number.isNaN(parseInt(paramStoreId))) {
+      storeId = parseInt(paramStoreId)
+      console.log('✅ StoreId obtido via query param:', storeId)
+    } else {
+      console.log('⚠️ StoreId não fornecido na query, buscando via /api/user/store')
+      // Fallback: buscar storeId do usuário
+      const userRes = await fetch(`${request.nextUrl.origin}/api/user/store`, {
+        headers: request.headers
+      })
+      if (!userRes.ok) {
+        console.log('❌ Store não encontrada para o usuário')
+        return NextResponse.json({ error: "Store not found" }, { status: 404 })
+      }
+      const userData = await userRes.json()
+      storeId = userData.storeId
+      if (!storeId) {
+        console.log('❌ StoreId não encontrado')
+        return NextResponse.json({ error: "Store not found" }, { status: 404 })
+      }
     }
 
     console.log('🏪 Buscando pedidos para storeId:', storeId)

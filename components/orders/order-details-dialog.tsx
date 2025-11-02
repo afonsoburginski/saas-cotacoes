@@ -29,9 +29,18 @@ interface OrderDetailsDialogProps {
 }
 
 export function OrderDetailsDialog({ order, isOpen, onClose }: OrderDetailsDialogProps) {
-  const { data: orderItems = [] } = useOrderItems(order?.id || 0)
+  // Só buscar itens se o dialog estiver aberto e houver um pedido válido
+  const { data: orderItems = [], isLoading } = useOrderItems(isOpen && order?.id ? order.id : 0)
 
-  if (!order) return null
+  // IMPORTANTE: useCallback DEVE estar ANTES de qualquer return condicional
+  const handleClose = React.useCallback(() => {
+    onClose()
+  }, [onClose])
+
+  // Se não houver ordem, não renderizar nada
+  if (!order) {
+    return null
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -91,11 +100,16 @@ export function OrderDetailsDialog({ order, isOpen, onClose }: OrderDetailsDialo
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog 
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) {
+          handleClose()
+        }
+      }}
+    >
       <DialogContent 
         className="max-w-4xl max-h-[80vh] overflow-y-auto"
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
@@ -240,7 +254,10 @@ export function OrderDetailsDialog({ order, isOpen, onClose }: OrderDetailsDialo
         </div>
         
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button 
+            variant="outline" 
+            onClick={handleClose}
+          >
             Fechar
           </Button>
         </DialogFooter>

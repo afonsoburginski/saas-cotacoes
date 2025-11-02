@@ -42,6 +42,11 @@ export function useProducts(params?: UseProductsParams) {
   return useQuery({
     queryKey: ["products", params],
     queryFn: async () => {
+      // CRÍTICO: Não buscar se não tiver storeId no contexto de catálogo
+      if (params?.includeInactive && !params?.storeId) {
+        console.warn('⚠️ useProducts: tentativa de carregar produtos sem storeId no modo catálogo')
+        return { data: [], total: 0 } as ProductsResponse
+      }
       try {
         const res = await fetch(`/api/products?${searchParams.toString()}`)
         if (!res.ok) {
@@ -55,14 +60,13 @@ export function useProducts(params?: UseProductsParams) {
         return { data: [], total: 0 } as ProductsResponse
       }
     },
-    staleTime: 1000 * 30, // 30 segundos de cache (reduzido para APIs públicas)
-    gcTime: 1000 * 60 * 5, // 5 minutos no cache
-    refetchOnWindowFocus: true, // Recarregar ao focar janela para garantir dados atualizados
-    refetchOnMount: true, // Sempre refetch ao montar componente
-    retry: 2, // Retry 2 vezes
-    retryDelay: 1000, // 1 segundo entre retries
-    // Removido refetchInterval - estava causando muitas requisições repetidas
-    // O refetchOnWindowFocus e refetchOnMount são suficientes
+    // 🚀 Cache otimizado - dados ficam frescos por 3 minutos
+    staleTime: 3 * 60 * 1000, // 3 minutos
+    gcTime: 10 * 60 * 1000, // 10 minutos
+    refetchOnWindowFocus: false, // Realtime já atualiza automaticamente
+    refetchOnMount: false, // Não refetch ao montar se tem cache válido
+    retry: 1, // Apenas 1 retry
+    retryDelay: 1000,
   })
 }
 
@@ -76,6 +80,11 @@ export function useProduct(id: string) {
       return json.data as Product
     },
     enabled: !!id,
+    // 🚀 Cache otimizado - produto individual
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    gcTime: 15 * 60 * 1000, // 15 minutos
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   })
 }
 

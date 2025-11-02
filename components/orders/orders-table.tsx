@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useOrders, Order, useUpdateOrderStatus, useDeleteOrder, useDeleteOrders } from "@/hooks/use-orders"
 import { useStoreSlug } from "@/hooks/use-store-slug"
 import {
@@ -57,10 +57,13 @@ import {
   DollarSign,
   Phone,
   MessageSquare,
+  Download,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Checkbox } from "@/components/ui/checkbox"
 import Image from "next/image"
+import { generatePdfFromElement } from "@/lib/pdf"
+import { useStores } from "@/hooks/use-stores"
 
 interface OrdersTableProps {
   isLoading: boolean
@@ -72,20 +75,18 @@ export function OrdersTable({ isLoading }: OrdersTableProps) {
   const updateStatusMutation = useUpdateOrderStatus()
   const deleteOrder = useDeleteOrder()
   const deleteOrders = useDeleteOrders()
+  const { data: storesData } = useStores()
+  const stores = storesData?.data || []
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [selectedOrders, setSelectedOrders] = useState<number[]>([])
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false)
+  const pdfRef = useRef<HTMLDivElement | null>(null)
+  const [renderPdfDOM, setRenderPdfDOM] = useState(false)
+  const [pendingOrderForPdf, setPendingOrderForPdf] = useState<any | null>(null)
 
-  // Debug logs
-  console.log('📊 OrdersTable - orders recebidos:', orders.length)
-  console.log('📊 OrdersTable - isLoading:', isLoading)
-  console.log('📊 OrdersTable - dados:', orders.map(o => ({ id: o.id, status: o.status, total: o.total })))
-
-  // Debug logs para orderItems
-  console.log('📦 OrdersTable - selectedOrder:', selectedOrder?.id)
 
   // Filtrar pedidos
   const filteredOrders = orders.filter(order => {
@@ -182,6 +183,32 @@ ${order.storeName || 'Nossa Loja'}`
         description: "Não foi possível atualizar o status do pedido.",
         variant: "destructive"
       })
+    }
+  }
+
+  const handleDownloadPdf = async (order: any) => {
+    try {
+      const res = await fetch(`/api/orders/${order.id}/items`)
+      const itemsJson = res.ok ? await res.json() : { data: [] }
+      const items = itemsJson.data || []
+      const store = stores.find((s: any) => String(s.id) === String(order.storeId)) as any
+      setPendingOrderForPdf({ order, items, store })
+      setRenderPdfDOM(true)
+      await new Promise(r => setTimeout(r, 300))
+      const el = pdfRef.current
+      if (!el) return
+      await generatePdfFromElement(el, {
+        fileName: `Orcamento_${String(order.id).padStart(5,'0')}.pdf`,
+        width: 794,
+        height: 1123,
+        scale: 2,
+        backgroundColor: '#ffffff'
+      })
+    } catch (e) {
+      toast({ title: 'Erro ao gerar PDF', description: 'Tente novamente.', variant: 'destructive' })
+    } finally {
+      setRenderPdfDOM(false)
+      setPendingOrderForPdf(null)
     }
   }
 
@@ -426,37 +453,44 @@ ${order.storeName || 'Nossa Loja'}`
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setSelectedOrder(order)}>
+                        <DropdownMenuItem onSelect={() => {
+                          // Pequeno delay para garantir que o menu fecha antes do dialog abrir
+                          setTimeout(() => setSelectedOrder(order), 0)
+                        }}>
                           <Eye className="h-4 w-4 mr-2" />
                           Visualizar Detalhes
                         </DropdownMenuItem>
                         {order.userPhone && (
-                          <DropdownMenuItem onClick={() => handleWhatsApp(order)}>
+                          <DropdownMenuItem onSelect={() => handleWhatsApp(order)}>
                             <MessageSquare className="h-4 w-4 mr-2" />
                             Responder via WhatsApp
                           </DropdownMenuItem>
                         )}
+                        <DropdownMenuItem onSelect={() => handleDownloadPdf(order)}>
+                          <Download className="h-4 w-4 mr-2" />
+                          Baixar PDF
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuLabel>Alterar Status</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => handleStatusUpdate(order.id, 'respondida')}>
+                        <DropdownMenuItem onSelect={() => handleStatusUpdate(order.id, 'respondida')}>
                           <MessageCircle className="h-4 w-4 mr-2" />
                           Marcar como Respondida
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleStatusUpdate(order.id, 'aceita')}>
+                        <DropdownMenuItem onSelect={() => handleStatusUpdate(order.id, 'aceita')}>
                           <CheckCircle2 className="h-4 w-4 mr-2" />
                           Marcar como Aceita
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleStatusUpdate(order.id, 'rejeitada')}>
+                        <DropdownMenuItem onSelect={() => handleStatusUpdate(order.id, 'rejeitada')}>
                           <XCircle className="h-4 w-4 mr-2" />
                           Marcar como Rejeitada
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleStatusUpdate(order.id, 'concluida')}>
+                        <DropdownMenuItem onSelect={() => handleStatusUpdate(order.id, 'concluida')}>
                           <CheckCircle2 className="h-4 w-4 mr-2" />
                           Marcar como Concluída
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem 
-                          onClick={() => {
+                          onSelect={() => {
                             setSelectedOrder(order)
                             setShowDeleteDialog(true)
                           }}
@@ -471,62 +505,49 @@ ${order.storeName || 'Nossa Loja'}`
                 </TableRow>
                   </ContextMenuTrigger>
                   
-                  <ContextMenuContent 
-                    className="w-48"
-                    onCloseAutoFocus={(e) => e.preventDefault()}
-                  >
-                    <ContextMenuItem onClick={(e) => {
-                      e.preventDefault()
-                      setSelectedOrder(order)
+                  <ContextMenuContent className="w-48">
+                    <ContextMenuItem onSelect={() => {
+                      // Delay para garantir que o menu fecha antes do dialog abrir
+                      setTimeout(() => setSelectedOrder(order), 0)
                     }}>
                       <Eye className="h-4 w-4 mr-2" />
                       Visualizar Detalhes
                     </ContextMenuItem>
                     {order.userPhone && (
-                      <ContextMenuItem onClick={(e) => {
-                        e.preventDefault()
-                        handleWhatsApp(order)
-                      }}>
+                      <ContextMenuItem onSelect={() => handleWhatsApp(order)}>
                         <MessageSquare className="h-4 w-4 mr-2" />
                         Responder via WhatsApp
                       </ContextMenuItem>
                     )}
                     <ContextMenuSeparator />
                     <ContextMenuLabel>Alterar Status</ContextMenuLabel>
-                    <ContextMenuItem onClick={(e) => {
-                      e.preventDefault()
-                      handleStatusUpdate(order.id, 'respondida')
-                    }}>
+                    <ContextMenuItem onSelect={() => handleStatusUpdate(order.id, 'respondida')}>
                       <MessageCircle className="h-4 w-4 mr-2" />
                       Marcar como Respondida
                     </ContextMenuItem>
-                    <ContextMenuItem onClick={(e) => {
-                      e.preventDefault()
-                      handleStatusUpdate(order.id, 'aceita')
-                    }}>
+                    <ContextMenuItem onSelect={() => handleStatusUpdate(order.id, 'aceita')}>
                       <CheckCircle2 className="h-4 w-4 mr-2" />
                       Marcar como Aceita
                     </ContextMenuItem>
-                    <ContextMenuItem onClick={(e) => {
-                      e.preventDefault()
-                      handleStatusUpdate(order.id, 'rejeitada')
-                    }}>
+                    <ContextMenuItem onSelect={() => handleStatusUpdate(order.id, 'rejeitada')}>
                       <XCircle className="h-4 w-4 mr-2" />
                       Marcar como Rejeitada
                     </ContextMenuItem>
-                    <ContextMenuItem onClick={(e) => {
-                      e.preventDefault()
-                      handleStatusUpdate(order.id, 'concluida')
-                    }}>
+                    <ContextMenuItem onSelect={() => handleStatusUpdate(order.id, 'concluida')}>
                       <CheckCircle2 className="h-4 w-4 mr-2" />
                       Marcar como Concluída
                     </ContextMenuItem>
+                    <ContextMenuItem onSelect={() => handleDownloadPdf(order)}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Baixar PDF
+                    </ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem 
-                      onClick={(e) => {
-                        e.preventDefault()
-                        setSelectedOrder(order)
-                        setShowDeleteDialog(true)
+                      onSelect={() => {
+                        setTimeout(() => {
+                          setSelectedOrder(order)
+                          setShowDeleteDialog(true)
+                        }, 0)
                       }}
                       className="text-red-600 focus:text-red-600"
                     >
@@ -592,6 +613,120 @@ ${order.storeName || 'Nossa Loja'}`
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {/* DOM oculto para renderizar PDF do pedido */}
+      {renderPdfDOM && pendingOrderForPdf && (
+        <div style={{ position: 'fixed', left: '-99999px', top: '0' }}>
+          <div
+            id="pdf-root"
+            ref={pdfRef}
+            style={{ width: '794px', height: '1123px', backgroundColor: '#ffffff', color: '#000000', fontFamily: 'Arial, sans-serif', position: 'relative' }}
+          >
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ padding: '32px 48px 0 48px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <div>
+                    <p style={{ color: '#2563eb', fontWeight: '600', fontSize: '16px', margin: 0 }}>Data: {new Date().toLocaleDateString('pt-BR')}</p>
+                    <div style={{ marginTop: '8px' }}>
+                      <h3 style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '14px', margin: '0 0 4px 0' }}>Cliente:</h3>
+                      <p style={{ fontWeight: 'bold', color: 'black', fontSize: '14px', margin: '0 0 2px 0' }}>{pendingOrderForPdf.order?.userName || 'Cliente'}</p>
+                      {pendingOrderForPdf.order?.userPhone && (
+                        <p style={{ color: 'black', fontSize: '14px', margin: '0 0 2px 0' }}>{pendingOrderForPdf.order.userPhone}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginRight: '64px' }}>
+                    <div style={{ textAlign: 'right' }}>
+                      <img src="/logo-pdf.png" alt="Orçanorte" style={{ height: '80px', width: 'auto', display: 'block' }} />
+                    </div>
+                    <div style={{ position: 'absolute', top: 0, right: '48px', width: '40px', height: '100px', backgroundColor: '#1e3a8a' }} />
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px', height: '24px' }}>
+                <div style={{ width: '55%', height: '24px', backgroundColor: '#1e3a8a' }} />
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', paddingLeft: '16px', paddingRight: '48px', height: '24px' }}>
+                  <h1 style={{ color: '#2563eb', fontSize: '22px', fontWeight: 'normal', letterSpacing: '0.05em', margin: 0, lineHeight: 1, transform: 'translateY(-8px)' }}>
+                    {`ORÇAMENTO #${String(pendingOrderForPdf.order?.id ?? '').padStart(5,'0')}`}
+                  </h1>
+                </div>
+              </div>
+
+              <div style={{ padding: '0 48px', flex: 1, display: 'flex', flexDirection: 'column', paddingBottom: '220px' }}>
+                <div style={{ marginTop: '8px' }}>
+                  {(() => {
+                    const group = { storeNome: pendingOrderForPdf.store?.nome || '', items: pendingOrderForPdf.items || [] }
+                    const store = pendingOrderForPdf.store
+                    const tipoRaw = (store?.tipo || store?.businessType || '').toString().toLowerCase()
+                    const isServico = tipoRaw.includes('serv') || tipoRaw === 'prestador' || group.items.some((it: any) => it.serviceId)
+                    return (
+                      <div style={{ marginBottom: '16px' }}>
+                        <h3 style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '16px', marginBottom: '8px', marginTop: 0 }}>
+                          {isServico ? 'Prestador:' : 'Comércio:'}
+                        </h3>
+                        <p style={{ fontWeight: 'bold', color: 'black', fontSize: '16px', marginBottom: '2px', marginTop: 0 }}>{group.storeNome}</p>
+                        {store?.telefone && <p style={{ color: 'black', fontSize: '16px', marginBottom: '2px', marginTop: 0 }}>{store.telefone}</p>}
+                        {store?.endereco && <p style={{ color: 'black', fontSize: '16px', marginBottom: '14px', marginTop: 0 }}>{store.endereco}</p>}
+
+                        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '16px' }}>
+                          <thead>
+                            <tr style={{ backgroundColor: '#f3f4f6' }}>
+                              <th style={{ paddingTop: 0, paddingBottom: '6px', paddingLeft: '8px', paddingRight: '8px', border: '1px solid #e5e7eb', textAlign: 'left', fontSize: '12px', fontWeight: 'bold', lineHeight: '11px', verticalAlign: 'top', transform: 'translateY(-1px)' }}>Item</th>
+                              <th style={{ paddingTop: 0, paddingBottom: '6px', paddingLeft: '8px', paddingRight: '8px', border: '1px solid #e5e7eb', textAlign: 'left', fontSize: '12px', fontWeight: 'bold', lineHeight: '11px', verticalAlign: 'top', width: '80px', transform: 'translateY(-1px)' }}>Qtd</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {group.items.map((item: any, idx: number) => (
+                              <tr key={idx}>
+                                <td style={{ paddingTop: 0, paddingBottom: '6px', paddingLeft: '8px', paddingRight: '8px', border: '1px solid #e5e7eb', fontSize: '12px', lineHeight: '11px', verticalAlign: 'top', transform: 'translateY(-1px)' }}>{item.productNome}</td>
+                                <td style={{ paddingTop: 0, paddingBottom: '6px', paddingLeft: '8px', paddingRight: '8px', border: '1px solid #e5e7eb', fontSize: '12px', lineHeight: '11px', verticalAlign: 'top', transform: 'translateY(-1px)' }}>{item.qty}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )
+                  })()}
+                </div>
+
+                <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, width: '100%' }}>
+                  <div style={{ paddingLeft: '48px', paddingRight: '48px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+                      <div style={{ backgroundColor: '#1e3a8a', color: 'white', paddingTop: 0, paddingBottom: '12px', paddingLeft: '40px', paddingRight: '40px', fontWeight: 'bold', fontSize: '20px', letterSpacing: '0.05em', lineHeight: '20px' }}>
+                        ORÇAMENTO ENVIADO
+                      </div>
+                    </div>
+                    <div style={{ width: '128px', height: '3px', backgroundColor: '#1e3a8a', marginBottom: '12px' }} />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '80px', marginBottom: '12px' }}>
+                      <div>
+                        <h3 style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '16px', marginBottom: '6px', marginTop: 0 }}>FORMA DE PAGAMENTO</h3>
+                        <p style={{ fontSize: '14px', color: 'black', margin: '0 0 4px 0' }}>Pix com 10% de desconto</p>
+                        <p style={{ fontSize: '14px', color: 'black', margin: 0 }}>ou 2x no cartão de crédito</p>
+                      </div>
+                      <div>
+                        <h3 style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '16px', marginBottom: '6px', marginTop: 0 }}>TERMOS E CONDIÇÕES</h3>
+                        <p style={{ fontSize: '14px', color: 'black', margin: 0 }}>Este orçamento é válido por 30 dias.</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ backgroundColor: '#1e3a8a', color: 'white', paddingTop: '6px', paddingBottom: '14px', width: '100%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '14px', lineHeight: '16px', paddingLeft: '48px', paddingRight: '48px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '40px' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><span>☎</span><span>(66) 9 9661-4628</span></span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><span>✉</span><span>orcanorte28@gmail.com</span></span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '40px' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><span>●</span><span>www.orcanorte.com.br</span></span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}><span>@</span><span>orcanorte</span></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1423,35 +1423,28 @@ export function ProductTable({ storeId, isLoading: isLoadingProp, activeTab = 'p
       <ImportCSVDialog
         open={showImportDialog}
         onOpenChange={setShowImportDialog}
+        isImporting={bulkCreateProducts.isPending}
         onImport={(importedProducts) => {
           // Converter dados do CSV para formato de produto
           const productsToCreate = importedProducts.map(csvRow => ({
-            storeId: Number(storeId),
+            storeId: String(storeId),
             nome: csvRow.nome || '',
             categoria: csvRow.categoria || '',
             preco: parseFloat(csvRow.preco) || 0,
-            precoPromocional: csvRow.precoPromocional ? parseFloat(csvRow.precoPromocional) : undefined,
             estoque: parseInt(csvRow.estoque) || 0,
             unidadeMedida: csvRow.unidadeMedida || 'Unidade (un)',
             sku: csvRow.sku || '',
             descricao: csvRow.descricao || '',
             imagemUrl: csvRow.imagemUrl || undefined,
-            ativo: csvRow.ativo === 'true' || csvRow.ativo === '1' || csvRow.ativo === true,
-            destacado: csvRow.destacado === 'true' || csvRow.destacado === '1' || csvRow.destacado === true,
-            temVariacaoPreco: csvRow.temVariacaoPreco === 'true' || csvRow.temVariacaoPreco === '1' || csvRow.temVariacaoPreco === true,
             peso: csvRow.peso ? parseFloat(csvRow.peso) : undefined,
-            dimensoes: csvRow.dimensoes ? (typeof csvRow.dimensoes === 'string' ? JSON.parse(csvRow.dimensoes) : csvRow.dimensoes) : undefined,
+            ativo: true, // Todos criados como ativos
+            destacado: false, // Nenhum criado como destacado
+            temVariacaoPreco: false, // Sempre false
             rating: 0,
           }))
 
-          // Corrigir o tipo de storeId para string conforme esperado em Partial<Product>
-          const productsToCreateFixed = productsToCreate.map(prod => ({
-            ...prod,
-            storeId: String(prod.storeId),
-          }))
-
           // Executar importação em lote
-          bulkCreateProducts.mutate(productsToCreateFixed, {
+          bulkCreateProducts.mutate(productsToCreate, {
             onSuccess: (results) => {
               toast({
                 title: "Produtos importados!",

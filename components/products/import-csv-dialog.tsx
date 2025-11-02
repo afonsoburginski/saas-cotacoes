@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Upload, FileSpreadsheet, X, CheckCircle, Download } from "lucide-react"
+import { Upload, FileSpreadsheet, X, CheckCircle, Download, Image as ImageIcon } from "lucide-react"
 import { useDropzone } from "react-dropzone"
 import {
   Table,
@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
+import Image from "next/image"
+import { createClient } from "@/lib/supabase"
 
 interface ImportCSVDialogProps {
   open: boolean
@@ -34,6 +36,9 @@ export function ImportCSVDialog({ open, onOpenChange, onImport, isImporting = fa
   const [csvData, setCsvData] = useState<any[]>([])
   const [fileName, setFileName] = useState<string>("")
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isUploadingImages, setIsUploadingImages] = useState(false)
+  const [localImages, setLocalImages] = useState<Map<number, File>>(new Map())
+  const supabase = createClient()
 
   const updateCellValue = (rowIndex: number, columnKey: string, value: string) => {
     setCsvData(prev => {
@@ -41,6 +46,19 @@ export function ImportCSVDialog({ open, onOpenChange, onImport, isImporting = fa
       updated[rowIndex] = { ...updated[rowIndex], [columnKey]: value }
       return updated
     })
+  }
+
+  const handleImageSelect = (rowIndex: number, file: File) => {
+    // Apenas armazenar localmente - upload será feito ao importar
+    setLocalImages(prev => {
+      const updated = new Map(prev)
+      updated.set(rowIndex, file)
+      return updated
+    })
+  }
+  
+  const getLocalImageUrl = (file: File): string => {
+    return URL.createObjectURL(file)
   }
 
   const parseCSV = (text: string) => {
@@ -95,7 +113,7 @@ export function ImportCSVDialog({ open, onOpenChange, onImport, isImporting = fa
     maxFiles: 1,
   })
 
-  const handleImport = () => {
+  const handleImport = async () => {
     if (csvData.length === 0) {
       toast({
         title: "Nenhum dado!",
@@ -105,13 +123,86 @@ export function ImportCSVDialog({ open, onOpenChange, onImport, isImporting = fa
       return
     }
 
-    onImport(csvData)
-    handleClose()
+    // Validação de campos obrigatórios antes de importar
+    const missingFields: string[] = []
+    csvData.forEach((row, idx) => {
+      if (!row.nome?.trim()) missingFields.push(`Linha ${idx + 1}: nome`)
+      if (!row.categoria?.trim()) missingFields.push(`Linha ${idx + 1}: categoria`)
+      if (!row.preco || parseFloat(row.preco) <= 0) missingFields.push(`Linha ${idx + 1}: preco válido`)
+    })
+
+    if (missingFields.length > 0) {
+      toast({
+        title: "Campos obrigatórios faltando!",
+        description: missingFields.slice(0, 3).join(', ') + (missingFields.length > 3 ? '...' : ''),
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Upload de imagens primeiro usando Supabase
+    setIsUploadingImages(true)
+    const imageUrls: Map<number, string> = new Map()
+    
+    for (const [rowIndex, file] of localImages.entries()) {
+      try {
+        if (!supabase) continue
+        
+        const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+        const uid = Math.random().toString(36).slice(2, 11)
+        const path = `products/${uid}.${ext}`
+        
+        // 1) Pede URL assinada ao backend
+        const res = await fetch('/api/storage/signed-upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bucket: 'images', path })
+        })
+        
+        if (!res.ok) throw new Error('Falha ao criar URL assinada')
+        
+        const signed = await res.json()
+        
+        // 2) Faz upload usando token assinado
+        const { error: signedErr } = await supabase.storage
+          .from('images')
+          .uploadToSignedUrl(signed.path, signed.token, file)
+        
+        if (signedErr) throw new Error('Erro no upload')
+        
+        // 3) Obtém URL pública
+        const { data } = supabase.storage.from('images').getPublicUrl(path)
+        imageUrls.set(rowIndex, data.publicUrl)
+      } catch (error) {
+        console.error(`Erro ao fazer upload da imagem ${rowIndex}:`, error)
+        // Não mostrar toast para cada imagem que falhou - silencioso
+      }
+    }
+
+    // Adicionar imagemUrl aos produtos (APENAS das que foram anexadas)
+    const productsWithImages = csvData.map((row, index) => {
+      // Remover imagemUrl falsa do CSV se não foi anexada imagem local
+      const { imagemUrl, ...rowWithoutImage } = row
+      return {
+        ...rowWithoutImage,
+        imagemUrl: imageUrls.get(index) || undefined, // Apenas URLs reais do Supabase
+      }
+    })
+
+    setIsUploadingImages(false)
+    onImport(productsWithImages)
+    // NÃO fechar aqui - deixar o parent controlar o dialog
   }
 
   const handleClose = () => {
+    // Cleanup dos object URLs
+    localImages.forEach((file) => {
+      URL.revokeObjectURL(URL.createObjectURL(file))
+    })
+    
     setCsvData([])
     setFileName("")
+    setLocalImages(new Map())
     onOpenChange(false)
   }
 
@@ -148,20 +239,15 @@ export function ImportCSVDialog({ open, onOpenChange, onImport, isImporting = fa
               <Table>
                 <TableHeader className="bg-gray-50">
                   <TableRow className="whitespace-nowrap">
+                    <TableHead className="font-semibold text-xs border-r w-24">imagem</TableHead>
                     <TableHead className="font-semibold text-xs border-r">nome</TableHead>
                     <TableHead className="font-semibold text-xs border-r">categoria</TableHead>
                     <TableHead className="font-semibold text-xs border-r">preco</TableHead>
-                    <TableHead className="font-semibold text-xs border-r">precoPromocional</TableHead>
                     <TableHead className="font-semibold text-xs border-r">estoque</TableHead>
                     <TableHead className="font-semibold text-xs border-r">unidadeMedida</TableHead>
                     <TableHead className="font-semibold text-xs border-r">sku</TableHead>
                     <TableHead className="font-semibold text-xs border-r">descricao</TableHead>
-                    <TableHead className="font-semibold text-xs border-r">imagemUrl</TableHead>
-                    <TableHead className="font-semibold text-xs border-r">ativo</TableHead>
-                    <TableHead className="font-semibold text-xs border-r">destacado</TableHead>
-                    <TableHead className="font-semibold text-xs border-r">temVariacaoPreco</TableHead>
                     <TableHead className="font-semibold text-xs border-r">peso</TableHead>
-                    <TableHead className="font-semibold text-xs">dimensoes</TableHead>
                   </TableRow>
                 </TableHeader>
               </Table>
@@ -232,27 +318,72 @@ export function ImportCSVDialog({ open, onOpenChange, onImport, isImporting = fa
                 <Table>
                   <TableHeader className="sticky top-0 bg-gray-50 z-10">
                     <TableRow className="whitespace-nowrap">
-                      {Object.keys(csvData[0] || {}).map((key) => (
-                        <TableHead key={key} className="font-semibold text-xs border-r last:border-r-0">
-                          {key}
-                        </TableHead>
-                      ))}
+                      <TableHead className="font-semibold text-xs border-r w-32">imagem</TableHead>
+                      {Object.keys(csvData[0] || {})
+                        .filter(key => !['imagemUrl', 'ativo', 'destacado', 'temVariacaoPreco', 'dimensoes', 'precoPromocional'].includes(key))
+                        .map((key) => (
+                          <TableHead key={key} className="font-semibold text-xs border-r last:border-r-0">
+                            {key}
+                          </TableHead>
+                        ))}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {csvData.map((row, rowIndex) => (
                       <TableRow key={rowIndex} className="text-xs hover:bg-gray-50">
-                        {Object.keys(csvData[0] || {}).map((key) => (
-                          <TableCell key={key} className="p-0 border-r last:border-r-0">
-                            <input
-                              type="text"
-                              value={row[key] || ''}
-                              onChange={(e) => updateCellValue(rowIndex, key, e.target.value)}
-                              className="w-full h-full px-3 py-2 text-xs text-gray-700 bg-transparent hover:bg-blue-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none border-0"
-                              style={{ minWidth: '120px' }}
-                            />
-                          </TableCell>
-                        ))}
+                        {/* Coluna de Imagem */}
+                        <TableCell className="p-2 border-r">
+                          <div className="relative w-16 h-16 flex items-center justify-center bg-gray-50 rounded border">
+                            {localImages.has(rowIndex) ? (
+                              <div className="relative w-full h-full group">
+                                <Image
+                                  src={getLocalImageUrl(localImages.get(rowIndex)!)}
+                                  alt={`Imagem ${rowIndex + 1}`}
+                                  fill
+                                  className="object-cover rounded"
+                                />
+                                <button
+                                  onClick={() => {
+                                    const file = localImages.get(rowIndex)!
+                                    URL.revokeObjectURL(URL.createObjectURL(file))
+                                    const updated = new Map(localImages)
+                                    updated.delete(rowIndex)
+                                    setLocalImages(updated)
+                                  }}
+                                  className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <label className="cursor-pointer w-full h-full flex items-center justify-center">
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0]
+                                    if (file) handleImageSelect(rowIndex, file)
+                                  }}
+                                />
+                                <ImageIcon className="w-6 h-6 text-gray-400" />
+                              </label>
+                            )}
+                          </div>
+                        </TableCell>
+                        {Object.keys(csvData[0] || {})
+                          .filter(key => !['imagemUrl', 'ativo', 'destacado', 'temVariacaoPreco', 'dimensoes', 'precoPromocional'].includes(key))
+                          .map((key) => (
+                            <TableCell key={key} className="p-0 border-r last:border-r-0">
+                              <input
+                                type="text"
+                                value={row[key] || ''}
+                                onChange={(e) => updateCellValue(rowIndex, key, e.target.value)}
+                                className="w-full h-full px-3 py-2 text-xs text-gray-700 bg-transparent hover:bg-blue-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none border-0"
+                                style={{ minWidth: '120px' }}
+                              />
+                            </TableCell>
+                          ))}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -272,10 +403,10 @@ export function ImportCSVDialog({ open, onOpenChange, onImport, isImporting = fa
             </Button>
             <Button
               onClick={handleImport}
-              disabled={csvData.length === 0 || isImporting}
+              disabled={csvData.length === 0 || isImporting || isUploadingImages}
               className="bg-blue-600 hover:bg-blue-700"
             >
-              {isImporting ? (
+              {isImporting || isUploadingImages ? (
                 <>
                   <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   Importando...

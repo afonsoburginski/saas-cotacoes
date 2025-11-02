@@ -40,13 +40,28 @@ export function useServices(params?: UseServicesParams) {
   return useQuery({
     queryKey: ["services", params],
     queryFn: async () => {
-      const res = await fetch(`/api/services?${searchParams.toString()}`)
-      if (!res.ok) throw new Error("Failed to fetch services")
-      return res.json() as Promise<ServicesResponse>
+      // CRÍTICO: Não buscar se não tiver storeId no contexto de catálogo
+      if (params?.includeInactive && !params?.storeId) {
+        console.warn('⚠️ useServices: tentativa de carregar serviços sem storeId no modo catálogo')
+        return { data: [], total: 0 } as ServicesResponse
+      }
+      try {
+        const res = await fetch(`/api/services?${searchParams.toString()}`)
+        if (!res.ok) {
+          return { data: [], total: 0 } as ServicesResponse
+        }
+        return res.json() as Promise<ServicesResponse>
+      } catch (error) {
+        return { data: [], total: 0 } as ServicesResponse
+      }
     },
-    staleTime: 1000 * 60 * 5, // 5 minutos de cache
-    gcTime: 1000 * 60 * 10, // 10 minutos no cache
-    refetchOnWindowFocus: false, // Não recarregar ao focar janela
+    // 🚀 Cache otimizado - dados ficam frescos por 3 minutos
+    staleTime: 3 * 60 * 1000, // 3 minutos
+    gcTime: 10 * 60 * 1000, // 10 minutos
+    refetchOnWindowFocus: false, // Realtime já atualiza automaticamente
+    refetchOnMount: false, // Não refetch ao montar se tem cache válido
+    retry: 1,
+    retryDelay: 1000,
   })
 }
 
@@ -60,6 +75,11 @@ export function useService(id: string) {
       return json.data as Service
     },
     enabled: !!id,
+    // 🚀 Cache otimizado - serviço individual
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    gcTime: 15 * 60 * 1000, // 15 minutos
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   })
 }
 
@@ -85,7 +105,7 @@ export function useCreateService() {
       
       const tempService: Service = {
         ...newService as Service,
-        id: Date.now(),
+        id: Date.now().toString(),
       } as Service
       
       queryClient.setQueriesData<ServicesResponse>(
